@@ -2,6 +2,7 @@
 import { css } from 'remix/component'
 
 import { Document } from './document.tsx'
+import { Counter } from './public/counter.tsx'
 
 const FONT_STACK =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
@@ -43,6 +44,7 @@ export function HomePage() {
         })}
       >
         <p>Taqyeem</p>
+        <Counter initialCount={1}/>
       </main>
     </Document>
   )
