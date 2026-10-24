@@ -1,8 +1,5 @@
 import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
-import { ImportMap } from 'remix/component/server'
-
-import { scriptEntry } from '../assets.ts'
 
 export interface DocumentProps {
   children?: RemixNode
@@ -12,10 +9,12 @@ export interface DocumentProps {
 
 const DEFAULT_TITLE = readAppDisplayName('Taqyeem')
 
+// Vite serves the client entry itself in dev; the built, hashed chunk in production.
+const CLIENT_ENTRY_SRC = import.meta.env?.DEV ? '/client.ts' : '/assets/client.js'
+
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { children, head, title = DEFAULT_TITLE } = handle.props
-    let { href, importMap, preloads } = scriptEntry
 
     return (
       <html lang="en">
@@ -26,11 +25,7 @@ export function Document(handle: Handle<DocumentProps>) {
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <title>{title}</title>
           {head}
-          <ImportMap value={importMap} />
-          {preloads.map((preloadHref) => (
-            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
-          ))}
-          <script type="module" src={href}></script>
+          <script type="module" src={CLIENT_ENTRY_SRC}></script>
         </head>
         <body mix={css({ margin: 0 })}>{children}</body>
       </html>

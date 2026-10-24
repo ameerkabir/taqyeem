@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
-    "hmr": "NODE_ENV=development node hmr.ts",
-    "start": "NODE_ENV=production node --import remix/node-tsx server.ts",
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite build && vite preview",
+    "deploy": "vite build && wrangler deploy",
     "test": "NODE_ENV=test remix test",
     "typecheck": "tsc --noEmit"
   },
@@ -16,7 +17,11 @@
     "remix": "^3.1.0"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.65.0",
+    "@cloudflare/workers-types": "^5.20261024.1",
     "@types/node": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vite": "^8",
+    "wrangler": "^4.152.0"
   }
 }

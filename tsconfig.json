@@ -2,11 +2,12 @@
   "compilerOptions": {
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "types": ["node", "remix/assets/types/hmr"],
+    "types": ["node", "vite/client", "@cloudflare/workers-types"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ESNext",
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
@@ -15,5 +16,5 @@
     "jsxImportSource": "remix/component",
     "noEmit": true
   },
-  "exclude": ["dist"]
+  "exclude": ["dist", "public"]
 }

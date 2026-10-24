@@ -1,13 +1,14 @@
 import { createRouter, type RouterContext } from 'remix/router'
 import { render } from 'remix/middleware/render'
-import { staticFiles } from 'remix/middleware/static'
 
 import controller from './actions/controller.tsx'
-import { assets } from './assets.ts'
 import { routes } from './routes.ts'
 
+// Static files under `public/` and compiled client scripts under `/assets/*` are served
+// directly by Vite in dev and by Cloudflare's Workers Assets in production (see
+// vite.config.ts and wrangler.jsonc) — this router only ever sees dynamic requests.
 export const router = createRouter({
-  middleware: [staticFiles('./public', { index: false }), render({ assets })],
+  middleware: [render()],
 })
 
 export type AppContext = RouterContext<typeof router>
