@@ -20,7 +20,6 @@ export function HomePage() {
     <Document>
       <main mix={mainStyle}>
         <p>Taqyeem</p>
-        <p>مرحبا Taqyeem 123 ١٢٣</p>
         <Counter initialCount={1} />
       </main>
     </Document>

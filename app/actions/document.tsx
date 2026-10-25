@@ -1,5 +1,4 @@
 import type { Handle, RemixNode } from "remix/component";
-import { css } from "remix/component";
 
 export interface DocumentProps {
   children?: RemixNode;
@@ -42,7 +41,7 @@ export function Document(handle: Handle<DocumentProps>) {
           {head}
           <script type="module" src={CLIENT_ENTRY_SRC}></script>
         </head>
-        <body mix={css({ margin: 0 })}>{children}</body>
+        <body>{children}</body>
       </html>
     );
   };
