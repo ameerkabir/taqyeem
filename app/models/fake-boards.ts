@@ -1,4 +1,11 @@
-import { board, cards, categories, members } from "../data/fake-board.ts";
+import {
+  board,
+  cards,
+  categories,
+  members,
+  viewerMemberId,
+  viewerVotedCardIds,
+} from "../data/fake-board.ts";
 import type { BoardModels } from "./boards.ts";
 
 export function createFakeBoardModels(): BoardModels {
@@ -13,5 +20,10 @@ export function createFakeBoardModels(): BoardModels {
 
     listMembers: async (boardId: string) =>
       members.filter((m) => m.boardId === boardId),
+
+    listViewerVotes: async (boardId: string) => [...viewerVotedCardIds],
+
+    // Later a device-cookie middleware identifies the member.
+    getViewerMemberId: async (boardId: string) => viewerMemberId,
   };
 }

@@ -5,4 +5,6 @@ export interface BoardModels {
   listCategories(boardId: string): Promise<Category[]>;
   listCards(boardId: string): Promise<Card[]>;
   listMembers(boardId: string): Promise<Member[]>;
+  listViewerVotes(boardId: string): Promise<string[]>;
+  getViewerMemberId(boardId: string): Promise<string | null>;
 }
