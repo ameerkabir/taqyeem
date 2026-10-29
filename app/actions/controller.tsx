@@ -38,5 +38,8 @@ export default createController(routes, {
         />,
       );
     },
+    newCard: async function (context) {
+      return new Response("coming in $13", { status: 501 });
+    },
   },
 });

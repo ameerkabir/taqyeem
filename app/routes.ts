@@ -3,4 +3,5 @@ import { route } from "remix/routes";
 export const routes = route({
   home: "/",
   board: "/board",
+  newCard: "/board/new",
 });

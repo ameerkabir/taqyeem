@@ -1,12 +1,46 @@
 import { css, type Handle } from "remix/component";
 import { Document } from "./document.tsx";
-import type { Board, Card, Category, Member } from "../data/fake-board.ts";
+import type {
+  Board,
+  BoardStatus,
+  Card,
+  Category,
+  Member,
+} from "../data/fake-board.ts";
 import { routes } from "../routes.ts";
 import { compareCards } from "../models/cards.ts";
+
+const statusLabels: Record<BoardStatus, string> = {
+  collecting: "جمع الملاحظات",
+  meeting: "اجتماع",
+  closed: "مغلق",
+};
 
 const mainStyle = css({
   paddingInline: "var(--page-gutter)",
   paddingBlock: "var(--space-4)",
+});
+
+const headerStyle = css({
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: "var(--space-2)",
+  marginBlockEnd: "var(--space-3)",
+});
+
+const titleStyle = css({
+  margin: 0,
+  fontSize: "var(--text-lg)",
+});
+
+const statusPillStyle = css({
+  paddingBlock: "var(--space-1)",
+  paddingInline: "var(--space-3)",
+  borderRadius: "var(--radius-lg)",
+  backgroundColor: "var(--color-surface)",
+  border: "1px solid var(--color-border)",
+  color: "var(--color-text-muted)",
 });
 
 // Bleeds to the screen edges so tabs scroll under them, while the first tab
@@ -166,6 +200,19 @@ const votePillStyle = css({
   },
 });
 
+const addNoteStyle = css({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minBlockSize: "var(--target-min)",
+  marginBlockStart: "var(--space-4)",
+  borderRadius: "var(--radius-md)",
+  backgroundColor: "var(--color-primary)",
+  color: "var(--color-on-primary)",
+  textDecoration: "none",
+  "&:hover": { backgroundColor: "var(--color-primary-hover)" },
+});
+
 export function BoardPage(
   handle: Handle<{
     activeId: string;
@@ -194,6 +241,12 @@ export function BoardPage(
     return (
       <Document>
         <main mix={mainStyle}>
+          <header mix={headerStyle}>
+            <h1 mix={titleStyle}>{handle.props.board.title}</h1>
+            <span mix={statusPillStyle}>
+              {statusLabels[handle.props.board.status]}
+            </span>
+          </header>
           <nav aria-label="الأقسام" mix={navStyle}>
             {categories.map((cat) => {
               let count = cards.filter(
@@ -274,6 +327,12 @@ export function BoardPage(
               </ul>
             )}
           </section>
+          <a
+            href={`${routes.newCard.href()}?category=${sectionId}`}
+            mix={addNoteStyle}
+          >
+            + أضف ملاحظة هنا
+          </a>
         </main>
       </Document>
     );
