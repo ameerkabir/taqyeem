@@ -108,7 +108,7 @@ describe("new card guards", () => {
       let response = await app.submit();
       assert.equal(response.status, testCase.status);
       assert.equal(
-        await response.text(),
+        ((await response.json()) as { error: string }).error,
         testCase.message,
       );
       assert.equal(app.saved.length, 0);
@@ -195,7 +195,7 @@ describe("new card guards", () => {
       let response = await app.submit(data);
       assert.equal(response.status, 400);
       assert.equal(
-        await response.text(),
+        ((await response.json()) as { error: string }).error,
         testCase.message,
       );
       assert.equal(app.saved.length, 0);
@@ -209,7 +209,7 @@ describe("new card guards", () => {
     let response = await app.submit(data);
     assert.equal(response.status, 400);
     assert.equal(
-      await response.text(),
+      ((await response.json()) as { error: string }).error,
       "التصنيف غير صالح",
     );
     assert.equal(app.saved.length, 0);
@@ -345,7 +345,7 @@ describe("new card rate limit", () => {
     let response = await app.submit();
     assert.equal(response.status, 429);
     assert.equal(
-      await response.text(),
+      ((await response.json()) as { error: string }).error,
       "لقد نشرت ملاحظات كثيرة، يرجى الانتظار قليلًا",
     );
     let retryAfter = Number(response.headers.get("Retry-After"));
@@ -440,6 +440,62 @@ describe("new card rate limit", () => {
       3,
     );
     assert.equal(app.saved.length, 5);
+  });
+});
+
+describe("new card error feedback without JavaScript", () => {
+  it("renders the rate-limit error and preserves every draft field", async () => {
+    let app = setup();
+    for (let count = 0; count < 5; count++) {
+      assert.equal((await app.submit()).status, 303);
+    }
+    let data = validForm();
+    data.set("text", "مسودة <script>ليست HTML</script>");
+    data.set("categoryId", "bad");
+    data.set("isAnonymous", "true");
+    let response = await app.submit(data, false);
+    assert.equal(response.status, 429);
+    assert.ok(response.headers.get("Retry-After"));
+    assert.match(response.headers.get("Content-Type") ?? "", /text\/html/);
+    let html = await response.text();
+    assert.match(html, /role="alert"/);
+    assert.ok(html.includes("لقد نشرت ملاحظات كثيرة، يرجى الانتظار قليلًا"));
+    assert.ok(html.includes("مسودة &lt;script&gt;"));
+    assert.ok(!html.includes("<script>ليست HTML</script>"));
+    assert.ok(html.includes(String(data.get("submissionId"))));
+    assert.match(html, /value="bad"[^>]*checked/);
+    assert.match(html, /name="isAnonymous"[^>]*checked/);
+    assert.equal(app.saved.length, 5);
+  });
+
+  it("renders validation errors with the submitted text and a usable form", async () => {
+    let app = setup();
+    let data = validForm();
+    data.set("text", "س".repeat(501));
+    let response = await app.submit(data, false);
+    assert.equal(response.status, 400);
+    let html = await response.text();
+    assert.ok(html.includes("الحد الأقصى ٥٠٠ حرف"));
+    assert.ok(html.includes("س".repeat(501)));
+    assert.match(html, /<form[^>]*method="post"/);
+    assert.match(html, /role="alert"/);
+    assert.equal(app.saved.length, 0);
+  });
+
+  it("replaces an invalid submission ID so the native form can be retried", async () => {
+    let app = setup();
+    let data = validForm();
+    data.set("submissionId", "bad-id");
+    let response = await app.submit(data, false);
+    assert.equal(response.status, 400);
+    let html = await response.text();
+    let match = html.match(/name="submissionId"[^>]*value="([^"]+)"/);
+    assert.ok(match);
+    assert.match(match[1], /^[0-9a-f-]{36}$/);
+    assert.ok(html.includes("معرّف الإرسال غير صالح"));
+    data.set("submissionId", match[1]);
+    assert.equal((await app.submit(data, false)).status, 303);
+    assert.equal(app.saved.length, 1);
   });
 });
 

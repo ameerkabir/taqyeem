@@ -3,7 +3,8 @@ import { redirect } from "remix/response/redirect";
 import { routes } from "../../routes.ts";
 import { resolveActiveSection } from "../../models/section.ts";
 import { NewCardPage } from "./page.tsx";
-import { parseNewCardForm } from "./schema.ts";
+import { isSubmissionId, parseNewCardForm } from "./schema.ts";
+import type { Category } from "../../data/fake-board.ts";
 
 export default createController(routes.newCard, {
   actions: {
@@ -28,37 +29,89 @@ export default createController(routes.newCard, {
       );
     },
     async action(context) {
-      let board = await context.models.getBoard("demo");
-      if (!board) return new Response("اللوحة غير موجودة", { status: 404 });
+      const board = await context.models.getBoard("demo");
+      let enhanced = context.request.headers
+        .get("Accept")
+        ?.includes("application/json");
+
+      if (!board) {
+        if (enhanced) {
+          return Response.json({ error: "اللوحة غير موجودة" }, { status: 404 });
+        }
+        return new Response("اللوحة غير موجودة", { status: 404 });
+      }
+
+      let data: FormData | undefined;
+      let categories: Category[] | undefined;
+
+      const formError = async (
+        message: string,
+        status: number,
+        retryAfter?: number,
+      ) => {
+        let headers = new Headers();
+        if (retryAfter !== undefined)
+          headers.set("Retry-After", String(retryAfter));
+        if (enhanced) {
+          return Response.json({ error: message }, { status, headers });
+        }
+
+        // Ordinary submissions receive the form again, preserving the draft.
+        data ??= await context.request.formData();
+        categories ??= await context.models.listCategories(board.id);
+        let text = data.get("text");
+        let categoryId = data.get("categoryId");
+        let submissionId = data.get("submissionId");
+        return context.render(
+          <NewCardPage
+            board={board}
+            categories={categories}
+            activeCategoryId={resolveActiveSection(
+              typeof categoryId === "string" ? categoryId : null,
+              categories,
+              board,
+            )}
+            submissionId={
+              isSubmissionId(submissionId) ? submissionId : crypto.randomUUID()
+            }
+            values={{
+              text: typeof text === "string" ? text : "",
+              isAnonymous: data.get("isAnonymous") === "true",
+            }}
+            error={message}
+          />,
+          { status, headers },
+        );
+      };
 
       if (board.status === "closed") {
-        return new Response("اللوحة مغلقة", { status: 403 });
+        return formError("اللوحة مغلقة", 403);
       }
 
       let memberId = await context.models.getViewerMemberId("demo");
 
       if (!memberId) {
-        return new Response("يرجى الانضمام إلى اللوحة", { status: 403 });
+        return formError("يرجى الانضمام إلى اللوحة", 403);
       }
 
       let members = await context.models.listMembers(board.id);
 
       if (!members.some((member) => member.id === memberId)) {
-        return new Response("العضو غير موجود في هذه اللوحة", { status: 403 });
+        return formError("العضو غير موجود في هذه اللوحة", 403);
       }
 
-      let data = await context.request.formData();
+      data = await context.request.formData();
       let parsed = parseNewCardForm(data);
       if (!parsed.success) {
-        return new Response(parsed.issues[0].message, { status: 400 });
+        return formError(parsed.issues[0].message, 400);
       }
 
       let { text, categoryId, submissionId, isAnonymous } = parsed.value;
 
-      let categories = await context.models.listCategories(board.id);
+      categories = await context.models.listCategories(board.id);
 
       if (!categories.some((category) => category.id === categoryId)) {
-        return new Response("التصنيف غير صالح", { status: 400 });
+        return formError("التصنيف غير صالح", 400);
       }
 
       let result = await context.models.createCard(
@@ -76,7 +129,11 @@ export default createController(routes.newCard, {
       );
 
       if (!result.ok) {
-        return new Response("لقد نشرت ملاحظات كثيرة، يرجى الانتظار قليلًا", { status: 429, headers: { "Retry-After": String(result.retryAfter) } });
+        return formError(
+          "لقد نشرت ملاحظات كثيرة، يرجى الانتظار قليلًا",
+          429,
+          result.retryAfter,
+        );
       }
 
       return redirect(
