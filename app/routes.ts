@@ -1,7 +1,7 @@
-import { route } from "remix/routes";
+import { form, route } from "remix/routes";
 
 export const routes = route({
   home: "/",
   board: "/board",
-  newCard: "/board/new",
+  newCard: form("/board/new"),
 });
