@@ -328,7 +328,7 @@ export function BoardPage(
             )}
           </section>
           <a
-            href={`${routes.newCard.href()}?category=${sectionId}`}
+            href={`${routes.newCard.index.href()}?category=${sectionId}`}
             mix={addNoteStyle}
           >
             + أضف ملاحظة هنا
