@@ -2,6 +2,7 @@ import { css, type Handle } from "remix/component";
 import type { Board, Category } from "../../data/fake-board.ts";
 import { routes } from "../../routes.ts";
 import { Document } from "../document.tsx";
+import { NoteField } from "./public/note-field.tsx";
 
 interface NewCardPageProps {
   board: Board;
@@ -49,12 +50,7 @@ export function NewCardPage(handle: Handle<NewCardPageProps>) {
               ))}
             </div>
           </fieldset>
-<div mix={fieldStyle}>
-  <label htmlFor="card-text" mix={labelStyle}>ملاحظتك</label>
-  <textarea id="card-text" name="text" dir="auto" rows={6} required maxLength={500}
-    placeholder="ما الذي تود مشاركته مع الفريق؟" aria-describedby="card-text-hint" mix={textareaStyle} />
-  <p id="card-text-hint" mix={hintStyle}>اكتب ملاحظة واحدة واضحة، بحد أقصى ٥٠٠ حرف.</p>
-</div>
+<NoteField />
           <label mix={choiceStyle}>
             <input
               type="checkbox"
@@ -176,21 +172,3 @@ const submitStyle = css({
   "&:hover": { backgroundColor: "var(--color-primary-hover)" },
   "&:disabled": { opacity: 0.65, cursor: "wait" },
 });
-
-
-const fieldStyle = css({ display: "grid", gap: "var(--space-2)" });
-const textareaStyle = css({
-  inlineSize: "100%",
-  minInlineSize: 0,
-  minBlockSize: "10rem",
-  padding: "var(--space-3)",
-  border: "1px solid var(--color-border)",
-  borderRadius: "var(--radius-md)",
-  font: "inherit",
-  color: "var(--color-text)",
-  backgroundColor: "var(--color-surface)",
-  resize: "vertical",
-  "&::placeholder": { color: "var(--color-text-muted)" },
-});
-
-const hintStyle = css({ margin: 0, color: "var(--color-text-muted)" });
