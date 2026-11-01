@@ -3,6 +3,7 @@ import { render } from "remix/middleware/render";
 
 import controller from "./actions/controller.tsx";
 import newCardController from "./actions/new-card/controller.tsx";
+import editCardController from "./actions/edit-card/controller.tsx";
 import { routes } from "./routes.ts";
 import { loadBoardModels } from "./middleware/models.ts";
 
@@ -23,3 +24,4 @@ declare module "remix" {
 
 router.map(routes, controller);
 router.map(routes.newCard, newCardController);
+router.map(routes.editCard, editCardController);

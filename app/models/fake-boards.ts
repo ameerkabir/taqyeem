@@ -10,9 +10,9 @@ import {
 import type { BoardModels } from "./boards.ts";
 
 // Shared between requests in this Worker instance, just like the demo cards.
-const defaultStore = { cards, submissions: new Map<string, Card>() };
-const MAX_CARDS = 5;
-const WINDOW_MS = 60_000;
+export const defaultStore = { cards, submissions: new Map<string, Card>() };
+export const MAX_CARDS = 5;
+export const WINDOW_MS = 60_000;
 
 export function createFakeBoardModels(
   store = defaultStore,
@@ -58,6 +58,24 @@ export function createFakeBoardModels(
       return { ok: true, card };
     },
 
+    getCard: async (boardId, cardId) => {
+      return (
+        store.cards.find(
+          (card) => card.boardId === boardId && card.id === cardId,
+        ) ?? null
+      );
+    },
+
+    deleteCard: async (boardId, cardId) => {
+      let index = store.cards.findIndex(
+        (card) => card.boardId === boardId && card.id === cardId,
+      );
+      if (index === -1) {
+        return false;
+      }
+      store.cards.splice(index, 1);
+      return true;
+    },
     listMembers: async (boardId: string) =>
       members.filter((m) => m.boardId === boardId),
 

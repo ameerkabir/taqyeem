@@ -7,6 +7,7 @@ export interface Board {
   id: string
   title: string
   status: BoardStatus
+  votingOpen: boolean
   currentSectionId: string | null
 }
 
@@ -38,6 +39,7 @@ export const board: Board = {
   id: 'demo',
   title: 'مراجعة السبرنت ١٤',
   status: 'collecting',
+  votingOpen: false,
   currentSectionId: null,
 }
 

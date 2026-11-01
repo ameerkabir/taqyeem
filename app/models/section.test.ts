@@ -15,6 +15,7 @@ function makeBoard(overrides: Partial<Board> = {}): Board {
     id: 'demo',
     title: 'Demo',
     status: 'collecting',
+    votingOpen: false,
     currentSectionId: null,
     ...overrides,
   }

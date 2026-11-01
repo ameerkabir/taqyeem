@@ -444,6 +444,36 @@ describe("new card rate limit", () => {
 });
 
 describe("new card error feedback without JavaScript", () => {
+  it("preserves the native draft when membership middleware rejects the POST", async () => {
+    let app = setup({ getViewerMemberId: async () => null });
+    let data = validForm();
+    data.set("text", "مسودة تحتاج الانضمام إلى اللوحة");
+    data.set("categoryId", "bad");
+    data.set("isAnonymous", "true");
+    let response = await app.submit(data, false);
+    assert.equal(response.status, 403);
+    let html = await response.text();
+    assert.ok(html.includes("يرجى الانضمام إلى اللوحة"));
+    assert.ok(html.includes("مسودة تحتاج الانضمام إلى اللوحة"));
+    assert.ok(html.includes(String(data.get("submissionId"))));
+    assert.match(html, /role="alert"/);
+    assert.match(html, /value="bad"[^>]*checked/);
+    assert.match(html, /name="isAnonymous"[^>]*checked/);
+    assert.equal(app.saved.length, 0);
+  });
+
+  it("renders a membership error on GET without trying to parse a form body", async () => {
+    let app = setup({ getViewerMemberId: async () => null });
+    let response = await app.router.fetch(
+      new URL(routes.newCard.index.href(), "http://localhost"),
+    );
+    assert.equal(response.status, 403);
+    let html = await response.text();
+    assert.ok(html.includes("يرجى الانضمام إلى اللوحة"));
+    assert.match(html, /role="alert"/);
+    assert.equal(app.saved.length, 0);
+  });
+
   it("renders the rate-limit error and preserves every draft field", async () => {
     let app = setup();
     for (let count = 0; count < 5; count++) {
