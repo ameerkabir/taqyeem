@@ -160,7 +160,8 @@ const menuListStyle = css({
 });
 
 const menuItemStyle = css({
-  display: "block",
+  display: "flex",
+  alignItems: "center",
   inlineSize: "100%",
   minBlockSize: "var(--target-min)",
   paddingInline: "var(--space-3)",
@@ -170,8 +171,16 @@ const menuItemStyle = css({
   color: "var(--color-text)",
   font: "inherit",
   textAlign: "start",
+  textDecoration: "none",
   cursor: "pointer",
   "&:hover": { backgroundColor: "var(--color-bg)" },
+});
+
+const menuHintStyle = css({
+  margin: 0,
+  padding: "var(--space-3)",
+  maxInlineSize: "16rem",
+  color: "var(--color-text-muted)",
 });
 
 const cardFooterStyle = css({
@@ -294,16 +303,18 @@ export function BoardPage(
                             </svg>
                           </summary>
                           <ul mix={menuListStyle}>
+                            {handle.props.board.status !== "closed" && !handle.props.board.votingOpen ? <>
                             <li>
-                              <button type="button" mix={menuItemStyle}>
+                              <a href={routes.editCard.index.href({ cardId: card.id })} mix={menuItemStyle}>
                                 تعديل
-                              </button>
+                              </a>
                             </li>
                             <li>
-                              <button type="button" mix={menuItemStyle}>
+                              <a href={routes.deleteCard.index.href({ cardId: card.id })} mix={menuItemStyle}>
                                 حذف
-                              </button>
+                              </a>
                             </li>
+                            </> : <li><p mix={menuHintStyle}>{handle.props.board.status === "closed" ? "اللوحة مغلقة" : "التعديل والحذف غير متاحين أثناء التصويت"}</p></li>}
                           </ul>
                         </details>
                       ) : null}
