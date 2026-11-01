@@ -3,7 +3,7 @@ import { describe, it } from "remix/test";
 import { createRouter } from "remix/router";
 import { render } from "remix/middleware/render";
 
-import controller from "../controller.tsx";
+import boardController from "../board/controller.tsx";
 import newCardController from "./controller.tsx";
 import { routes } from "../../routes.ts";
 import { board, type Card } from "../../data/fake-board.ts";
@@ -29,7 +29,7 @@ function setup(
     return next();
   };
   let router = createRouter({ middleware: [render(), provideModels] });
-  router.map(routes, controller);
+  router.map(routes.board, boardController);
   router.map(routes.newCard, newCardController);
 
   return {

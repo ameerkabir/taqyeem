@@ -1,14 +1,14 @@
 import { css, type Handle } from "remix/component";
-import { Document } from "./document.tsx";
+import { Document } from "../document.tsx";
 import type {
   Board,
   BoardStatus,
   Card,
   Category,
   Member,
-} from "../data/fake-board.ts";
-import { routes } from "../routes.ts";
-import { compareCards } from "../models/cards.ts";
+} from "../../data/fake-board.ts";
+import { routes } from "../../routes.ts";
+import { compareCards } from "../../models/cards.ts";
 
 const statusLabels: Record<BoardStatus, string> = {
   collecting: "جمع الملاحظات",
@@ -303,18 +303,39 @@ export function BoardPage(
                             </svg>
                           </summary>
                           <ul mix={menuListStyle}>
-                            {handle.props.board.status !== "closed" && !handle.props.board.votingOpen ? <>
-                            <li>
-                              <a href={routes.editCard.index.href({ cardId: card.id })} mix={menuItemStyle}>
-                                تعديل
-                              </a>
-                            </li>
-                            <li>
-                              <a href={routes.deleteCard.index.href({ cardId: card.id })} mix={menuItemStyle}>
-                                حذف
-                              </a>
-                            </li>
-                            </> : <li><p mix={menuHintStyle}>{handle.props.board.status === "closed" ? "اللوحة مغلقة" : "التعديل والحذف غير متاحين أثناء التصويت"}</p></li>}
+                            {handle.props.board.status !== "closed" &&
+                            !handle.props.board.votingOpen ? (
+                              <>
+                                <li>
+                                  <a
+                                    href={routes.editCard.index.href({
+                                      cardId: card.id,
+                                    })}
+                                    mix={menuItemStyle}
+                                  >
+                                    تعديل
+                                  </a>
+                                </li>
+                                <li>
+                                  <a
+                                    href={routes.deleteCard.index.href({
+                                      cardId: card.id,
+                                    })}
+                                    mix={menuItemStyle}
+                                  >
+                                    حذف
+                                  </a>
+                                </li>
+                              </>
+                            ) : (
+                              <li>
+                                <p mix={menuHintStyle}>
+                                  {handle.props.board.status === "closed"
+                                    ? "اللوحة مغلقة"
+                                    : "التعديل والحذف غير متاحين أثناء التصويت"}
+                                </p>
+                              </li>
+                            )}
                           </ul>
                         </details>
                       ) : null}
