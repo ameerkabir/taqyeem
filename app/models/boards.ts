@@ -9,11 +9,11 @@ export interface BoardModels {
   listCards(boardId: string): Promise<Card[]>;
   getCard(boardId: string, cardId: string): Promise<Card | null>;
 
-  // updateCard(
-  //   boardId: string,
-  //   cardId: string,
-  //   changes: Pick<Card, "body" | "categoryId" | "isAnonymous">,
-  // ): Promise<Card | null>;
+  updateCard(
+    boardId: string,
+    cardId: string,
+    changes: Pick<Card, "body" | "categoryId" | "isAnonymous">,
+  ): Promise<Card | null>;
 
   deleteCard(boardId: string, cardId: string): Promise<boolean>;
 

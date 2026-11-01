@@ -87,3 +87,46 @@ describe("in-memory card rate limit", () => {
     assert.equal(store.cards.length, 6);
   });
 });
+
+describe("in-memory card editing and deletion", () => {
+  it("finds later cards by both board and card ID", async () => {
+    let first = card(Date.now());
+    let second = card(Date.now());
+    let models = createFakeBoardModels({ cards: [first, second], submissions: new Map() });
+    assert.equal((await models.getCard("demo", second.id))?.id, second.id);
+    assert.equal(await models.getCard("another-board", second.id), null);
+  });
+
+  it("updates only editable fields and makes changes visible to other model instances", async () => {
+    let original = { ...card(Date.now()), voteCount: 3 };
+    let before = { ...original };
+    let store = { cards: [original], submissions: new Map<string, Card>() };
+    let models = createFakeBoardModels(store);
+    let changes = { body: "ملاحظة معدلة", categoryId: "bad", isAnonymous: true, id: "forged", memberId: "m2", voteCount: 0 };
+    let updated = await models.updateCard("demo", original.id, changes);
+    assert.ok(updated);
+    assert.equal(updated.body, changes.body);
+    assert.equal(updated.categoryId, "bad");
+    assert.equal(updated.isAnonymous, true);
+    assert.equal(updated.id, before.id);
+    assert.equal(updated.memberId, before.memberId);
+    assert.equal(updated.createdAt, before.createdAt);
+    assert.equal(updated.voteCount, before.voteCount);
+    assert.equal((await createFakeBoardModels(store).getCard("demo", original.id))?.body, changes.body);
+    assert.equal(await models.updateCard("wrong-board", original.id, changes), null);
+    assert.equal(await models.updateCard("demo", "missing", changes), null);
+  });
+
+  it("deletes only the matching card and never removes the last card on a miss", async () => {
+    let first = card(Date.now());
+    let second = card(Date.now());
+    let store = { cards: [first, second], submissions: new Map<string, Card>() };
+    let models = createFakeBoardModels(store);
+    assert.equal(await models.deleteCard("wrong-board", first.id), false);
+    assert.equal(await models.deleteCard("demo", "missing"), false);
+    assert.equal(store.cards.length, 2);
+    assert.equal(await models.deleteCard("demo", first.id), true);
+    assert.equal(store.cards.length, 1);
+    assert.equal(store.cards[0].id, second.id);
+  });
+});
