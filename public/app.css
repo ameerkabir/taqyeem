@@ -55,6 +55,10 @@
     --color-border: #cbd2d9;
     --color-primary: #0b6e4f;
     --color-primary-hover: #095a41;
+    --color-danger: #8b1e1e;
+    --color-danger-hover: #701818;
+    --color-danger-bg: #fff1f1;
+    --color-danger-border: #e8b4b4;
     --color-on-primary: #ffffff;
 
     /* spacing */
