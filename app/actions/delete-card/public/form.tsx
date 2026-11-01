@@ -1,0 +1,91 @@
+import { clientEntry, css, on, type Handle } from "remix/component";
+import type { Card } from "../../../data/fake-board.ts";
+import { routes } from "../../../routes.ts";
+import { submitMutation } from "../../../ui/public/submit-mutation.ts";
+import {
+  formStyle,
+  submitStyle,
+  dangerStyle,
+  cancelStyle,
+  errorStyle,
+} from "../../../ui/public/card-form-styles.ts";
+
+export interface DeleteCardFormProps {
+  card: Card;
+  error?: string;
+}
+
+export const DeleteCardForm = clientEntry(
+  "/app/actions/delete-card/public/form.tsx#DeleteCardForm",
+  function DeleteCardForm(handle: Handle<DeleteCardFormProps>) {
+    let pending = false;
+    let error = handle.props.error;
+    return () => {
+      let { card } = handle.props;
+      let cancelHref = `${routes.board.href()}?section=${encodeURIComponent(card.categoryId)}`;
+      return (
+        <form
+          method="post"
+          action={routes.deleteCard.action.href({ cardId: card.id })}
+          aria-busy={pending}
+          mix={[
+            formStyle,
+            on("submit", async (event) => {
+              event.preventDefault();
+              if (pending) return;
+              pending = true;
+              error = undefined;
+              handle.update();
+              let message = await submitMutation(
+                event.currentTarget,
+                handle.signal,
+                "تعذّر حذف الملاحظة، يرجى المحاولة مجددًا",
+              );
+              if (!handle.signal.aborted) {
+                error = message;
+                pending = false;
+                handle.update();
+              }
+            }),
+          ]}
+        >
+          <p mix={questionStyle}>هل تريد حذف هذه الملاحظة؟</p>
+          <blockquote dir="auto" mix={previewStyle}>
+            {card.body}
+          </blockquote>
+          <p mix={hintStyle}>لا يمكن التراجع عن الحذف.</p>
+          {error && (
+            <p role="alert" mix={errorStyle}>
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={pending}
+            mix={[submitStyle, dangerStyle]}
+          >
+            {pending ? "جارٍ الحذف…" : "حذف الملاحظة"}
+          </button>
+          <a href={cancelHref} mix={cancelStyle}>
+            إلغاء
+          </a>
+        </form>
+      );
+    };
+  },
+);
+const questionStyle = css({
+  margin: 0,
+  fontWeight: 500,
+  fontSize: "var(--text-md)",
+});
+const previewStyle = css({
+  margin: 0,
+  padding: "var(--space-4)",
+  borderInlineStart: "var(--space-1) solid var(--color-border)",
+  backgroundColor: "var(--color-bg)",
+  borderRadius: "var(--radius-md)",
+  whiteSpace: "pre-wrap",
+  overflowWrap: "anywhere",
+});
+const hintStyle = css({ margin: 0, color: "var(--color-text-muted)" });
