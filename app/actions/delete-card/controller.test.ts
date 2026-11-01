@@ -19,7 +19,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
       boardId: "demo",
       memberId: "m1",
       categoryId: "ideas",
-      body: "ملاحظة",
+      body: "ملاحظة <b>خاصة</b>",
       createdAt: new Date().toISOString(),
       isAnonymous: true,
       voteCount: 0,
@@ -46,10 +46,13 @@ function setup(overrides: Partial<BoardModels> = {}) {
     get deletes() {
       return deletes;
     },
-    request(method: "GET" | "POST", cardId = "own-card") {
+    request(method: "GET" | "POST", cardId = "own-card", enhanced = true) {
       return router.fetch(
         new URL(routes.deleteCard.index.href({ cardId }), "http://localhost"),
-        { method },
+        {
+          method,
+          headers: { Accept: enhanced ? "application/json" : "text/html" },
+        },
       );
     },
   };
@@ -104,10 +107,16 @@ describe("delete card access", () => {
     assert.equal(app.deletes, 1);
   });
 
-  it("does not delete when the unfinished confirmation page is opened", async () => {
+  it("does not delete when the confirmation page is opened", async () => {
     let app = setup();
-    assert.equal((await app.request("GET")).status, 501);
+    assert.equal((await app.request("GET")).status, 200);
     assert.equal(app.deletes, 0);
+    let response = await app.request("GET", "own-card", false);
+    let html = await response.text();
+    assert.ok(html.includes("هل تريد حذف هذه الملاحظة؟"));
+    assert.ok(html.includes("ملاحظة &lt;b&gt;خاصة&lt;/b&gt;"));
+    assert.match(html, /<form[^>]*method="post"/);
+    assert.ok(html.includes("/board?section=ideas"));
   });
 
   for (let status of ["collecting", "meeting", "closed"] as const) {
@@ -119,14 +128,20 @@ describe("delete card access", () => {
           });
           let response = await app.request(method);
           let allowed = status !== "closed" && !votingOpen;
-          assert.equal(response.status, allowed ? (method === "POST" ? 303 : 501) : 403);
+          assert.equal(
+            response.status,
+            allowed ? (method === "POST" ? 303 : 200) : 403,
+          );
           let deleted = allowed && method === "POST";
           assert.equal(app.deletes, deleted ? 1 : 0);
           assert.equal(app.saved.length, deleted ? 0 : 1);
           if (!allowed) {
-            assert.equal(await response.text(), status === "closed"
-              ? "اللوحة مغلقة"
-              : "لا يمكن حذف الملاحظة أثناء التصويت");
+            assert.equal(
+              ((await response.json()) as { error: string }).error,
+              status === "closed"
+                ? "اللوحة مغلقة"
+                : "لا يمكن حذف الملاحظة أثناء التصويت",
+            );
           }
         });
       }
@@ -136,11 +151,14 @@ describe("delete card access", () => {
   it("rechecks voting on POST if voting opened after the confirmation request", async () => {
     let votingOpen = false;
     let app = setup({ getBoard: async () => ({ ...board, votingOpen }) });
-    assert.equal((await app.request("GET")).status, 501);
+    assert.equal((await app.request("GET")).status, 200);
     votingOpen = true;
     let response = await app.request("POST");
     assert.equal(response.status, 403);
-    assert.equal(await response.text(), "لا يمكن حذف الملاحظة أثناء التصويت");
+    assert.equal(
+      ((await response.json()) as { error: string }).error,
+      "لا يمكن حذف الملاحظة أثناء التصويت",
+    );
     assert.equal(app.deletes, 0);
     assert.equal(app.saved.length, 1);
   });
