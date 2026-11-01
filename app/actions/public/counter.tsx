@@ -1,23 +1,5 @@
-import { clientEntry, css, on, type Handle } from "remix/component";
-
-const rowStyle = css({
-  display: "flex",
-  gap: "var(--space-2)",
-});
-
-const buttonStyle = css({
-  minBlockSize: "var(--target-min)",
-  minInlineSize: "var(--target-min)",
-  paddingBlock: "var(--space-2)",
-  paddingInline: "var(--space-4)",
-  border: "none",
-  borderRadius: "var(--radius-md)",
-  backgroundColor: "var(--color-primary)",
-  color: "var(--color-on-primary)",
-  font: "inherit",
-  cursor: "pointer",
-  "&:hover": { backgroundColor: "var(--color-primary-hover)" },
-});
+import { rowStyle, buttonStyle } from "./counter.styles.ts";
+import { clientEntry, on, type Handle } from "remix/component";
 
 export const Counter = clientEntry(
   "/app/actions/public/counter.tsx#Counter",

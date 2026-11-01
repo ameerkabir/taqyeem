@@ -1,4 +1,5 @@
-import { clientEntry, css, on, type Handle } from "remix/component";
+import { questionStyle, previewStyle, hintStyle } from "./styles.ts";
+import { clientEntry, on, type Handle } from "remix/component";
 import type { Card } from "../../../data/fake-board.ts";
 import { routes } from "../../../routes.ts";
 import { submitMutation } from "../../../ui/public/submit-mutation.ts";
@@ -74,18 +75,3 @@ export const DeleteCardForm = clientEntry(
     };
   },
 );
-const questionStyle = css({
-  margin: 0,
-  fontWeight: 500,
-  fontSize: "var(--text-md)",
-});
-const previewStyle = css({
-  margin: 0,
-  padding: "var(--space-4)",
-  borderInlineStart: "var(--space-1) solid var(--color-border)",
-  backgroundColor: "var(--color-bg)",
-  borderRadius: "var(--radius-md)",
-  whiteSpace: "pre-wrap",
-  overflowWrap: "anywhere",
-});
-const hintStyle = css({ margin: 0, color: "var(--color-text-muted)" });
