@@ -38,8 +38,8 @@ export interface Card {
 export const board: Board = {
   id: 'demo',
   title: 'مراجعة السبرنت ١٤',
-  status: 'collecting',
-  votingOpen: false,
+  status: 'meeting',
+  votingOpen: true,
   currentSectionId: null,
 }
 

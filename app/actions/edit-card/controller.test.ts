@@ -31,9 +31,10 @@ function setup(overrides: Partial<BoardModels> = {}) {
   };
   let saved = [{ ...original }];
   let updates = 0;
-  let base = createFakeBoardModels({ cards: saved, submissions: new Map() });
+  let base = createFakeBoardModels({ cards: saved, submissions: new Map(), votes: new Map<string, Set<string>>() });
   let models = {
     ...base,
+    getBoard: async () => ({ ...board, votingOpen: false }),
     updateCard: async (...args: Parameters<BoardModels["updateCard"]>) => {
       updates++;
       return base.updateCard(...args);

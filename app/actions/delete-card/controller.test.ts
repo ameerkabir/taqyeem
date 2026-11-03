@@ -26,9 +26,10 @@ function setup(overrides: Partial<BoardModels> = {}) {
     },
   ];
   let deletes = 0;
-  let base = createFakeBoardModels({ cards: saved, submissions: new Map() });
+  let base = createFakeBoardModels({ cards: saved, submissions: new Map(), votes: new Map<string, Set<string>>() });
   let models: BoardModels = {
     ...base,
+    getBoard: async () => ({ ...board, votingOpen: false }),
     deleteCard: async (boardId, cardId) => {
       deletes++;
       return base.deleteCard(boardId, cardId);
