@@ -4,6 +4,7 @@ import { createRouter } from "remix/router";
 import { render } from "remix/middleware/render";
 
 import boardController from "../board/controller.tsx";
+import boardCardsController from "../board-cards/controller.tsx";
 import newCardController from "./controller.tsx";
 import { routes } from "../../routes.ts";
 import { board, type Card } from "../../data/fake-board.ts";
@@ -21,7 +22,7 @@ function setup(
 ) {
   let saved: Card[] = [];
   let models: BoardModels = {
-    ...createFakeBoardModels({ cards: saved, submissions: new Map() }, now),
+    ...createFakeBoardModels({ cards: saved, submissions: new Map(), votes: new Map<string, Set<string>>() }, now),
     ...overrides,
   };
   let provideModels: ReturnType<typeof loadBoardModels> = (context, next) => {
@@ -30,6 +31,7 @@ function setup(
   };
   let router = createRouter({ middleware: [render(), provideModels] });
   router.map(routes.board, boardController);
+  router.map(routes.boardCards, boardCardsController);
   router.map(routes.newCard, newCardController);
 
   return {

@@ -9,11 +9,13 @@ import {
   type loadBoardModels,
 } from "../../middleware/models.ts";
 import controller from "./controller.tsx";
+import boardCardsController from "../board-cards/controller.tsx";
 import { routes } from "../../routes.ts";
 
 async function page(
   overrides: Partial<Board> = {},
   viewerMemberId: string | null = "m1",
+  section = "good",
 ) {
   let cards: Card[] = [
     {
@@ -36,10 +38,15 @@ async function page(
       voteCount: 0,
       createdAt: new Date().toISOString(),
     },
+    {
+      id: "bad-card", boardId: "demo", memberId: "m2", categoryId: "bad",
+      body: "ملاحظة القسم الآخر", isAnonymous: false, voteCount: 0,
+      createdAt: new Date().toISOString(),
+    },
   ];
   let models = {
-    ...createFakeBoardModels({ cards, submissions: new Map() }),
-    getBoard: async () => ({ ...board, ...overrides }),
+    ...createFakeBoardModels({ cards, submissions: new Map(), votes: new Map<string, Set<string>>() }),
+    getBoard: async () => ({ ...board, votingOpen: false, ...overrides }),
     getViewerMemberId: async () => viewerMemberId,
   };
   let provideModels: ReturnType<typeof loadBoardModels> = (context, next) => {
@@ -48,7 +55,8 @@ async function page(
   };
   let router = createRouter({ middleware: [render(), provideModels] });
   router.map(routes.board, controller);
-  let response = await router.fetch("http://localhost/board?section=good");
+  router.map(routes.boardCards, boardCardsController);
+  let response = await router.fetch(`http://localhost/board?section=${encodeURIComponent(section)}`);
   assert.equal(response.status, 200);
   return response.text();
 }
@@ -71,15 +79,49 @@ describe("own-card menu", () => {
   it("explains why management is unavailable during voting", async () => {
     let html = await page({ votingOpen: true });
     assert.ok(html.includes("التعديل والحذف غير متاحين أثناء التصويت"));
-    assert.ok(!html.includes("/board/cards/own/"));
+    assert.ok(!html.includes(routes.editCard.index.href({ cardId: "own" })));
+    assert.ok(!html.includes(routes.deleteCard.index.href({ cardId: "own" })));
   });
   it("explains why management is unavailable after closing", async () => {
     let html = await page({ status: "closed", votingOpen: false });
     assert.ok(html.includes("اللوحة مغلقة"));
-    assert.ok(!html.includes("/board/cards/own/"));
+    assert.ok(!html.includes(routes.editCard.index.href({ cardId: "own" })));
+    assert.ok(!html.includes(routes.deleteCard.index.href({ cardId: "own" })));
   });
   it("does not expose management links without a viewer identity", async () => {
     let html = await page({}, null);
-    assert.ok(!html.includes("/board/cards/"));
+    assert.ok(!/href="[^"]*\/(?:edit|delete)"/.test(html));
   });
+});
+
+describe("server-rendered board frame", () => {
+  it("includes the resolved card list in the initial document without browser JavaScript", async () => {
+    let html = await page();
+    assert.match(html, /<html[\s>]/);
+    assert.ok(html.includes(board.title));
+    assert.ok(html.includes("ملاحظتي"));
+    assert.ok(html.includes("ملاحظة زميل"));
+    assert.ok(!html.includes("ملاحظة القسم الآخر"));
+  });
+
+  it("passes the selected category to the frame while keeping the board shell", async () => {
+    let html = await page({}, "m1", "bad");
+    assert.ok(html.includes(board.title));
+    assert.ok(html.includes("ملاحظة القسم الآخر"));
+    assert.ok(!html.includes("ملاحظتي"));
+    assert.ok(!html.includes("ملاحظة زميل"));
+    assert.ok(html.includes("/board/new?category=bad"));
+  });
+});
+
+
+describe("meeting voting banner", () => {
+  for (let status of ["collecting", "meeting", "closed"] as const) {
+    for (let votingOpen of [false, true]) {
+      it(`${status} with voting ${votingOpen ? "open" : "closed"}`, async () => {
+        let html = await page({ status, votingOpen });
+        assert.equal(html.includes("التصويت مفتوح"), status === "meeting" && votingOpen);
+      });
+    }
+  }
 });
