@@ -1,4 +1,10 @@
-import { clientEntry, css, on, type Handle } from "remix/component";
+import {
+  labelStyle,
+  fieldStyle,
+  textareaStyle,
+  hintStyle,
+} from "./note-field.styles.ts";
+import { clientEntry, on, type Handle } from "remix/component";
 
 export const NoteField = clientEntry(
   "/app/actions/new-card/public/note-field.tsx#NoteField",
@@ -37,21 +43,3 @@ export const NoteField = clientEntry(
     );
   },
 );
-
-const labelStyle = css({ fontWeight: 500, padding: 0 });
-const fieldStyle = css({ display: "grid", gap: "var(--space-2)" });
-const textareaStyle = css({
-  inlineSize: "100%",
-  minInlineSize: 0,
-  minBlockSize: "10rem",
-  padding: "var(--space-3)",
-  border: "1px solid var(--color-border)",
-  borderRadius: "var(--radius-md)",
-  font: "inherit",
-  color: "var(--color-text)",
-  backgroundColor: "var(--color-surface)",
-  resize: "vertical",
-  "&::placeholder": { color: "var(--color-text-muted)" },
-});
-
-const hintStyle = css({ margin: 0, color: "var(--color-text-muted)" });

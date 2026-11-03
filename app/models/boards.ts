@@ -7,6 +7,16 @@ export interface BoardModels {
   getBoard(id: string): Promise<Board | null>;
   listCategories(boardId: string): Promise<Category[]>;
   listCards(boardId: string): Promise<Card[]>;
+  getCard(boardId: string, cardId: string): Promise<Card | null>;
+
+  updateCard(
+    boardId: string,
+    cardId: string,
+    changes: Pick<Card, "body" | "categoryId" | "isAnonymous">,
+  ): Promise<Card | null>;
+
+  deleteCard(boardId: string, cardId: string): Promise<boolean>;
+
   createCard(card: Card, submissionId: string): Promise<CreateCardResult>;
   listMembers(boardId: string): Promise<Member[]>;
   listViewerVotes(boardId: string): Promise<string[]>;
