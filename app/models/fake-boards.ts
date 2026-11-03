@@ -4,13 +4,16 @@ import {
   categories,
   members,
   viewerMemberId,
-  viewerVotedCardIds,
   type Card,
 } from "../data/fake-board.ts";
 import type { BoardModels } from "./boards.ts";
 
 // Shared between requests in this Worker instance, just like the demo cards.
-export const defaultStore = { cards, submissions: new Map<string, Card>() };
+export const defaultStore = {
+  cards,
+  submissions: new Map<string, Card>(),
+  votes: new Map<string, Set<string>>(),
+};
 export const MAX_CARDS = 5;
 export const WINDOW_MS = 60_000;
 
@@ -18,6 +21,15 @@ export function createFakeBoardModels(
   store = defaultStore,
   now: () => number = Date.now,
 ): BoardModels {
+  function withVoteCount(card: Card): Card {
+    let key = JSON.stringify([card.boardId, card.id]);
+
+    return {
+      ...card,
+      voteCount: store.votes.get(key)?.size ?? 0,
+    };
+  }
+
   return {
     getBoard: async (id) => (board.id === id ? board : null),
     listCategories: async (boardId: string) =>
@@ -25,7 +37,7 @@ export function createFakeBoardModels(
         .filter((cat) => cat.boardId === boardId)
         .sort((a, b) => a.position - b.position),
     listCards: async (boardId: string) =>
-      store.cards.filter((c) => c.boardId === boardId),
+      store.cards.filter((c) => c.boardId === boardId).map(withVoteCount),
 
     createCard: async (card: Card, submissionId: string) => {
       let key = JSON.stringify([card.boardId, card.memberId, submissionId]);
@@ -59,15 +71,21 @@ export function createFakeBoardModels(
     },
 
     getCard: async (boardId, cardId) => {
-      return (
-        store.cards.find(
-          (card) => card.boardId === boardId && card.id === cardId,
-        ) ?? null
+      let card = store.cards.find(
+        (card) => card.boardId === boardId && card.id === cardId,
       );
+
+      if (!card) {
+        return null;
+      }
+
+      return withVoteCount(card) ?? null;
     },
 
     updateCard: async (boardId, cardId, changes) => {
-      let card = store.cards.find((saved) => saved.boardId === boardId && saved.id === cardId);
+      let card = store.cards.find(
+        (saved) => saved.boardId === boardId && saved.id === cardId,
+      );
       if (!card) return null;
       // Only editable fields may change, even if a caller supplies extra properties.
       card.body = changes.body;
@@ -89,9 +107,48 @@ export function createFakeBoardModels(
     listMembers: async (boardId: string) =>
       members.filter((m) => m.boardId === boardId),
 
-    listViewerVotes: async (boardId: string) => [...viewerVotedCardIds],
+    listViewerVotes: async (boardId: string) =>
+      store.cards
+        .filter((card) => {
+          if (card.boardId !== boardId) {
+            return false;
+          }
+          let key = JSON.stringify([boardId, card.id]);
+          return store.votes.get(key)?.has(viewerMemberId) ?? false;
+        })
+        .map((card) => card.id),
 
     // Later a device-cookie middleware identifies the member.
     getViewerMemberId: async (boardId: string) => viewerMemberId,
+
+    setCardVote: async (boardId, cardId, memberId, voted) => {
+      let card = store.cards.find(
+        (c) => c.boardId === boardId && c.id === cardId,
+      );
+
+      if (!card) {
+        return null;
+      }
+
+      let key = JSON.stringify([boardId, cardId]);
+
+      let voters = store.votes.get(key);
+
+      if (!voters) {
+        voters = new Set<string>();
+        store.votes.set(key, voters);
+      }
+
+      if (voted) {
+        voters.add(memberId);
+      } else {
+        voters.delete(memberId);
+      }
+
+      return {
+        voted: voters.has(memberId),
+        count: voters.size,
+      };
+    },
   };
 }

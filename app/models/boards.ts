@@ -3,6 +3,11 @@ import type { Board, Category, Card, Member } from "../data/fake-board.ts";
 export type CreateCardResult =
   { ok: true; card: Card } | { ok: false; retryAfter: number };
 
+export interface VoteResult {
+  voted: boolean;
+  count: number;
+}
+
 export interface BoardModels {
   getBoard(id: string): Promise<Board | null>;
   listCategories(boardId: string): Promise<Category[]>;
@@ -21,4 +26,11 @@ export interface BoardModels {
   listMembers(boardId: string): Promise<Member[]>;
   listViewerVotes(boardId: string): Promise<string[]>;
   getViewerMemberId(boardId: string): Promise<string | null>;
+
+  setCardVote(
+    boardId: string,
+    cardId: string,
+    memberId: string,
+    voted: boolean,
+  ): Promise<VoteResult | null>;
 }
