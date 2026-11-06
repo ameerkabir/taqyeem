@@ -4,6 +4,7 @@ import { createRouter } from "remix/router";
 import { render } from "remix/middleware/render";
 import { board, type Board, type Card } from "../../data/fake-board.ts";
 import { createFakeBoardModels } from "../../models/fake-boards.ts";
+import { createFakeBoardStore } from "../../models/fake-board-store.ts";
 import {
   boardModelsContext,
   type loadBoardModels,
@@ -45,7 +46,7 @@ async function page(
     },
   ];
   let models = {
-    ...createFakeBoardModels({ cards, submissions: new Map(), votes: new Map<string, Set<string>>() }),
+    ...createFakeBoardModels(createFakeBoardStore({ cards, submissions: new Map(), votes: new Map<string, Set<string>>() })),
     getBoard: async () => ({ ...board, votingOpen: false, ...overrides }),
     getViewerMemberId: async () => viewerMemberId,
   };

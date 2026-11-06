@@ -2,6 +2,7 @@ import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import type { Card } from "../data/fake-board.ts";
 import { createFakeBoardModels } from "./fake-boards.ts";
+import { createFakeBoardStore } from "./fake-board-store.ts";
 
 function card(time: number): Card {
   return {
@@ -18,7 +19,7 @@ function card(time: number): Card {
 
 describe("in-memory card submissions", () => {
   it("shares writes and duplicate detection across model instances", async () => {
-    let store = { cards: [] as Card[], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() };
+    let store = createFakeBoardStore({ cards: [] as Card[], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() });
     let first = createFakeBoardModels(store);
     let second = createFakeBoardModels(store);
     let submissionId = crypto.randomUUID();
@@ -35,7 +36,7 @@ describe("in-memory card submissions", () => {
   });
 
   it("scopes submission IDs to the member and board", async () => {
-    let store = { cards: [] as Card[], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() };
+    let store = createFakeBoardStore({ cards: [] as Card[], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() });
     let models = createFakeBoardModels(store);
     let submissionId = crypto.randomUUID();
     let original = card(Date.now());
@@ -55,7 +56,7 @@ describe("in-memory card submissions", () => {
 describe("in-memory card rate limit", () => {
   it("shares allowance across model instances, without charging retries", async () => {
     let time = Date.now();
-    let store = { cards: [] as Card[], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() };
+    let store = createFakeBoardStore({ cards: [] as Card[], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() });
     let first = createFakeBoardModels(store, () => time);
     let second = createFakeBoardModels(store, () => time);
     let original = card(time);
@@ -73,10 +74,10 @@ describe("in-memory card rate limit", () => {
 
   it("rounds the retry delay up and releases allowance at the exact boundary", async () => {
     let time = Date.now();
-    let store = {
+    let store = createFakeBoardStore({
       cards: Array.from({ length: 5 }, () => card(time - 58_500)),
       submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>(),
-    };
+    });
     let models = createFakeBoardModels(store, () => time);
     let submissionId = crypto.randomUUID();
     let blocked = await models.createCard(card(time), submissionId);
@@ -92,7 +93,7 @@ describe("in-memory card editing and deletion", () => {
   it("finds later cards by both board and card ID", async () => {
     let first = card(Date.now());
     let second = card(Date.now());
-    let models = createFakeBoardModels({ cards: [first, second], submissions: new Map(), votes: new Map<string, Set<string>>() });
+    let models = createFakeBoardModels(createFakeBoardStore({ cards: [first, second], submissions: new Map(), votes: new Map<string, Set<string>>() }));
     assert.equal((await models.getCard("demo", second.id))?.id, second.id);
     assert.equal(await models.getCard("another-board", second.id), null);
   });
@@ -100,7 +101,7 @@ describe("in-memory card editing and deletion", () => {
   it("updates only editable fields and makes changes visible to other model instances", async () => {
     let original = { ...card(Date.now()), voteCount: 3 };
     let before = { ...original };
-    let store = { cards: [original], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() };
+    let store = createFakeBoardStore({ cards: [original], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() });
     let models = createFakeBoardModels(store);
     let changes = { body: "ملاحظة معدلة", categoryId: "bad", isAnonymous: true, id: "forged", memberId: "m2", voteCount: 0 };
     let updated = await models.updateCard("demo", original.id, changes);
@@ -120,7 +121,7 @@ describe("in-memory card editing and deletion", () => {
   it("deletes only the matching card and never removes the last card on a miss", async () => {
     let first = card(Date.now());
     let second = card(Date.now());
-    let store = { cards: [first, second], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() };
+    let store = createFakeBoardStore({ cards: [first, second], submissions: new Map<string, Card>(), votes: new Map<string, Set<string>>() });
     let models = createFakeBoardModels(store);
     assert.equal(await models.deleteCard("wrong-board", first.id), false);
     assert.equal(await models.deleteCard("demo", "missing"), false);
@@ -136,11 +137,11 @@ describe("in-memory card voting", () => {
     let first = card(Date.now());
     let second = card(Date.now());
     let otherBoard = { ...first, boardId: "another-board" };
-    let store = {
+    let store = createFakeBoardStore({
       cards: [first, second, otherBoard],
       submissions: new Map<string, Card>(),
       votes: new Map<string, Set<string>>(),
-    };
+    });
     return { first, second, store, models: createFakeBoardModels(store) };
   }
 

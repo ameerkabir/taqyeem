@@ -10,6 +10,7 @@ import { routes } from "../../routes.ts";
 import { board, type Card } from "../../data/fake-board.ts";
 import type { BoardModels } from "../../models/boards.ts";
 import { createFakeBoardModels } from "../../models/fake-boards.ts";
+import { createFakeBoardStore } from "../../models/fake-board-store.ts";
 import {
   boardModelsContext,
   type loadBoardModels,
@@ -22,7 +23,7 @@ function setup(
 ) {
   let saved: Card[] = [];
   let models: BoardModels = {
-    ...createFakeBoardModels({ cards: saved, submissions: new Map(), votes: new Map<string, Set<string>>() }, now),
+    ...createFakeBoardModels(createFakeBoardStore({ cards: saved, submissions: new Map(), votes: new Map<string, Set<string>>() }), now),
     ...overrides,
   };
   let provideModels: ReturnType<typeof loadBoardModels> = (context, next) => {

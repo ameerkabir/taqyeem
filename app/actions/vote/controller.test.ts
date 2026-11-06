@@ -5,6 +5,7 @@ import { render } from "remix/middleware/render";
 import { board, type Card } from "../../data/fake-board.ts";
 import type { BoardModels } from "../../models/boards.ts";
 import { createFakeBoardModels } from "../../models/fake-boards.ts";
+import { createFakeBoardStore } from "../../models/fake-board-store.ts";
 import { boardModelsContext, type loadBoardModels } from "../../middleware/models.ts";
 import { routes } from "../../routes.ts";
 import controller from "./controller.ts";
@@ -14,7 +15,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
     id: "card", boardId: "demo", memberId: "m2", categoryId: "ideas",
     body: "ملاحظة", createdAt: new Date().toISOString(), isAnonymous: true, voteCount: 0,
   };
-  let base = createFakeBoardModels({ cards: [card], submissions: new Map(), votes: new Map() });
+  let base = createFakeBoardModels(createFakeBoardStore({ cards: [card], submissions: new Map(), votes: new Map() }));
   let writes = 0;
   let models: BoardModels = {
     ...base,

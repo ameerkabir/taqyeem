@@ -6,12 +6,13 @@ import { route } from "remix/routes";
 import { board } from "../data/fake-board.ts";
 import type { BoardModels } from "../models/boards.ts";
 import { createFakeBoardModels } from "../models/fake-boards.ts";
+import { createFakeBoardStore } from "../models/fake-board-store.ts";
 import { boardModelsContext, type loadBoardModels } from "./models.ts";
 import { loadBoard } from "./board.ts";
 import { requireBoardMember } from "./board-member.ts";
 
 function setup(overrides: Partial<BoardModels> = {}, boardId = "demo") {
-  let models = { ...createFakeBoardModels(), ...overrides };
+  let models = { ...createFakeBoardModels(createFakeBoardStore()), ...overrides };
   let provideModels: ReturnType<typeof loadBoardModels> = (context, next) => {
     context.set(boardModelsContext, models, { property: "models" });
     return next();

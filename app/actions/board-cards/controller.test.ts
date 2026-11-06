@@ -4,6 +4,7 @@ import { createRouter } from "remix/router";
 import { render } from "remix/middleware/render";
 import { board, type Board, type Card } from "../../data/fake-board.ts";
 import { createFakeBoardModels } from "../../models/fake-boards.ts";
+import { createFakeBoardStore } from "../../models/fake-board-store.ts";
 import { boardModelsContext, type loadBoardModels } from "../../middleware/models.ts";
 import { routes } from "../../routes.ts";
 import controller from "./controller.tsx";
@@ -15,7 +16,7 @@ function setup(overrides: Partial<Board> = {}, missingBoard = false) {
     { id: "bad-card", boardId: "demo", memberId: "m2", categoryId: "bad", body: "نص <em>التصنيف الآخر</em>", isAnonymous: false, voteCount: 0, createdAt: "2026-10-21T10:00:00Z" },
   ];
   let models = {
-    ...createFakeBoardModels({ cards, submissions: new Map(), votes: new Map<string, Set<string>>() }),
+    ...createFakeBoardModels(createFakeBoardStore({ cards, submissions: new Map(), votes: new Map<string, Set<string>>() })),
     getBoard: async () => missingBoard ? null : ({ ...board, status: "collecting" as const, votingOpen: false, ...overrides }),
   };
   let provideModels: ReturnType<typeof loadBoardModels> = (context, next) => {
