@@ -1,3 +1,4 @@
+import { testDatabase } from "../../test/dependencies.ts";
 import { loadAppDependencies } from "../../middleware/dependencies.ts";
 import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
@@ -15,7 +16,7 @@ import {
 import { routes } from "../../routes.ts";
 import controller from "./controller.tsx";
 
-function setup(overrides: Partial<BoardModels> = {}) {
+async function setup(overrides: Partial<BoardModels> = {}) {
   let saved: Card[] = [
     {
       id: "own-card",
@@ -43,7 +44,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [loadAppDependencies({ config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.deleteCard, controller);
   return {
     saved,
@@ -89,21 +90,21 @@ describe("delete card access", () => {
       },
     ]) {
       it(`${method} rejects ${testCase.name} without deleting`, async () => {
-        let app = setup(testCase.overrides);
+        let app = await setup(testCase.overrides);
         assert.equal((await app.request(method)).status, testCase.status);
         assert.equal(app.saved.length, 1);
         assert.equal(app.deletes, 0);
       });
     }
     it(`${method} rejects a missing card`, async () => {
-      let app = setup();
+      let app = await setup();
       assert.equal((await app.request(method, "missing")).status, 404);
       assert.equal(app.deletes, 0);
     });
   }
 
   it("allows the author to delete an anonymous card and returns a redirect", async () => {
-    let app = setup();
+    let app = await setup();
     let response = await app.request("POST");
     assert.equal(response.status, 303);
     assert.equal(response.headers.get("Location"), "/boards/demo?section=ideas");
@@ -112,7 +113,7 @@ describe("delete card access", () => {
   });
 
   it("does not delete when the confirmation page is opened", async () => {
-    let app = setup();
+    let app = await setup();
     assert.equal((await app.request("GET")).status, 200);
     assert.equal(app.deletes, 0);
     let response = await app.request("GET", "own-card", false);
@@ -127,7 +128,7 @@ describe("delete card access", () => {
     for (let votingOpen of [false, true]) {
       for (let method of ["GET", "POST"] as const) {
         it(`${method} checks ${status} with voting ${votingOpen ? "open" : "closed"}`, async () => {
-          let app = setup({
+          let app = await setup({
             getBoard: async () => ({ ...board, status, votingOpen }),
           });
           let response = await app.request(method);
@@ -154,7 +155,7 @@ describe("delete card access", () => {
 
   it("rechecks voting on POST if voting opened after the confirmation request", async () => {
     let votingOpen = false;
-    let app = setup({ getBoard: async () => ({ ...board, votingOpen }) });
+    let app = await setup({ getBoard: async () => ({ ...board, votingOpen }) });
     assert.equal((await app.request("GET")).status, 200);
     votingOpen = true;
     let response = await app.request("POST");

@@ -1,0 +1,7 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "taqyeem-d1-smoke",
+  "main": "./d1-smoke-worker.ts",
+  "compatibility_date": "2026-10-24",
+  "d1_databases": [{ "binding": "DB", "database_name": "taqyeem-d1-smoke" }]
+}
