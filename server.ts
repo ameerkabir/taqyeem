@@ -1,29 +1,26 @@
-import { createAppRouter } from "./app/router.ts";
+import { createAppRouter, type AppRouterOptions } from "./app/router.ts";
 
-interface Env {
-  SESSION_SECRET: string;
+// Runtime values are narrowed here before entering the application.
+export function createRequestOptions(
+  env: Cloudflare.Env,
+  ctx: Pick<ExecutionContext, "waitUntil">,
+): AppRouterOptions {
+  if (!env.SESSION_SECRET) throw new Error("SESSION_SECRET is required");
+  return {
+    sessionSecret: env.SESSION_SECRET,
+    config: { appEnv: env.APP_ENV },
+    waitUntil: ctx.waitUntil.bind(ctx),
+  };
 }
 
-let cached:
-  | { secret: string; router: ReturnType<typeof createAppRouter> }
-  | undefined;
-
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
-      if (!env.SESSION_SECRET) throw new Error("SESSION_SECRET is required");
-
-      if (!cached || cached.secret !== env.SESSION_SECRET) {
-        cached = {
-          secret: env.SESSION_SECRET,
-          router: createAppRouter(env.SESSION_SECRET),
-        };
-      }
-
-      return await cached.router.fetch(request);
+      let router = createAppRouter(createRequestOptions(env, ctx));
+      return await router.fetch(request);
     } catch (error) {
       console.error(error);
       return new Response("Internal Server Error", { status: 500 });
     }
   },
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Cloudflare.Env>;

@@ -1,3 +1,4 @@
+import { loadAppDependencies } from "../../middleware/dependencies.ts";
 import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
@@ -32,7 +33,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
       : models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadAppDependencies({ config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.vote, controller);
   return {
     models,

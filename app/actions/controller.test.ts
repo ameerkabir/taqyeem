@@ -6,7 +6,7 @@ import { routes } from '../routes.ts'
 
 describe('root controller', () => {
   it('GET / returns the home page', async () => {
-    let router = createAppRouter('test-only-session-secret')
+    let router = createAppRouter({ sessionSecret: 'test-only-session-secret', config: { appEnv: 'test' }, waitUntil() {} })
     let response = await router.fetch(new URL(routes.home.href(), 'http://localhost'))
 
     assert.equal(response.status, 200)
