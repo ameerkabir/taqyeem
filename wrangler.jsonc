@@ -3,6 +3,7 @@
   "name": "taqyeem",
   "compatibility_date": "2026-10-24",
   "main": "./server.ts",
+  "secrets": { "required": ["SESSION_SECRET"] },
   "vars": {
     "APP_ENV": "productation",
   },

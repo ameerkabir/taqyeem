@@ -45,8 +45,8 @@ Run `npm run types:worker` after binding/config changes. The generated
 Runtime declarations continue to come from the installed
 `@cloudflare/workers-types`; generation uses `--include-runtime=false` to avoid a
 second runtime declaration set, and `--strict-vars=false` permits environment
-values to differ. Wrangler discovers SESSION_SECRET by name from ignored local
-`.dev.vars`; generated types contain no secret values. Deployment must supply the
+values to differ. Wrangler declares SESSION_SECRET through `secrets.required` in config, so
+type generation works without local `.dev.vars`; generated types contain no secret values. Deployment must supply the
 secret separately. The Worker still rejects an empty secret.
 
 ## Database follow-up (#2)
