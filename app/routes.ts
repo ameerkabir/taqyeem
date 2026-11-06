@@ -1,9 +1,15 @@
-import { form, route } from "remix/routes";
+import { form, get, post, route } from "remix/routes";
 
 export const routes = route({
   home: "/",
-  board: "/board",
-  newCard: form("/board/new"),
-  deleteCard: form("/board/cards/:cardId/delete"),
-  editCard: form("/board/cards/:cardId/edit"),
+  newBoard: form("/boards/new"),
+  demoBoard: get("/board"),
+  board: get("/boards/:boardId"),
+  newCard: form("/boards/:boardId/new"),
+  deleteCard: form("/boards/:boardId/cards/:cardId/delete"),
+  editCard: form("/boards/:boardId/cards/:cardId/edit"),
+  boardCards: get("/boards/:boardId/cards"),
+  vote: post("/boards/:boardId/cards/:cardId/vote"),
+  boardVoting: post("/boards/:boardId/voting"),
+  boardStatus: post("/boards/:boardId/status"),
 });

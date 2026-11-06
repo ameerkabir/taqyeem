@@ -31,7 +31,7 @@ export default createController(routes.deleteCard, {
       let deleted = await context.models.deleteCard(board.id, card.id);
       if (!deleted) return cardAccessError(context, "الملاحظة غير موجودة", 404);
       return redirect(
-        `${routes.board.href()}?section=${encodeURIComponent(card.categoryId)}`,
+        `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(card.categoryId)}`,
         303,
       );
     },

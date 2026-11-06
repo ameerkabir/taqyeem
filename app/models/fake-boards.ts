@@ -1,31 +1,98 @@
 import {
-  board,
-  cards,
-  categories,
-  members,
   viewerMemberId,
-  viewerVotedCardIds,
+  type Board,
+  type Member,
+  type Category,
   type Card,
 } from "../data/fake-board.ts";
 import type { BoardModels } from "./boards.ts";
+import { createFakeBoardStore, type FakeBoardStore } from "./fake-board-store.ts";
+import { DEFAULT_CATEGORY_LABELS } from "../data/board-defaults.ts";
 
 // Shared between requests in this Worker instance, just like the demo cards.
-export const defaultStore = { cards, submissions: new Map<string, Card>() };
+export const defaultStore = createFakeBoardStore();
 export const MAX_CARDS = 5;
 export const WINDOW_MS = 60_000;
 
 export function createFakeBoardModels(
-  store = defaultStore,
+  store: FakeBoardStore = defaultStore,
   now: () => number = Date.now,
+  resolveViewerMemberId: (
+    boardId: string,
+  ) => Promise<string | null> = async () => viewerMemberId,
 ): BoardModels {
+  function withVoteCount(card: Card): Card {
+    let key = JSON.stringify([card.boardId, card.id]);
+
+    return {
+      ...card,
+      voteCount: store.votes.get(key)?.size ?? 0,
+    };
+  }
+
   return {
-    getBoard: async (id) => (board.id === id ? board : null),
+    createBoard: async ({ title, organiserDisplayName }) => {
+      let boardId = crypto.randomUUID();
+      let organiserId = crypto.randomUUID();
+
+      let board: Board = {
+        id: boardId,
+        title,
+        organiserMemberId: organiserId,
+        status: "collecting",
+        votingOpen: false,
+        currentSectionId: null,
+      };
+
+      let organiser: Member = {
+        id: organiserId,
+        boardId,
+        displayName: organiserDisplayName,
+      };
+
+      let categories: Category[] = DEFAULT_CATEGORY_LABELS.map(
+        (label, position) => ({
+          id: crypto.randomUUID(),
+          boardId,
+          label,
+          position,
+        }),
+      );
+
+      store.boards.set(board.id, board);
+      store.members.push(organiser);
+      store.categories.push(...categories);
+
+      return { board, organiser };
+    },
+
+    getBoard: async (id) => store.boards.get(id) ?? null,
+    setVotingOpen: async (boardId, votingOpen) => {
+      let board = store.boards.get(boardId);
+      if (!board) return null;
+
+      board.votingOpen = votingOpen;
+      return board;
+    },
+
+    setBoardStatus: async (boardId, status) => {
+      let board = store.boards.get(boardId);
+      if (!board) return null;
+
+      board.status = status;
+      if (status === "closed") {
+        board.votingOpen = false;
+      }
+
+      return board;
+    },
+
     listCategories: async (boardId: string) =>
-      categories
+      store.categories
         .filter((cat) => cat.boardId === boardId)
         .sort((a, b) => a.position - b.position),
     listCards: async (boardId: string) =>
-      store.cards.filter((c) => c.boardId === boardId),
+      store.cards.filter((c) => c.boardId === boardId).map(withVoteCount),
 
     createCard: async (card: Card, submissionId: string) => {
       let key = JSON.stringify([card.boardId, card.memberId, submissionId]);
@@ -59,15 +126,21 @@ export function createFakeBoardModels(
     },
 
     getCard: async (boardId, cardId) => {
-      return (
-        store.cards.find(
-          (card) => card.boardId === boardId && card.id === cardId,
-        ) ?? null
+      let card = store.cards.find(
+        (card) => card.boardId === boardId && card.id === cardId,
       );
+
+      if (!card) {
+        return null;
+      }
+
+      return withVoteCount(card) ?? null;
     },
 
     updateCard: async (boardId, cardId, changes) => {
-      let card = store.cards.find((saved) => saved.boardId === boardId && saved.id === cardId);
+      let card = store.cards.find(
+        (saved) => saved.boardId === boardId && saved.id === cardId,
+      );
       if (!card) return null;
       // Only editable fields may change, even if a caller supplies extra properties.
       card.body = changes.body;
@@ -87,11 +160,53 @@ export function createFakeBoardModels(
       return true;
     },
     listMembers: async (boardId: string) =>
-      members.filter((m) => m.boardId === boardId),
+      store.members.filter((m) => m.boardId === boardId),
 
-    listViewerVotes: async (boardId: string) => [...viewerVotedCardIds],
+    listViewerVotes: async (boardId: string) => {
+      let memberId = await resolveViewerMemberId(boardId);
+      if (!memberId) return [];
 
-    // Later a device-cookie middleware identifies the member.
-    getViewerMemberId: async (boardId: string) => viewerMemberId,
+      return store.cards
+        .filter((card) => {
+          if (card.boardId !== boardId) {
+            return false;
+          }
+          let key = JSON.stringify([boardId, card.id]);
+          return store.votes.get(key)?.has(memberId) ?? false;
+        })
+        .map((card) => card.id);
+    },
+
+    getViewerMemberId: resolveViewerMemberId,
+
+    setCardVote: async (boardId, cardId, memberId, voted) => {
+      let card = store.cards.find(
+        (c) => c.boardId === boardId && c.id === cardId,
+      );
+
+      if (!card) {
+        return null;
+      }
+
+      let key = JSON.stringify([boardId, cardId]);
+
+      let voters = store.votes.get(key);
+
+      if (!voters) {
+        voters = new Set<string>();
+        store.votes.set(key, voters);
+      }
+
+      if (voted) {
+        voters.add(memberId);
+      } else {
+        voters.delete(memberId);
+      }
+
+      return {
+        voted: voters.has(memberId),
+        count: voters.size,
+      };
+    },
   };
 }

@@ -69,7 +69,7 @@ export default createController(routes.newCard, {
         );
       }
       return redirect(
-        `${routes.board.href()}?section=${encodeURIComponent(result.card.categoryId)}`,
+        `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(result.card.categoryId)}`,
         303,
       );
     },

@@ -6,32 +6,23 @@ import {
   navStyle,
   tabStyle,
   tabCounter,
-  listStyle,
-  cardStyle,
-  cardBodyStyle,
-  cardAuthorStyle,
-  cardHeaderStyle,
-  menuStyle,
-  menuTriggerStyle,
-  menuIconStyle,
-  menuListStyle,
-  menuItemStyle,
-  menuHintStyle,
-  cardFooterStyle,
-  votePillStyle,
   addNoteStyle,
+  closedNoteStyle,
+  votingBannerStyle,
+  votingDotStyle,
+  votingTitleStyle,
+  votingHintStyle,
 } from "./styles.ts";
-import type { Handle } from "remix/component";
+import { Frame, type Handle } from "remix/component";
 import { Document } from "../document.tsx";
 import type {
   Board,
   BoardStatus,
   Card,
   Category,
-  Member,
 } from "../../data/fake-board.ts";
 import { routes } from "../../routes.ts";
-import { compareCards } from "../../models/cards.ts";
+import { OrganiserControls } from "./organiser-controles.tsx";
 
 const statusLabels: Record<BoardStatus, string> = {
   collecting: "جمع الملاحظات",
@@ -45,24 +36,13 @@ export function BoardPage(
     cards: Card[];
     categories: Category[];
     board: Board;
-    members: Member[];
-    viewerVotes: string[];
-    viewerMemberId: string | null;
+    isOrganiser: boolean;
   }>,
 ) {
   return () => {
     let sectionId = handle.props.activeId;
     let categories = handle.props.categories;
     let cards = handle.props.cards;
-    let activeCards = cards
-      .filter((c) => c.categoryId === sectionId)
-      .sort(compareCards(handle.props.board.status));
-
-    let memberNames = new Map(
-      handle.props.members.map((m) => [m.id, m.displayName]),
-    );
-
-    let voted = new Set(handle.props.viewerVotes);
 
     return (
       <Document>
@@ -73,6 +53,26 @@ export function BoardPage(
               {statusLabels[handle.props.board.status]}
             </span>
           </header>
+
+          {handle.props.isOrganiser && (
+            <OrganiserControls
+              boardId={handle.props.board.id}
+              status={handle.props.board.status}
+              votingOpen={handle.props.board.votingOpen}
+              sectionId={sectionId}
+            />
+          )}
+
+          {handle.props.board.status === "meeting" &&
+            handle.props.board.votingOpen && (
+              <div aria-label="حالة التصويت" mix={votingBannerStyle}>
+                <span aria-hidden="true" mix={votingDotStyle} />
+                <div>
+                  <p mix={votingTitleStyle}>التصويت مفتوح</p>
+                  <p mix={votingHintStyle}>صوّت للملاحظات التي تودّ مناقشتها</p>
+                </div>
+              </div>
+            )}
           <nav aria-label="الأقسام" mix={navStyle}>
             {categories.map((cat) => {
               let count = cards.filter(
@@ -83,7 +83,7 @@ export function BoardPage(
                 <a
                   key={cat.id}
                   mix={[tabStyle]}
-                  href={`${routes.board.href()}?section=${cat.id}`}
+                  href={`${routes.board.href({ boardId: handle.props.board.id })}?section=${cat.id}`}
                   aria-current={cat.id === sectionId ? "page" : undefined}
                 >
                   {cat.label} <span mix={tabCounter}>{count}</span>
@@ -91,97 +91,33 @@ export function BoardPage(
               );
             })}
           </nav>
+          <Frame
+            name="board-cards"
+            src={`${routes.boardCards.href({ boardId: handle.props.board.id })}?section=${encodeURIComponent(sectionId)}`}
+          />
 
-          <section>
-            {activeCards.length === 0 ? (
-              <p>لا توجد ملاحظات بعد</p>
-            ) : (
-              <ul mix={listStyle}>
-                {activeCards.map((card) => (
-                  <li key={card.id} mix={cardStyle}>
-                    <div mix={cardHeaderStyle}>
-                      <p dir="auto" mix={cardBodyStyle}>
-                        {card.body}
-                      </p>
-                      {card.memberId === handle.props.viewerMemberId ? (
-                        <details mix={menuStyle}>
-                          <summary
-                            aria-label="خيارات الملاحظة"
-                            mix={menuTriggerStyle}
-                          >
-                            <svg
-                              viewBox="0 0 24 24"
-                              aria-hidden="true"
-                              mix={menuIconStyle}
-                            >
-                              <circle cx="5" cy="12" r="2" />
-                              <circle cx="12" cy="12" r="2" />
-                              <circle cx="19" cy="12" r="2" />
-                            </svg>
-                          </summary>
-                          <ul mix={menuListStyle}>
-                            {handle.props.board.status !== "closed" &&
-                            !handle.props.board.votingOpen ? (
-                              <>
-                                <li>
-                                  <a
-                                    href={routes.editCard.index.href({
-                                      cardId: card.id,
-                                    })}
-                                    mix={menuItemStyle}
-                                  >
-                                    تعديل
-                                  </a>
-                                </li>
-                                <li>
-                                  <a
-                                    href={routes.deleteCard.index.href({
-                                      cardId: card.id,
-                                    })}
-                                    mix={menuItemStyle}
-                                  >
-                                    حذف
-                                  </a>
-                                </li>
-                              </>
-                            ) : (
-                              <li>
-                                <p mix={menuHintStyle}>
-                                  {handle.props.board.status === "closed"
-                                    ? "اللوحة مغلقة"
-                                    : "التعديل والحذف غير متاحين أثناء التصويت"}
-                                </p>
-                              </li>
-                            )}
-                          </ul>
-                        </details>
-                      ) : null}
-                    </div>
-                    <div mix={cardFooterStyle}>
-                      <p mix={cardAuthorStyle}>
-                        {card.isAnonymous
-                          ? "بدون اسم"
-                          : memberNames.get(card.memberId)}
-                      </p>
-                      <button
-                        type="button"
-                        mix={votePillStyle}
-                        aria-pressed={voted.has(card.id) ? "true" : "false"}
-                      >
-                        <span aria-hidden="true">👍</span> {card.voteCount}
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <a
-            href={`${routes.newCard.index.href()}?category=${sectionId}`}
-            mix={addNoteStyle}
-          >
-            + أضف ملاحظة هنا
-          </a>
+          {handle.props.board.status === "closed" ? (
+            <>
+              <button
+                type="button"
+                disabled
+                aria-describedby="closed-board-note"
+                mix={addNoteStyle}
+              >
+                + أضف ملاحظة هنا
+              </button>
+              <p id="closed-board-note" mix={closedNoteStyle}>
+                اللوحة مغلقة، لا يمكن إضافة ملاحظات
+              </p>
+            </>
+          ) : (
+            <a
+              href={`${routes.newCard.index.href({ boardId: handle.props.board.id })}?category=${sectionId}`}
+              mix={addNoteStyle}
+            >
+              + أضف ملاحظة هنا
+            </a>
+          )}
         </main>
       </Document>
     );

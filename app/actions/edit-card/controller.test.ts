@@ -1,3 +1,4 @@
+import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createRouter } from "remix/router";
@@ -5,6 +6,7 @@ import { render } from "remix/middleware/render";
 import { board, type Card } from "../../data/fake-board.ts";
 import type { BoardModels } from "../../models/boards.ts";
 import { createFakeBoardModels } from "../../models/fake-boards.ts";
+import { createFakeBoardStore } from "../../models/fake-board-store.ts";
 import {
   boardModelsContext,
   type loadBoardModels,
@@ -31,9 +33,10 @@ function setup(overrides: Partial<BoardModels> = {}) {
   };
   let saved = [{ ...original }];
   let updates = 0;
-  let base = createFakeBoardModels({ cards: saved, submissions: new Map() });
+  let base = createFakeBoardModels(createFakeBoardStore({ cards: saved, submissions: new Map(), votes: new Map<string, Set<string>>() }));
   let models = {
     ...base,
+    getBoard: async () => ({ ...board, votingOpen: false }),
     updateCard: async (...args: Parameters<BoardModels["updateCard"]>) => {
       updates++;
       return base.updateCard(...args);
@@ -44,7 +47,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [render(), provideModels] });
+  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.editCard, controller);
   return {
     original,
@@ -59,7 +62,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
       cardId = "own-card",
     ) {
       return router.fetch(
-        new URL(routes.editCard.index.href({ cardId }), "http://localhost"),
+        new URL(routes.editCard.index.href({ boardId: "demo", cardId }), "http://localhost"),
         {
           method,
           headers: { Accept: enhanced ? "application/json" : "text/html" },
@@ -79,7 +82,7 @@ describe("edit card", () => {
     assert.ok(html.includes("ملاحظة &lt;b&gt;أصلية&lt;/b&gt;"));
     assert.match(html, /value="ideas"[^>]*checked/);
     assert.match(html, /name="isAnonymous"[^>]*checked/);
-    assert.ok(html.includes("/board?section=ideas"));
+    assert.ok(html.includes("/boards/demo?section=ideas"));
     assert.equal(app.updates, 0);
   });
   it("saves editable fields, preserves identity and votes, and redirects to the selected category", async () => {
@@ -90,7 +93,7 @@ describe("edit card", () => {
     data.set("voteCount", "0");
     let response = await app.request("POST", data);
     assert.equal(response.status, 303);
-    assert.equal(response.headers.get("Location"), "/board?section=bad");
+    assert.equal(response.headers.get("Location"), "/boards/demo?section=bad");
     let card = app.saved[0];
     assert.equal(card.body, "ملاحظة معدلة");
     assert.equal(card.categoryId, "bad");

@@ -10,7 +10,7 @@ export interface DeleteCardPageProps extends DeleteCardFormProps {
 export function DeleteCardPage(handle: Handle<DeleteCardPageProps>) {
   return () => {
     let { board, ...formProps } = handle.props;
-    let cancelHref = `${routes.board.href()}?section=${encodeURIComponent(formProps.card.categoryId)}`;
+    let cancelHref = `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(formProps.card.categoryId)}`;
     return (
       <CardPage
         title="حذف الملاحظة"

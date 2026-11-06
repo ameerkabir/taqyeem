@@ -33,8 +33,8 @@ export function loadBoard(
     if (!models)
       throw new Error("loadBoard requires loadBoardModels middleware");
 
-    // The app currently serves a single demo board; callers can supply another ID.
-    let board = await models.getBoard(options.boardId ?? "demo");
+    let boardId = options.boardId ?? context.params.boardId;
+    let board = boardId ? await models.getBoard(boardId) : null;
     if (!board) {
       return (options.onError ?? boardAccessError)(
         context,

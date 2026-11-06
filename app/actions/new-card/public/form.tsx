@@ -13,6 +13,7 @@ import { routes } from "../../../routes.ts";
 import { NoteField } from "./note-field.tsx";
 
 export interface NewCardFormProps {
+  boardId: string;
   categories: Category[];
   activeCategoryId?: string;
   submissionId: string;
@@ -27,11 +28,11 @@ export const NewCardForm = clientEntry(
     let error = handle.props.error;
 
     return () => {
-      let { categories, activeCategoryId, submissionId, values } = handle.props;
+      let { boardId, categories, activeCategoryId, submissionId, values } = handle.props;
       return (
         <form
           method="post"
-          action={routes.newCard.action.href()}
+          action={routes.newCard.action.href({ boardId })}
           aria-busy={pending}
           mix={[
             formStyle,

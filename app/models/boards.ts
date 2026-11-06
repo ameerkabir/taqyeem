@@ -1,10 +1,29 @@
-import type { Board, Category, Card, Member } from "../data/fake-board.ts";
+import type { Board, BoardStatus, Category, Card, Member } from "../data/fake-board.ts";
 
 export type CreateCardResult =
   { ok: true; card: Card } | { ok: false; retryAfter: number };
 
+export interface VoteResult {
+  voted: boolean;
+  count: number;
+}
+
+export interface CreateBoardInput {
+  title: string;
+  organiserDisplayName: string;
+}
+
+export interface CreateBoardResult {
+  board: Board;
+  organiser: Member;
+}
+
 export interface BoardModels {
+  createBoard(input: CreateBoardInput): Promise<CreateBoardResult>;
   getBoard(id: string): Promise<Board | null>;
+  setVotingOpen(boardId: string, votingOpen: boolean): Promise<Board | null>;
+  setBoardStatus(boardId: string, status: BoardStatus): Promise<Board | null>;
+
   listCategories(boardId: string): Promise<Category[]>;
   listCards(boardId: string): Promise<Card[]>;
   getCard(boardId: string, cardId: string): Promise<Card | null>;
@@ -21,4 +40,11 @@ export interface BoardModels {
   listMembers(boardId: string): Promise<Member[]>;
   listViewerVotes(boardId: string): Promise<string[]>;
   getViewerMemberId(boardId: string): Promise<string | null>;
+
+  setCardVote(
+    boardId: string,
+    cardId: string,
+    memberId: string,
+    voted: boolean,
+  ): Promise<VoteResult | null>;
 }

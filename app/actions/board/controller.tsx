@@ -13,10 +13,16 @@ export default createAction(routes.board, {
     let categories = await context.models.listCategories(board.id);
     let cards = await context.models.listCards(board.id);
     let activeId = resolveActiveSection(section, categories, board);
-    let viewerVotes = await context.models.listViewerVotes(board.id);
 
+    let viewerId = await context.models.getViewerMemberId(board.id);
     let members = await context.models.listMembers(board.id);
-    let viewerMemberId = await context.models.getViewerMemberId(board.id);
+
+    let isOrganiser = members.some(
+      (member) =>
+        member.boardId === board.id &&
+        member.id === viewerId &&
+        member.id === board.organiserMemberId,
+    );
 
     return context.render(
       <BoardPage
@@ -24,9 +30,7 @@ export default createAction(routes.board, {
         cards={cards}
         categories={categories}
         board={board}
-        members={members}
-        viewerVotes={viewerVotes}
-        viewerMemberId={viewerMemberId}
+        isOrganiser={isOrganiser}
       />,
     );
   },
