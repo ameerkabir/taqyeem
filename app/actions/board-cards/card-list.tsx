@@ -17,8 +17,10 @@ import {
 import { routes } from "../../routes.ts";
 import { VoteCounter } from "./public/vote-counter.tsx";
 import { compareCards } from "../../models/cards.ts";
+import type { I18n } from "../../middleware/locale.ts";
 
 interface CardListProps {
+  i18n: I18n;
   activeId: string;
   board: Board;
   cards: Card[];
@@ -29,8 +31,9 @@ interface CardListProps {
 
 export function Cardlist(handle: Handle<CardListProps>) {
   return () => {
-    let { activeId, board, cards, members, viewerVotes, viewerMemberId } =
+    let { i18n, activeId, board, cards, members, viewerVotes, viewerMemberId } =
       handle.props;
+    let { t } = i18n;
 
     let activeCards = cards
       .filter((card) => card.categoryId === activeId)
@@ -45,7 +48,7 @@ export function Cardlist(handle: Handle<CardListProps>) {
     return (
       <section>
         {activeCards.length === 0 ? (
-          <p>لا توجد ملاحظات بعد</p>
+          <p>{t("cards.empty")}</p>
         ) : (
           <ul mix={listStyle}>
             {activeCards.map((card) => (
@@ -57,7 +60,7 @@ export function Cardlist(handle: Handle<CardListProps>) {
                   {card.memberId === handle.props.viewerMemberId ? (
                     <details mix={menuStyle}>
                       <summary
-                        aria-label="خيارات الملاحظة"
+                        aria-label={t("cards.menu")}
                         mix={menuTriggerStyle}
                       >
                         <svg
@@ -82,7 +85,7 @@ export function Cardlist(handle: Handle<CardListProps>) {
                                 })}
                                 mix={menuItemStyle}
                               >
-                                تعديل
+                                {t("cards.edit")}
                               </a>
                             </li>
                             <li>
@@ -93,7 +96,7 @@ export function Cardlist(handle: Handle<CardListProps>) {
                                 })}
                                 mix={menuItemStyle}
                               >
-                                حذف
+                                {t("cards.delete")}
                               </a>
                             </li>
                           </>
@@ -101,8 +104,8 @@ export function Cardlist(handle: Handle<CardListProps>) {
                           <li>
                             <p mix={menuHintStyle}>
                               {handle.props.board.status === "closed"
-                                ? "اللوحة مغلقة"
-                                : "التعديل والحذف غير متاحين أثناء التصويت"}
+                                ? t("cards.boardClosed")
+                                : t("cards.lockedDuringVoting")}
                             </p>
                           </li>
                         )}
@@ -111,13 +114,14 @@ export function Cardlist(handle: Handle<CardListProps>) {
                   ) : null}
                 </div>
                 <div mix={cardFooterStyle}>
-                  <p mix={cardAuthorStyle}>
+                  <p dir="auto" mix={cardAuthorStyle}>
                     {card.isAnonymous
-                      ? "بدون اسم"
+                      ? t("cards.anonymous")
                       : memberNames.get(card.memberId)}
                   </p>
 
                   <VoteCounter
+                    locale={i18n.locale}
                     card={card}
                     voted={voted.has(card.id)}
                     disabled={board.status === "closed" || !board.votingOpen}

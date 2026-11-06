@@ -24,12 +24,12 @@ export default createAction(routes.boardStatus, {
       values.length !== 1 ||
       (status !== "collecting" && status !== "meeting" && status !== "closed")
     ) {
-      return cardAccessError(context, "مرحلة اللوحة غير صالحة", 400);
+      return cardAccessError(context, context.i18n.t("access.invalidStage"), 400);
     }
 
     let updated = await models.setBoardStatus(board.id, status);
     if (!updated) {
-      return cardAccessError(context, "اللوحة غير موجودة", 404);
+      return cardAccessError(context, context.i18n.t("access.boardNotFound"), 404);
     }
 
     let categories = await models.listCategories(board.id);

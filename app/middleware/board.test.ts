@@ -1,3 +1,4 @@
+import { loadLocale } from "./locale.ts";
 import { loadSession } from "../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
@@ -19,7 +20,7 @@ function setup(overrides: Partial<BoardModels> = {}, boardId = "demo") {
     return next();
   };
   let routes = route({ protected: "/protected" });
-  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), render(), loadSession("test-only-session-secret"), provideModels] });
   router.get("/public", () => new Response("Public"));
   router.map(
     routes,

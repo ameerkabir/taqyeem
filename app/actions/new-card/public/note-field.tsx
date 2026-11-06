@@ -5,16 +5,21 @@ import {
   hintStyle,
 } from "./note-field.styles.ts";
 import { clientEntry, on, type Handle } from "remix/component";
+import type { Locale } from "../../../i18n/locales.ts";
+import { createTranslator } from "../../../i18n/translator.ts";
+import { MAX_CARD_TEXT_LENGTH } from "../../../data/limits.ts";
 
 export const NoteField = clientEntry(
   "/app/actions/new-card/public/note-field.tsx#NoteField",
-  function NoteField(handle: Handle<{ initialValue?: string }>) {
+  function NoteField(handle: Handle<{ locale: Locale; initialValue?: string }>) {
     let characterCount = handle.props.initialValue?.length ?? 0;
 
-    return () => (
+    return () => {
+      let { t, formatNumber } = createTranslator(handle.props.locale);
+      return (
       <div mix={fieldStyle}>
         <label htmlFor="card-text" mix={labelStyle}>
-          ملاحظتك
+          {t("form.note")}
         </label>
 
         <textarea
@@ -24,8 +29,8 @@ export const NoteField = clientEntry(
           dir="auto"
           rows={6}
           required
-          maxLength={500}
-          placeholder="ما الذي تود مشاركته مع الفريق؟"
+          maxLength={MAX_CARD_TEXT_LENGTH}
+          placeholder={t("form.notePlaceholder")}
           aria-describedby="card-text-hint"
           mix={[
             textareaStyle,
@@ -37,9 +42,10 @@ export const NoteField = clientEntry(
         />
 
         <p id="card-text-hint" mix={hintStyle}>
-          {characterCount.toLocaleString("ar-u-nu-arab")} / ٥٠٠ حرف
+          {t("form.counter", { count: characterCount, max: MAX_CARD_TEXT_LENGTH })}
         </p>
       </div>
-    );
+      );
+    };
   },
 );

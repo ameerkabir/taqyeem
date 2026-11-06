@@ -1,4 +1,6 @@
 import { createAppRouter } from "./app/router.ts";
+import { resolveLocale } from "./app/i18n/resolve.ts";
+import { createTranslator } from "./app/i18n/translator.ts";
 
 interface Env {
   SESSION_SECRET: string;
@@ -23,7 +25,12 @@ export default {
       return await cached.router.fetch(request);
     } catch (error) {
       console.error(error);
-      return new Response("Internal Server Error", { status: 500 });
+      // Outside the router: only Accept-Language is available here.
+      let locale = resolveLocale({ acceptLanguage: request.headers.get("Accept-Language") });
+      return new Response(createTranslator(locale).t("server.error"), {
+        status: 500,
+        headers: { "Content-Language": locale, "Cache-Control": "no-store" },
+      });
     }
   },
 } satisfies ExportedHandler<Env>;

@@ -10,8 +10,11 @@ import {
   cancelStyle,
   errorStyle,
 } from "../../../ui/public/card-form-styles.ts";
+import type { Locale } from "../../../i18n/locales.ts";
+import { createTranslator } from "../../../i18n/translator.ts";
 
 export interface DeleteCardFormProps {
+  locale: Locale;
   card: Card;
   error?: string;
 }
@@ -22,7 +25,8 @@ export const DeleteCardForm = clientEntry(
     let pending = false;
     let error = handle.props.error;
     return () => {
-      let { card } = handle.props;
+      let { locale, card } = handle.props;
+      let { t } = createTranslator(locale);
       let cancelHref = `${routes.board.href({ boardId: card.boardId })}?section=${encodeURIComponent(card.categoryId)}`;
       return (
         <form
@@ -40,7 +44,10 @@ export const DeleteCardForm = clientEntry(
               let message = await submitMutation(
                 event.currentTarget,
                 handle.signal,
-                "تعذّر حذف الملاحظة، يرجى المحاولة مجددًا",
+                {
+                  failure: t("deleteCard.failed"),
+                  network: t("form.networkError"),
+                },
               );
               if (!handle.signal.aborted) {
                 error = message;
@@ -50,11 +57,11 @@ export const DeleteCardForm = clientEntry(
             }),
           ]}
         >
-          <p mix={questionStyle}>هل تريد حذف هذه الملاحظة؟</p>
+          <p mix={questionStyle}>{t("deleteCard.question")}</p>
           <blockquote dir="auto" mix={previewStyle}>
             {card.body}
           </blockquote>
-          <p mix={hintStyle}>لا يمكن التراجع عن الحذف.</p>
+          <p mix={hintStyle}>{t("deleteCard.warning")}</p>
           {error && (
             <p role="alert" mix={errorStyle}>
               {error}
@@ -65,10 +72,10 @@ export const DeleteCardForm = clientEntry(
             disabled={pending}
             mix={[submitStyle, dangerStyle]}
           >
-            {pending ? "جارٍ الحذف…" : "حذف الملاحظة"}
+            {pending ? t("deleteCard.submitting") : t("deleteCard.submit")}
           </button>
           <a href={cancelHref} mix={cancelStyle}>
-            إلغاء
+            {t("common.cancel")}
           </a>
         </form>
       );

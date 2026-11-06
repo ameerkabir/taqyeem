@@ -5,6 +5,7 @@ import {
   type BoardAccessErrorHandler,
 } from "./board.ts";
 import { boardMemberContext } from "./board-member.ts";
+import { getI18n } from "./locale.ts";
 
 export function requireBoardOrganiser(
   options: { onError?: BoardAccessErrorHandler } = {},
@@ -21,7 +22,7 @@ export function requireBoardOrganiser(
 
     if (board.organiserMemberId !== member.id) {
       let fail = options.onError ?? boardAccessError;
-      return fail(context, "هذا الإجراء متاح للمنظم فقط", 403);
+      return fail(context, getI18n(context).t("access.organiserOnly"), 403);
     }
 
     return next();

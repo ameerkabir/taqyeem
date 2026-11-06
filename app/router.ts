@@ -1,6 +1,7 @@
 import { createRouter, type RouterContext } from "remix/router";
 import { render } from "remix/middleware/render";
 import { cop } from "remix/middleware/cop";
+import { loadLocale, getI18n } from "./middleware/locale.ts";
 import { loadSession } from "./sessions.ts";
 
 import controller from "./actions/controller.tsx";
@@ -14,6 +15,7 @@ import boardCardsController from "./actions/board-cards/controller.tsx";
 import voteController from "./actions/vote/controller.ts";
 import boardVotingController from "./actions/board-voting/controller.ts";
 import boardStatusController from "./actions/board-status/controller.ts";
+import localeController from "./actions/locale/controller.ts";
 import newBoardController from "./actions/new-board/controller.tsx";
 
 // Static files under `public/` and compiled client scripts under `/assets/*` are served
@@ -21,7 +23,17 @@ import newBoardController from "./actions/new-board/controller.tsx";
 // vite.config.ts and wrangler.jsonc) — this router only ever sees dynamic requests.
 export function createAppRouter(sessionSecret: string) {
   let router = createRouter({
-    middleware: [cop(), render(), loadSession(sessionSecret), loadBoardModels()],
+    middleware: [
+      loadLocale(),
+      cop({
+        // Locale resolves before cop so a rejected cross-origin request keeps the user's language.
+        onDeny: (_reason, context) =>
+          new Response(getI18n(context).t("access.crossOriginDenied"), { status: 403 }),
+      }),
+      render(),
+      loadSession(sessionSecret),
+      loadBoardModels(),
+    ],
   });
 
   router.map({ home: routes.home, demoBoard: routes.demoBoard }, controller);
@@ -34,6 +46,7 @@ export function createAppRouter(sessionSecret: string) {
   router.map(routes.boardVoting, boardVotingController);
   router.map(routes.boardStatus, boardStatusController);
   router.map(routes.newBoard, newBoardController);
+  router.map(routes.setLocale, localeController);
 
   return router;
 }

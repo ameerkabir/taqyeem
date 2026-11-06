@@ -1,3 +1,4 @@
+import { loadLocale } from "../../middleware/locale.ts";
 import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
@@ -42,7 +43,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.deleteCard, controller);
   return {
     saved,

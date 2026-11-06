@@ -8,9 +8,12 @@ import {
 } from "./card-page.styles.ts";
 import type { Handle, RemixNode } from "remix/component";
 import { Document } from "../actions/document.tsx";
+import type { I18n } from "../middleware/locale.ts";
+import { isolate } from "../i18n/translator.ts";
 
 export function CardPage(
   handle: Handle<{
+    i18n: I18n;
     title: string;
     boardTitle: string;
     cancelHref: string;
@@ -18,9 +21,12 @@ export function CardPage(
   }>,
 ) {
   return () => {
-    let { title, boardTitle, cancelHref, children } = handle.props;
+    let { i18n, title, boardTitle, cancelHref, children } = handle.props;
     return (
-      <Document title={`${title} · ${boardTitle}`}>
+      <Document
+        i18n={i18n}
+        title={i18n.t("page.title", { title, suffix: isolate(boardTitle) })}
+      >
         <main mix={mainStyle}>
           <section mix={panelStyle} aria-labelledby="card-page-title">
             <header mix={headerStyle}>
@@ -31,7 +37,7 @@ export function CardPage(
                 </h1>
               </div>
               <a href={cancelHref} mix={cancelStyle}>
-                إلغاء
+                {i18n.t("common.cancel")}
               </a>
             </header>
             {children}

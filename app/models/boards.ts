@@ -11,6 +11,8 @@ export interface VoteResult {
 export interface CreateBoardInput {
   title: string;
   organiserDisplayName: string;
+  /** Stored verbatim as category labels, in the creator's language. */
+  categoryLabels: readonly string[];
 }
 
 export interface CreateBoardResult {

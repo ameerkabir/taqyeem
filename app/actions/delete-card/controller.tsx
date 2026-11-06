@@ -15,21 +15,33 @@ export default createController(routes.deleteCard, {
     async index(context) {
       let { board, member } = context;
       let card = await context.models.getCard(board.id, context.params.cardId);
-      let failure = cardManagementError(board, member.id, card, "delete");
+      let failure = cardManagementError(
+        board,
+        member.id,
+        card,
+        "delete",
+        context.i18n.t,
+      );
       if (failure)
         return cardAccessError(context, failure.message, failure.status);
-      if (!card) return cardAccessError(context, "الملاحظة غير موجودة", 404);
-      return context.render(<DeleteCardPage board={board} card={card} />);
+      if (!card) return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
+      return context.render(<DeleteCardPage i18n={context.i18n} board={board} card={card} />);
     },
     async action(context) {
       let { board, member } = context;
       let card = await context.models.getCard(board.id, context.params.cardId);
-      let failure = cardManagementError(board, member.id, card, "delete");
+      let failure = cardManagementError(
+        board,
+        member.id,
+        card,
+        "delete",
+        context.i18n.t,
+      );
       if (failure)
         return cardAccessError(context, failure.message, failure.status);
-      if (!card) return cardAccessError(context, "الملاحظة غير موجودة", 404);
+      if (!card) return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
       let deleted = await context.models.deleteCard(board.id, card.id);
-      if (!deleted) return cardAccessError(context, "الملاحظة غير موجودة", 404);
+      if (!deleted) return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
       return redirect(
         `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(card.categoryId)}`,
         303,
