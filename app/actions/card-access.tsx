@@ -38,7 +38,7 @@ export function cardAccessError(
     <CardPage
       title="تعذّر إكمال الطلب"
       boardTitle={board?.title ?? "تقييم"}
-      cancelHref={routes.board.href()}
+      cancelHref={board ? routes.board.href({ boardId: board.id }) : routes.home.href()}
     >
       <p role="alert" mix={errorStyle}>
         {message}

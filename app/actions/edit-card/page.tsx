@@ -10,7 +10,7 @@ export interface EditCardPageProps extends EditCardFormProps {
 export function EditCardPage(handle: Handle<EditCardPageProps>) {
   return () => {
     let { board, ...formProps } = handle.props;
-    let cancelHref = `${routes.board.href()}?section=${encodeURIComponent(formProps.card.categoryId)}`;
+    let cancelHref = `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(formProps.card.categoryId)}`;
     return (
       <CardPage
         title="تعديل الملاحظة"

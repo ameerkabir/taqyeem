@@ -77,6 +77,7 @@ export function Cardlist(handle: Handle<CardListProps>) {
                             <li>
                               <a
                                 href={routes.editCard.index.href({
+                                  boardId: board.id,
                                   cardId: card.id,
                                 })}
                                 mix={menuItemStyle}
@@ -87,6 +88,7 @@ export function Cardlist(handle: Handle<CardListProps>) {
                             <li>
                               <a
                                 href={routes.deleteCard.index.href({
+                                  boardId: board.id,
                                   cardId: card.id,
                                 })}
                                 mix={menuItemStyle}

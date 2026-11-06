@@ -38,11 +38,11 @@ export const EditCardForm = clientEntry(
         categoryId: card.categoryId,
         isAnonymous: card.isAnonymous,
       };
-      let cancelHref = `${routes.board.href()}?section=${encodeURIComponent(card.categoryId)}`;
+      let cancelHref = `${routes.board.href({ boardId: card.boardId })}?section=${encodeURIComponent(card.categoryId)}`;
       return (
         <form
           method="post"
-          action={routes.editCard.action.href({ cardId: card.id })}
+          action={routes.editCard.action.href({ boardId: card.boardId, cardId: card.id })}
           aria-busy={pending}
           mix={[
             formStyle,

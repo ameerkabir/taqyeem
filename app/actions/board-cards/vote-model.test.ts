@@ -7,7 +7,7 @@ function options(voted = true, previous = server) {
   let body = new FormData();
   body.set("voted", String(voted));
   return {
-    action: "/board/cards/card/vote", body, previous,
+    action: "/boards/demo/cards/card/vote", body, previous,
     signal: new AbortController().signal, update() {},
   };
 }

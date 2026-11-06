@@ -1,3 +1,4 @@
+import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createRouter } from "remix/router";
@@ -41,7 +42,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [render(), provideModels] });
+  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.deleteCard, controller);
   return {
     saved,
@@ -50,7 +51,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
     },
     request(method: "GET" | "POST", cardId = "own-card", enhanced = true) {
       return router.fetch(
-        new URL(routes.deleteCard.index.href({ cardId }), "http://localhost"),
+        new URL(routes.deleteCard.index.href({ boardId: "demo", cardId }), "http://localhost"),
         {
           method,
           headers: { Accept: enhanced ? "application/json" : "text/html" },
@@ -104,7 +105,7 @@ describe("delete card access", () => {
     let app = setup();
     let response = await app.request("POST");
     assert.equal(response.status, 303);
-    assert.equal(response.headers.get("Location"), "/board?section=ideas");
+    assert.equal(response.headers.get("Location"), "/boards/demo?section=ideas");
     assert.equal(app.saved.length, 0);
     assert.equal(app.deletes, 1);
   });
@@ -118,7 +119,7 @@ describe("delete card access", () => {
     assert.ok(html.includes("هل تريد حذف هذه الملاحظة؟"));
     assert.ok(html.includes("ملاحظة &lt;b&gt;خاصة&lt;/b&gt;"));
     assert.match(html, /<form[^>]*method="post"/);
-    assert.ok(html.includes("/board?section=ideas"));
+    assert.ok(html.includes("/boards/demo?section=ideas"));
   });
 
   for (let status of ["collecting", "meeting", "closed"] as const) {

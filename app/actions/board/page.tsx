@@ -7,6 +7,7 @@ import {
   tabStyle,
   tabCounter,
   addNoteStyle,
+  closedNoteStyle,
   votingBannerStyle,
   votingDotStyle,
   votingTitleStyle,
@@ -21,6 +22,7 @@ import type {
   Category,
 } from "../../data/fake-board.ts";
 import { routes } from "../../routes.ts";
+import { OrganiserControls } from "./organiser-controles.tsx";
 
 const statusLabels: Record<BoardStatus, string> = {
   collecting: "جمع الملاحظات",
@@ -34,6 +36,7 @@ export function BoardPage(
     cards: Card[];
     categories: Category[];
     board: Board;
+    isOrganiser: boolean;
   }>,
 ) {
   return () => {
@@ -50,15 +53,23 @@ export function BoardPage(
               {statusLabels[handle.props.board.status]}
             </span>
           </header>
+
+          {handle.props.isOrganiser && (
+            <OrganiserControls
+              boardId={handle.props.board.id}
+              status={handle.props.board.status}
+              votingOpen={handle.props.board.votingOpen}
+              sectionId={sectionId}
+            />
+          )}
+
           {handle.props.board.status === "meeting" &&
             handle.props.board.votingOpen && (
-              <div mix={votingBannerStyle}>
+              <div aria-label="حالة التصويت" mix={votingBannerStyle}>
                 <span aria-hidden="true" mix={votingDotStyle} />
                 <div>
                   <p mix={votingTitleStyle}>التصويت مفتوح</p>
-                  <p mix={votingHintStyle}>
-                    صوّت للملاحظات التي تودّ مناقشتها
-                  </p>
+                  <p mix={votingHintStyle}>صوّت للملاحظات التي تودّ مناقشتها</p>
                 </div>
               </div>
             )}
@@ -72,7 +83,7 @@ export function BoardPage(
                 <a
                   key={cat.id}
                   mix={[tabStyle]}
-                  href={`${routes.board.href()}?section=${cat.id}`}
+                  href={`${routes.board.href({ boardId: handle.props.board.id })}?section=${cat.id}`}
                   aria-current={cat.id === sectionId ? "page" : undefined}
                 >
                   {cat.label} <span mix={tabCounter}>{count}</span>
@@ -82,15 +93,31 @@ export function BoardPage(
           </nav>
           <Frame
             name="board-cards"
-            src={`${routes.boardCards.href()}?section=${encodeURIComponent(sectionId)}`}
+            src={`${routes.boardCards.href({ boardId: handle.props.board.id })}?section=${encodeURIComponent(sectionId)}`}
           />
 
-          <a
-            href={`${routes.newCard.index.href()}?category=${sectionId}`}
-            mix={addNoteStyle}
-          >
-            + أضف ملاحظة هنا
-          </a>
+          {handle.props.board.status === "closed" ? (
+            <>
+              <button
+                type="button"
+                disabled
+                aria-describedby="closed-board-note"
+                mix={addNoteStyle}
+              >
+                + أضف ملاحظة هنا
+              </button>
+              <p id="closed-board-note" mix={closedNoteStyle}>
+                اللوحة مغلقة، لا يمكن إضافة ملاحظات
+              </p>
+            </>
+          ) : (
+            <a
+              href={`${routes.newCard.index.href({ boardId: handle.props.board.id })}?category=${sectionId}`}
+              mix={addNoteStyle}
+            >
+              + أضف ملاحظة هنا
+            </a>
+          )}
         </main>
       </Document>
     );

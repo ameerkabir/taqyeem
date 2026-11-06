@@ -1,3 +1,4 @@
+import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createRouter } from "remix/router";
@@ -30,7 +31,7 @@ function setup(
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [render(), provideModels] });
+  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.board, boardController);
   router.map(routes.boardCards, boardCardsController);
   router.map(routes.newCard, newCardController);
@@ -40,7 +41,7 @@ function setup(
     saved,
     submit(data = validForm(), enhanced = true) {
       return router.fetch(
-        new Request(new URL(routes.newCard.action.href(), "http://localhost"), {
+        new Request(new URL(routes.newCard.action.href({ boardId: "demo" }), "http://localhost"), {
           method: "POST",
           headers: { Accept: enhanced ? "application/json" : "text/html" },
           body: data,
@@ -224,7 +225,7 @@ describe("new card guards", () => {
     data.set("text", `  ${"س".repeat(500)}  `);
     let response = await app.submit(data);
     assert.equal(response.status, 303);
-    assert.equal(response.headers.get("Location"), "/board?section=ideas");
+    assert.equal(response.headers.get("Location"), "/boards/demo?section=ideas");
     assert.equal(app.saved.length, 1);
     assert.equal(app.saved[0].body, "س".repeat(500));
     assert.equal(app.saved[0].categoryId, "ideas");
@@ -253,7 +254,7 @@ describe("new card idempotency", () => {
     let ids: string[] = [];
     for (let visit = 0; visit < 2; visit++) {
       let response = await app.router.fetch(
-        new URL(routes.newCard.index.href(), "http://localhost"),
+        new URL(routes.newCard.index.href({ boardId: "demo" }), "http://localhost"),
       );
       assert.equal(response.status, 200);
       let html = await response.text();
@@ -278,7 +279,7 @@ describe("new card idempotency", () => {
 
     assert.equal(first.status, 303);
     assert.equal(retry.status, 303);
-    assert.equal(retry.headers.get("Location"), "/board?section=ideas");
+    assert.equal(retry.headers.get("Location"), "/boards/demo?section=ideas");
     assert.equal(app.saved.length, 1);
     assert.equal(app.saved[0].id, originalId);
     assert.equal(app.saved[0].body, "ملاحظة للفريق");
@@ -297,7 +298,7 @@ describe("new card idempotency", () => {
     );
     for (let response of responses) {
       assert.equal(response.status, 303);
-      assert.equal(response.headers.get("Location"), "/board?section=ideas");
+      assert.equal(response.headers.get("Location"), "/boards/demo?section=ideas");
     }
     assert.equal(app.saved.length, 1);
   });
@@ -468,7 +469,7 @@ describe("new card error feedback without JavaScript", () => {
   it("renders a membership error on GET without trying to parse a form body", async () => {
     let app = setup({ getViewerMemberId: async () => null });
     let response = await app.router.fetch(
-      new URL(routes.newCard.index.href(), "http://localhost"),
+      new URL(routes.newCard.index.href({ boardId: "demo" }), "http://localhost"),
     );
     assert.equal(response.status, 403);
     let html = await response.text();

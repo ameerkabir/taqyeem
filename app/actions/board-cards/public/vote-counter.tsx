@@ -24,7 +24,7 @@ export const VoteCounter = clientEntry(
       return (
         <form
           method="post"
-          action={routes.vote.href({ cardId: card.id })}
+          action={routes.vote.href({ boardId: card.boardId, cardId: card.id })}
           aria-busy={pending}
           mix={on("submit", async (event) => {
             event.preventDefault();

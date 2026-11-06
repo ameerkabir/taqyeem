@@ -13,12 +13,24 @@ export default createAction(routes.board, {
     let categories = await context.models.listCategories(board.id);
     let cards = await context.models.listCards(board.id);
     let activeId = resolveActiveSection(section, categories, board);
+
+    let viewerId = await context.models.getViewerMemberId(board.id);
+    let members = await context.models.listMembers(board.id);
+
+    let isOrganiser = members.some(
+      (member) =>
+        member.boardId === board.id &&
+        member.id === viewerId &&
+        member.id === board.organiserMemberId,
+    );
+
     return context.render(
       <BoardPage
         activeId={activeId}
         cards={cards}
         categories={categories}
         board={board}
+        isOrganiser={isOrganiser}
       />,
     );
   },

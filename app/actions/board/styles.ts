@@ -102,11 +102,27 @@ export const addNoteStyle = css({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  boxSizing: "border-box",
+  inlineSize: "100%",
+  border: 0,
+  font: "inherit",
   minBlockSize: "var(--target-min)",
   marginBlockStart: "var(--space-4)",
   borderRadius: "var(--radius-md)",
   backgroundColor: "var(--color-primary)",
   color: "var(--color-on-primary)",
   textDecoration: "none",
-  "&:hover": { backgroundColor: "var(--color-primary-hover)" },
+  "&:hover:not(:disabled)": { backgroundColor: "var(--color-primary-hover)" },
+  "&:disabled": {
+    backgroundColor: "var(--color-border)",
+    color: "var(--color-text-muted)",
+    cursor: "not-allowed",
+  },
+});
+
+export const closedNoteStyle = css({
+  marginBlock: "var(--space-2)",
+  textAlign: "center",
+  fontSize: "0.875rem",
+  color: "var(--color-text-muted)",
 });

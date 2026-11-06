@@ -23,11 +23,11 @@ export const DeleteCardForm = clientEntry(
     let error = handle.props.error;
     return () => {
       let { card } = handle.props;
-      let cancelHref = `${routes.board.href()}?section=${encodeURIComponent(card.categoryId)}`;
+      let cancelHref = `${routes.board.href({ boardId: card.boardId })}?section=${encodeURIComponent(card.categoryId)}`;
       return (
         <form
           method="post"
-          action={routes.deleteCard.action.href({ cardId: card.id })}
+          action={routes.deleteCard.action.href({ boardId: card.boardId, cardId: card.id })}
           aria-busy={pending}
           mix={[
             formStyle,

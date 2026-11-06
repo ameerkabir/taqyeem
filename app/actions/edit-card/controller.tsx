@@ -71,7 +71,7 @@ export default createController(routes.editCard, {
       });
       if (!updated) return cardAccessError(context, "الملاحظة غير موجودة", 404);
       return redirect(
-        `${routes.board.href()}?section=${encodeURIComponent(updated.categoryId)}`,
+        `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(updated.categoryId)}`,
         303,
       );
     },

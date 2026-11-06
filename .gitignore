@@ -4,3 +4,4 @@ tmp/
 .DS_Store
 .wrangler/
 dist/
+.dev.vars*

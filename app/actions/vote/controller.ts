@@ -37,6 +37,7 @@ export default createAction(routes.vote, {
       member.id,
       voted === "true",
     );
+
     if (!result) return cardAccessError(context, "الملاحظة غير موجودة", 404);
 
     if (context.request.headers.get("Accept")?.includes("application/json")) {
@@ -44,7 +45,7 @@ export default createAction(routes.vote, {
     }
 
     return redirect(
-      `${routes.board.href()}?section=${encodeURIComponent(card.categoryId)}`,
+      `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(card.categoryId)}`,
       303,
     );
   },

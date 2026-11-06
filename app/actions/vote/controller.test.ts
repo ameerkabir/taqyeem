@@ -1,3 +1,4 @@
+import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createRouter } from "remix/router";
@@ -31,13 +32,13 @@ function setup(overrides: Partial<BoardModels> = {}) {
       : models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [render(), provideModels] });
+  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.vote, controller);
   return {
     models,
     get writes() { return writes; },
     request(body = "voted=true", cardId = "card", enhanced = true, memberId?: string) {
-      return router.fetch(new URL(routes.vote.href({ cardId }), "http://localhost"), {
+      return router.fetch(new URL(routes.vote.href({ boardId: "demo", cardId }), "http://localhost"), {
         method: "POST", body: new URLSearchParams(body), headers: { Accept: enhanced ? "application/json" : "text/html", ...(memberId ? { "X-Test-Member": memberId } : {}) },
       });
     },
@@ -49,7 +50,7 @@ describe("vote action", () => {
     let app = setup();
     let response = await app.request("voted=true&memberId=m2", "card", false);
     assert.equal(response.status, 303);
-    assert.equal(response.headers.get("Location"), "/board?section=ideas");
+    assert.equal(response.headers.get("Location"), "/boards/demo?section=ideas");
     await app.request();
     assert.equal((await app.models.getCard("demo", "card"))?.voteCount, 1);
     assert.deepEqual(await app.models.listViewerVotes("demo"), ["card"]);

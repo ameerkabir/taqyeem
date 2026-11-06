@@ -1,3 +1,4 @@
+import { loadSession } from "../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createController, createRouter } from "remix/router";
@@ -18,7 +19,7 @@ function setup(overrides: Partial<BoardModels> = {}, boardId = "demo") {
     return next();
   };
   let routes = route({ protected: "/protected" });
-  let router = createRouter({ middleware: [render(), provideModels] });
+  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
   router.get("/public", () => new Response("Public"));
   router.map(
     routes,

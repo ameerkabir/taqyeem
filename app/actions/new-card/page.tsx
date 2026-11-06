@@ -12,7 +12,7 @@ import { routes } from "../../routes.ts";
 import { Document } from "../document.tsx";
 import { NewCardForm, type NewCardFormProps } from "./public/form.tsx";
 
-interface NewCardPageProps extends NewCardFormProps {
+interface NewCardPageProps extends Omit<NewCardFormProps, "boardId"> {
   board: Board;
 }
 
@@ -31,12 +31,12 @@ export function NewCardPage(handle: Handle<NewCardPageProps>) {
                   إضافة ملاحظة
                 </h1>
               </div>
-              <a href={routes.board.href()} mix={cancelStyle}>
+              <a href={routes.board.href({ boardId: board.id })} mix={cancelStyle}>
                 إلغاء
               </a>
             </header>
 
-            <NewCardForm {...formProps} />
+            <NewCardForm boardId={board.id} {...formProps} />
           </section>
         </main>
       </Document>

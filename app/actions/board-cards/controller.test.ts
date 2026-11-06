@@ -1,3 +1,4 @@
+import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createRouter } from "remix/router";
@@ -23,12 +24,12 @@ function setup(overrides: Partial<Board> = {}, missingBoard = false) {
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [render(), provideModels] });
+  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.boardCards, controller);
   return {
     models,
     fetch(section?: string) {
-      let url = new URL(routes.boardCards.href(), "http://localhost");
+      let url = new URL(routes.boardCards.href({ boardId: "demo" }), "http://localhost");
       if (section !== undefined) url.searchParams.set("section", section);
       return router.fetch(url);
     },
@@ -63,8 +64,8 @@ describe("board card-list fragment", () => {
     assert.ok(html.includes("سارة"));
     assert.match(html, /<button\b[^>]*\baria-pressed="true"/);
     assert.match(html, /<button\b[^>]*\baria-pressed="false"/);
-    assert.ok(html.includes(routes.editCard.index.href({ cardId: "older" })));
-    assert.ok(!html.includes(routes.editCard.index.href({ cardId: "newer" })));
+    assert.ok(html.includes(routes.editCard.index.href({ boardId: "demo", cardId: "older" })));
+    assert.ok(!html.includes(routes.editCard.index.href({ boardId: "demo", cardId: "newer" })));
   });
 
   for (let status of ["meeting", "closed"] as const) {
