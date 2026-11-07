@@ -1,5 +1,8 @@
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
+import type { Translator } from "../../i18n/translator.ts";
+
+import { MAX_CARD_TEXT_LENGTH } from "../../data/limits.ts";
 
 const submissionIdPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -13,12 +16,12 @@ export const newCardForm = s.object({
   text: s
     .string()
     .transform((value) => value.trim())
-    .pipe(checks.minLength(1), checks.maxLength(500)),
+    .pipe(checks.minLength(1), checks.maxLength(MAX_CARD_TEXT_LENGTH)),
   categoryId: s.string(),
   isAnonymous: s.boolean(),
 });
 
-export function parseNewCardForm(data: FormData) {
+export function parseNewCardForm(data: FormData, t: Translator["t"]) {
   // Keep raw entries so missing values and files fail the string schemas.
   return s.parseSafe(
     newCardForm,
@@ -34,15 +37,15 @@ export function parseNewCardForm(data: FormData) {
       errorMap(context) {
         switch (context.path?.[0]) {
           case "submissionId":
-            return "معرّف الإرسال غير صالح، يرجى فتح النموذج مجددًا";
+            return t("card.error.submissionInvalid");
           case "text":
             return context.code === "string.max_length"
-              ? "الحد الأقصى ٥٠٠ حرف"
-              : "يرجى كتابة ملاحظة";
+              ? t("card.error.textMax", { max: MAX_CARD_TEXT_LENGTH })
+              : t("card.error.textRequired");
           case "categoryId":
-            return "التصنيف غير صالح";
+            return t("card.error.invalidCategory");
           case "isAnonymous":
-            return "خيار إخفاء الاسم غير صالح";
+            return t("card.error.invalidAnonymous");
         }
       },
     },

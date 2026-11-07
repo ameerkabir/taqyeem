@@ -1,7 +1,7 @@
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createVoteModel } from "./public/vote-model.ts";
-
+import { createTranslator } from "../../i18n/translator.ts";
 const server = { voted: false, count: 3 };
 function options(voted = true, previous = server) {
   let body = new FormData();
@@ -66,4 +66,19 @@ describe("optimistic vote model", () => {
     try { await model.save(options(false, confirmed)); } catch {}
     assert.deepEqual(model.read(server), confirmed);
   });
+});
+
+describe("vote model fallback errors follow the translator", () => {
+  for (let [locale, saveFailed, unconfirmed] of [
+    ["ar", "تعذّر حفظ التصويت", "تعذّر تأكيد التصويت"],
+    ["en", "Couldn't save your vote", "Couldn't confirm your vote"],
+  ] as const) {
+    it(`uses ${locale} messages for unexpected server responses`, async () => {
+      let t = createTranslator(locale).t;
+      let rejected = createVoteModel(async () => Response.json({}, { status: 500 }), t);
+      await assert.rejects(() => rejected.save(options()), (error: Error) => error.message === saveFailed);
+      let invalid = createVoteModel(async () => Response.json({ voted: true, count: -1 }), t);
+      await assert.rejects(() => invalid.save(options()), (error: Error) => error.message === unconfirmed);
+    });
+  }
 });

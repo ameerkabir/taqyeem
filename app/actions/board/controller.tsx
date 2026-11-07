@@ -26,6 +26,7 @@ export default createAction(routes.board, {
 
     return context.render(
       <BoardPage
+        i18n={context.i18n}
         activeId={activeId}
         cards={cards}
         categories={categories}

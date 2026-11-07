@@ -4,7 +4,7 @@ import { navigate } from "remix/component";
 export async function submitMutation(
   form: HTMLFormElement,
   signal: AbortSignal,
-  failureMessage: string,
+  messages: { failure: string; network: string },
 ): Promise<string | undefined> {
   try {
     let response = await fetch(form.action, {
@@ -18,13 +18,13 @@ export async function submitMutation(
       if (response.headers.get("Content-Type")?.includes("application/json")) {
         let result = (await response.json()) as { error?: unknown };
         if (signal.aborted) return;
-        return typeof result.error === "string" ? result.error : failureMessage;
+        return typeof result.error === "string" ? result.error : messages.failure;
       }
-      return failureMessage;
+      return messages.failure;
     }
     await navigate(response.url, { history: "replace" });
   } catch {
     if (!signal.aborted)
-      return "تعذّر الاتصال، يرجى التحقق من اتصالك والمحاولة مجددًا";
+      return messages.network;
   }
 }

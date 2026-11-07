@@ -2,6 +2,7 @@ import { form, get, post, route } from "remix/routes";
 
 export const routes = route({
   home: "/",
+  setLocale: post("/locale"),
   newBoard: form("/boards/new"),
   demoBoard: get("/board"),
   board: get("/boards/:boardId"),

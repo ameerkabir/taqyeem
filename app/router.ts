@@ -1,6 +1,7 @@
 import { createRouter, type RouterContext } from "remix/router";
 import { render } from "remix/middleware/render";
 import { cop } from "remix/middleware/cop";
+import { loadLocale, getI18n } from "./middleware/locale.ts";
 import { loadAppDependencies, type AppDependencies } from "./middleware/dependencies.ts";
 import { loadSession } from "./sessions.ts";
 
@@ -15,6 +16,7 @@ import boardCardsController from "./actions/board-cards/controller.tsx";
 import voteController from "./actions/vote/controller.ts";
 import boardVotingController from "./actions/board-voting/controller.ts";
 import boardStatusController from "./actions/board-status/controller.ts";
+import localeController from "./actions/locale/controller.ts";
 import newBoardController from "./actions/new-board/controller.tsx";
 
 // Static files under `public/` and compiled client scripts under `/assets/*` are served
@@ -27,7 +29,18 @@ export interface AppRouterOptions extends AppDependencies {
 // A fresh router for each incoming request; never cache request capabilities.
 export function createAppRouter(options: AppRouterOptions) {
   let router = createRouter({
-    middleware: [cop(), render(), loadAppDependencies(options), loadSession(options.sessionSecret), loadBoardModels()],
+    middleware: [
+      loadLocale(),
+      cop({
+        // Locale resolves before cop so a rejected cross-origin request keeps the user's language.
+        onDeny: (_reason, context) =>
+          new Response(getI18n(context).t("access.crossOriginDenied"), { status: 403 }),
+      }),
+      render(),
+      loadAppDependencies(options),
+      loadSession(options.sessionSecret),
+      loadBoardModels(),
+    ],
   });
 
   router.map({ home: routes.home, demoBoard: routes.demoBoard }, controller);
@@ -40,6 +53,7 @@ export function createAppRouter(options: AppRouterOptions) {
   router.map(routes.boardVoting, boardVotingController);
   router.map(routes.boardStatus, boardStatusController);
   router.map(routes.newBoard, newBoardController);
+  router.map(routes.setLocale, localeController);
 
   return router;
 }

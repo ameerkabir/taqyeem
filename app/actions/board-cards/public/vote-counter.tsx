@@ -4,8 +4,11 @@ import { routes } from "../../../routes.ts";
 import { errorStyle } from "../../../ui/public/card-form-styles.ts";
 import { votePillStyle } from "../styles.ts";
 import { createVoteModel } from "./vote-model.ts";
+import type { Locale } from "../../../i18n/locales.ts";
+import { createTranslator } from "../../../i18n/translator.ts";
 
 interface VoteCounterProps {
+  locale: Locale;
   card: Card;
   voted: boolean;
   disabled: boolean;
@@ -14,12 +17,14 @@ interface VoteCounterProps {
 export const VoteCounter = clientEntry(
   "/app/actions/board-cards/public/vote-counter.tsx#VoteCounter",
   function VoteCounter(handle: Handle<VoteCounterProps>) {
-    let model = createVoteModel();
+    let model = createVoteModel(undefined, createTranslator(handle.props.locale).t);
     let pending = false;
-    let error: string | undefined;
+    // Keep a message key, not text, so the message follows the current locale prop.
+    let error: "vote.refreshFailed" | "vote.confirmFailed" | undefined;
 
     return () => {
-      let { card, voted, disabled } = handle.props;
+      let { locale, card, voted, disabled } = handle.props;
+      let { t, formatNumber } = createTranslator(locale);
       let displayed = model.read({ voted, count: card.voteCount });
       return (
         <form
@@ -49,11 +54,11 @@ export const VoteCounter = clientEntry(
                 if (!handle.signal.aborted) model.reset();
               } catch {
                 // Saving succeeded; retain the confirmed vote if refreshing fails.
-                error = "تم حفظ التصويت، لكن تعذّر تحديث القائمة";
+                error = "vote.refreshFailed";
               }
             } catch {
               if (!handle.signal.aborted) {
-                error = "تعذّر تأكيد التصويت، يرجى التحقق من اتصالك والمحاولة مجددًا";
+                error = "vote.confirmFailed";
               }
             } finally {
               if (!handle.signal.aborted) {
@@ -69,11 +74,12 @@ export const VoteCounter = clientEntry(
             value={displayed.voted ? "false" : "true"}
             mix={votePillStyle}
             aria-pressed={displayed.voted ? "true" : "false"}
+            aria-label={t("vote.count", { count: displayed.count })}
             disabled={disabled || pending}
           >
-            <span aria-hidden="true">👍</span> {displayed.count}
+            <span aria-hidden="true">👍</span> {formatNumber(displayed.count)}
           </button>
-          {error && <p role="alert" mix={errorStyle}>{error}</p>}
+          {error && <p role="alert" mix={errorStyle}>{t(error)}</p>}
         </form>
       );
     };

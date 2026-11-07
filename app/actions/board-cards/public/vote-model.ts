@@ -1,9 +1,18 @@
+import { DEFAULT_LOCALE } from "../../../i18n/locales.ts";
+import { createTranslator, type Translator } from "../../../i18n/translator.ts";
+
 export interface VoteState {
   voted: boolean;
   count: number;
 }
 
-export function createVoteModel(request: typeof fetch = fetch) {
+type VoteMessages = Pick<Translator, "t">["t"];
+
+// The translator is injected so fallback errors follow the page locale.
+export function createVoteModel(
+  request: typeof fetch = fetch,
+  t: VoteMessages = createTranslator(DEFAULT_LOCALE).t,
+) {
   let current: VoteState | undefined;
 
   return {
@@ -45,12 +54,12 @@ export function createVoteModel(request: typeof fetch = fetch) {
         signal.throwIfAborted();
         if (!response.ok) {
           throw new Error(typeof result.error === "string"
-            ? result.error : "تعذّر حفظ التصويت");
+            ? result.error : t("vote.saveFailed"));
         }
         if (typeof result.voted !== "boolean" ||
             typeof result.count !== "number" ||
             !Number.isInteger(result.count) || result.count < 0) {
-          throw new Error("تعذّر تأكيد التصويت");
+          throw new Error(t("vote.unconfirmed"));
         }
         current = { voted: result.voted, count: result.count };
       } catch (cause) {
