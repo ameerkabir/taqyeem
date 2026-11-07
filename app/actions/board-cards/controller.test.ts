@@ -1,3 +1,4 @@
+import { testDatabase } from "../../test/dependencies.ts";
 import { loadAppDependencies } from "../../middleware/dependencies.ts";
 import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
@@ -11,7 +12,7 @@ import { boardModelsContext, type loadBoardModels } from "../../middleware/model
 import { routes } from "../../routes.ts";
 import controller from "./controller.tsx";
 
-function setup(overrides: Partial<Board> = {}, missingBoard = false) {
+async function setup(overrides: Partial<Board> = {}, missingBoard = false) {
   let cards: Card[] = [
     { id: "older", boardId: "demo", memberId: "m1", categoryId: "good", body: "ملاحظة قديمة", isAnonymous: true, voteCount: 0, createdAt: "2026-10-20T10:00:00Z" },
     { id: "newer", boardId: "demo", memberId: "m2", categoryId: "good", body: "ملاحظة حديثة", isAnonymous: false, voteCount: 0, createdAt: "2026-10-23T10:00:00Z" },
@@ -25,7 +26,7 @@ function setup(overrides: Partial<Board> = {}, missingBoard = false) {
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [loadAppDependencies({ config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.boardCards, controller);
   return {
     models,
@@ -39,7 +40,7 @@ function setup(overrides: Partial<Board> = {}, missingBoard = false) {
 
 describe("board card-list fragment", () => {
   it("returns only the selected category as HTML without the document shell", async () => {
-    let response = await setup().fetch("bad");
+    let response = await (await setup()).fetch("bad");
     assert.equal(response.status, 200);
     assert.match(response.headers.get("Content-Type") ?? "", /text\/html/);
     let html = await response.text();
@@ -56,7 +57,7 @@ describe("board card-list fragment", () => {
   });
 
   it("sorts collecting cards newest first and renders authorship and vote state", async () => {
-    let app = setup();
+    let app = await setup();
     await app.models.setCardVote("demo", "older", "m1", true);
     await app.models.setCardVote("demo", "older", "m2", true);
     let html = await (await app.fetch("good")).text();
@@ -71,7 +72,7 @@ describe("board card-list fragment", () => {
 
   for (let status of ["meeting", "closed"] as const) {
     it(`sorts ${status} cards by votes`, async () => {
-      let app = setup({ status });
+      let app = await setup({ status });
       await app.models.setCardVote("demo", "older", "m2", true);
       await app.models.setCardVote("demo", "newer", "m2", true);
       await app.models.setCardVote("demo", "newer", "m3", true);
@@ -83,14 +84,14 @@ describe("board card-list fragment", () => {
 
   for (let section of [undefined, "unknown"]) {
     it(`defaults ${section === undefined ? "missing" : "invalid"} categories to the first category`, async () => {
-      let html = await (await setup().fetch(section)).text();
+      let html = await (await (await setup()).fetch(section)).text();
       assert.ok(html.includes("ملاحظة حديثة"));
       assert.ok(!html.includes("التصنيف الآخر"));
     });
   }
 
   it("defaults to the current meeting section but honours an explicit category", async () => {
-    let app = setup({ status: "meeting", currentSectionId: "bad" });
+    let app = await setup({ status: "meeting", currentSectionId: "bad" });
     let html = await (await app.fetch()).text();
     assert.ok(html.includes("التصنيف الآخر"));
     assert.ok(!html.includes("ملاحظة حديثة"));
@@ -100,19 +101,19 @@ describe("board card-list fragment", () => {
   });
 
   it("renders the empty state for a category with no cards", async () => {
-    let html = await (await setup().fetch("ideas")).text();
+    let html = await (await (await setup()).fetch("ideas")).text();
     assert.ok(html.includes("لا توجد ملاحظات بعد"));
     assert.ok(!html.includes("ملاحظة حديثة"));
   });
 
   it("returns 404 for a missing board", async () => {
-    let response = await setup({}, true).fetch("good");
+    let response = await (await setup({}, true)).fetch("good");
     assert.equal(response.status, 404);
     assert.equal(await response.text(), "اللوحة غير موجودة");
   });
 
   it("renders every vote as unpressed when no vote records exist", async () => {
-    let html = await (await setup().fetch("good")).text();
+    let html = await (await (await setup()).fetch("good")).text();
     assert.ok(!/<button\b[^>]*\baria-pressed="true"/.test(html));
     assert.equal((html.match(/<button\b[^>]*\baria-pressed="false"/g) ?? []).length, 2);
   });

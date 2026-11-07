@@ -1,10 +1,11 @@
+import { testDatabase } from "./test/dependencies.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createAppRouter, type AppContext } from "./router.ts";
-import { appConfigContext, waitUntilContext } from "./middleware/dependencies.ts";
+import { appConfigContext, waitUntilContext, databaseContext } from "./middleware/dependencies.ts";
 import { createRequestOptions } from "../server.ts";
 
-function setup(appEnv = "test") {
+async function setup(appEnv = "test") {
   let pending: Promise<unknown>[] = [];
   let execution = {
     waitUntil(work: Promise<unknown>) {
@@ -12,16 +13,19 @@ function setup(appEnv = "test") {
       pending.push(work);
     },
   };
-  let options = createRequestOptions({ APP_ENV: appEnv, SESSION_SECRET: "test-only-session-secret" }, execution);
+  let options = createRequestOptions({ APP_ENV: appEnv, SESSION_SECRET: "test-only-session-secret" }, execution, await testDatabase());
   return { router: createAppRouter(options), pending, options };
 }
 
 describe("request dependency boundary", () => {
   it("publishes accurately typed configuration and bound execution helpers", async () => {
-    let { router, pending, options } = setup();
+    let { router, pending, options } = await setup();
     let work = Promise.resolve();
-    router.get("/dependencies", (context) => {
+    router.get("/dependencies", async (context) => {
       let typed: AppContext = context;
+      assert.equal(typed.db, options.db);
+      assert.equal(context.get(databaseContext), options.db);
+      assert.equal((await typed.db.exec("SELECT ? AS answer", [42])).rows?.[0].answer, 42);
       assert.equal(typed.config, options.config);
       assert.equal(context.get(appConfigContext), options.config);
       assert.equal(context.get(waitUntilContext), context.waitUntil);
@@ -33,8 +37,8 @@ describe("request dependency boundary", () => {
   });
 
   it("keeps consecutive and overlapping requests tied to their own execution helper", async () => {
-    let first = setup("first");
-    let second = setup("second");
+    let first = await setup("first");
+    let second = await setup("second");
     let release!: () => void;
     let gate = new Promise<void>((resolve) => { release = resolve; });
     let work = [Promise.resolve(1), Promise.resolve(2)];
@@ -55,8 +59,8 @@ describe("request dependency boundary", () => {
   });
 
   it("preserves boards and signed organiser sessions across fresh routers and native forms", async () => {
-    function request(path: string, init?: RequestInit) {
-      return setup().router.fetch(`http://localhost${path}`, init);
+    async function request(path: string, init?: RequestInit) {
+      return (await setup()).router.fetch(`http://localhost${path}`, init);
     }
     let created = await request("/boards/new", {
       method: "POST",

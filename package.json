@@ -3,10 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "db:migration:create": "wrangler d1 migrations create DB",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrations:list": "wrangler d1 migrations list DB --local",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite build && vite preview",
     "deploy": "vite build && wrangler deploy",
+    "test:d1": "node test/d1-smoke.ts",
     "test": "NODE_ENV=test remix test",
     "types:worker": "wrangler types --include-runtime=false --strict-vars=false",
     "typecheck": "tsc --noEmit"
