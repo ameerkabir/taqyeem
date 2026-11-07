@@ -1,3 +1,4 @@
+import { loadAppDependencies } from "../../middleware/dependencies.ts";
 import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
@@ -55,7 +56,7 @@ async function page(
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadAppDependencies({ config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.board, controller);
   router.map(routes.boardCards, boardCardsController);
   let response = await router.fetch(`http://localhost/boards/demo?section=${encodeURIComponent(section)}`);

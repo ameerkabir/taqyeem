@@ -8,6 +8,7 @@
     "preview": "vite build && vite preview",
     "deploy": "vite build && wrangler deploy",
     "test": "NODE_ENV=test remix test",
+    "types:worker": "wrangler types --include-runtime=false --strict-vars=false",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
