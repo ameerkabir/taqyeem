@@ -2,6 +2,7 @@ import { createRouter, type RouterContext } from "remix/router";
 import { render } from "remix/middleware/render";
 import { cop } from "remix/middleware/cop";
 import { loadLocale, getI18n } from "./middleware/locale.ts";
+import { loadAppDependencies, type AppDependencies } from "./middleware/dependencies.ts";
 import { loadSession } from "./sessions.ts";
 
 import controller from "./actions/controller.tsx";
@@ -21,7 +22,12 @@ import newBoardController from "./actions/new-board/controller.tsx";
 // Static files under `public/` and compiled client scripts under `/assets/*` are served
 // directly by Vite in dev and by Cloudflare's Workers Assets in production (see
 // vite.config.ts and wrangler.jsonc) — this router only ever sees dynamic requests.
-export function createAppRouter(sessionSecret: string) {
+export interface AppRouterOptions extends AppDependencies {
+  sessionSecret: string;
+}
+
+// A fresh router for each incoming request; never cache request capabilities.
+export function createAppRouter(options: AppRouterOptions) {
   let router = createRouter({
     middleware: [
       loadLocale(),
@@ -31,7 +37,8 @@ export function createAppRouter(sessionSecret: string) {
           new Response(getI18n(context).t("access.crossOriginDenied"), { status: 403 }),
       }),
       render(),
-      loadSession(sessionSecret),
+      loadAppDependencies(options),
+      loadSession(options.sessionSecret),
       loadBoardModels(),
     ],
   });

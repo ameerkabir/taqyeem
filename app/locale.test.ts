@@ -4,7 +4,11 @@ import { createAppRouter } from "./router.ts";
 import { routes } from "./routes.ts";
 import { serializeLocaleCookie } from "./middleware/locale.ts";
 
-const secret = "test-only-session-secret";
+const options = {
+  sessionSecret: "test-only-session-secret",
+  config: { appEnv: "test" },
+  waitUntil() {},
+};
 const origin = "http://localhost";
 
 async function localeCookie(locale: "ar" | "en") {
@@ -12,11 +16,11 @@ async function localeCookie(locale: "ar" | "en") {
 }
 
 function get(path: string, headers: Record<string, string> = {}) {
-  return createAppRouter(secret).fetch(new Request(origin + path, { headers }));
+  return createAppRouter(options).fetch(new Request(origin + path, { headers }));
 }
 
 function post(path: string, fields: Record<string, string>, headers: Record<string, string> = {}) {
-  return createAppRouter(secret).fetch(
+  return createAppRouter(options).fetch(
     new Request(origin + path, { method: "POST", body: new URLSearchParams(fields), headers }),
   );
 }
@@ -100,7 +104,7 @@ describe("POST /locale", () => {
   });
 
   it("marks the cookie Secure over https", async () => {
-    let response = await createAppRouter(secret).fetch(
+    let response = await createAppRouter(options).fetch(
       new Request("https://taqyeem.example/locale", {
         method: "POST",
         body: new URLSearchParams({ locale: "ar" }),
@@ -329,7 +333,7 @@ describe("card forms in English", () => {
   });
 
   it("localizes the rate-limit JSON error without changing the status", async () => {
-    let router = createAppRouter(secret);
+    let router = createAppRouter(options);
     let status = 0;
     let message = "";
     for (let i = 0; i < 8; i++) {
