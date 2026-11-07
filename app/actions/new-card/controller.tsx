@@ -7,6 +7,7 @@ import { resolveActiveSection } from "../../models/section.ts";
 import { NewCardPage } from "./page.tsx";
 import { parseNewCardForm } from "./schema.ts";
 import { newCardError } from "./error-response.tsx";
+import { getI18n } from "../../middleware/locale.ts";
 
 export default createController(routes.newCard, {
   middleware: [
@@ -29,20 +30,21 @@ export default createController(routes.newCard, {
           categories={categories}
           activeCategoryId={activeCategoryId}
           submissionId={crypto.randomUUID()}
+          i18n={context.i18n}
         />,
       );
     },
     async action(context) {
       let { board, member } = context;
       let data = await context.request.formData();
-      let parsed = parseNewCardForm(data);
+      let parsed = parseNewCardForm(data, context.i18n.t);
       if (!parsed.success) {
         return newCardError(context, parsed.issues[0].message, 400, { data });
       }
       let { text, categoryId, submissionId, isAnonymous } = parsed.value;
       let categories = await context.models.listCategories(board.id);
       if (!categories.some((category) => category.id === categoryId)) {
-        return newCardError(context, "التصنيف غير صالح", 400, {
+        return newCardError(context, context.i18n.t("card.error.invalidCategory"), 400, {
           data,
           categories,
         });
@@ -63,7 +65,7 @@ export default createController(routes.newCard, {
       if (!result.ok) {
         return newCardError(
           context,
-          "لقد نشرت ملاحظات كثيرة، يرجى الانتظار قليلًا",
+          context.i18n.t("card.error.rateLimited"),
           429,
           { data, categories, retryAfter: result.retryAfter },
         );
@@ -82,7 +84,7 @@ function requireCreationAllowed(): Middleware {
     let board = context.get(boardContext);
     if (!board) throw new Error("Creation policy requires loadBoard");
     if (context.request.method === "POST" && board.status === "closed") {
-      return newCardError(context, "اللوحة مغلقة", 403);
+      return newCardError(context, getI18n(context).t("access.boardClosed"), 403);
     }
     return next();
   };

@@ -1,20 +1,13 @@
 import type { Handle, RemixNode } from "remix/component";
+import type { I18n } from "../middleware/locale.ts";
+import { LocaleSwitcher } from "./locale-switcher.tsx";
 
 export interface DocumentProps {
   children?: RemixNode;
   head?: RemixNode;
   title?: string;
-  locale?: string;
+  i18n: I18n;
 }
-
-const DEFAULT_LOCALE = "ar";
-const RTL_LOCALES = new Set(["ar", "he", "fa", "ur"]);
-
-function directionFor(locale: string): "rtl" | "ltr" {
-  return RTL_LOCALES.has(locale.split("-")[0]) ? "rtl" : "ltr";
-}
-
-const DEFAULT_TITLE = readAppDisplayName("Taqyeem");
 
 // Vite serves the client entry itself in dev; the built, hashed chunk in production.
 const CLIENT_ENTRY_SRC = import.meta.env?.DEV
@@ -26,12 +19,12 @@ export function Document(handle: Handle<DocumentProps>) {
     let {
       children,
       head,
-      title = DEFAULT_TITLE,
-      locale = DEFAULT_LOCALE,
+      i18n,
     } = handle.props;
+    let title = handle.props.title ?? i18n.t("app.name");
 
     return (
-      <html lang={locale} dir={directionFor(locale)}>
+      <html lang={i18n.locale} dir={i18n.dir}>
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -41,12 +34,11 @@ export function Document(handle: Handle<DocumentProps>) {
           {head}
           <script type="module" src={CLIENT_ENTRY_SRC}></script>
         </head>
-        <body>{children}</body>
+        <body>
+          <LocaleSwitcher i18n={i18n} />
+          {children}
+        </body>
       </html>
     );
   };
-}
-
-function readAppDisplayName(value: string): string {
-  return value.startsWith("%%") ? "Remix App" : decodeURIComponent(value);
 }

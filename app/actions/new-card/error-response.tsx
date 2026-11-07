@@ -5,6 +5,7 @@ import { boardAccessError, boardContext } from "../../middleware/board.ts";
 import { boardModelsContext } from "../../middleware/models.ts";
 import { resolveActiveSection } from "../../models/section.ts";
 import { NewCardPage } from "./page.tsx";
+import { getI18n } from "../../middleware/locale.ts";
 import { isSubmissionId } from "./schema.ts";
 
 // Shared by the access middleware and action, while form presentation stays route-owned.
@@ -46,6 +47,7 @@ export async function newCardError(
   let submissionId = data.get("submissionId");
   return render(
     <NewCardPage
+      i18n={getI18n(context)}
       board={board}
       categories={categories}
       activeCategoryId={resolveActiveSection(

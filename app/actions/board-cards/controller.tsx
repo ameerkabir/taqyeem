@@ -23,6 +23,7 @@ export default createAction(routes.boardCards, {
 
     return context.render(
       <Cardlist
+        i18n={context.i18n}
         activeId={activeId}
         board={board}
         cards={cards}

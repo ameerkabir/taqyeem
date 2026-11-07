@@ -22,13 +22,13 @@ export default createAction(routes.boardVoting, {
     let value = values[0];
 
     if (values.length !== 1 || (value !== "true" && value !== "false")) {
-      return cardAccessError(context, "قيمة حالة التصويت غير صالحة", 400);
+      return cardAccessError(context, context.i18n.t("access.invalidVotingValue"), 400);
     }
 
     let votingOpen = value === "true";
 
     if (board.status === "closed" && votingOpen) {
-      return cardAccessError(context, "لا يمكن فتح التصويت في لوحة مغلقة", 403);
+      return cardAccessError(context, context.i18n.t("access.cannotOpenVotingClosed"), 403);
     }
 
     let categories = await models.listCategories(board.id);
@@ -42,7 +42,7 @@ export default createAction(routes.boardVoting, {
     let updated = await models.setVotingOpen(board.id, votingOpen);
 
     if (!updated) {
-      return cardAccessError(context, "اللوحة غير موجودة", 404);
+      return cardAccessError(context, context.i18n.t("access.boardNotFound"), 404);
     }
 
     let location = routes.board.href({ boardId: board.id });

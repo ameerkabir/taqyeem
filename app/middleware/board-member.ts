@@ -6,6 +6,7 @@ import {
   type BoardAccessErrorHandler,
 } from "./board.ts";
 import { boardModelsContext } from "./models.ts";
+import { getI18n } from "./locale.ts";
 
 export const boardMemberContext = createContextKey<Member>();
 
@@ -27,14 +28,14 @@ export function requireBoardMember(
 
     let fail = options.onError ?? boardAccessError;
     let memberId = await models.getViewerMemberId(board.id);
-    if (!memberId) return fail(context, "يرجى الانضمام إلى اللوحة", 403);
+    if (!memberId) return fail(context, getI18n(context).t("access.joinBoard"), 403);
 
     let members = await models.listMembers(board.id);
     let member = members.find(
       (candidate) =>
         candidate.id === memberId && candidate.boardId === board.id,
     );
-    if (!member) return fail(context, "العضو غير موجود في هذه اللوحة", 403);
+    if (!member) return fail(context, getI18n(context).t("access.memberNotFound"), 403);
 
     context.set(boardMemberContext, member, { property: "member" });
     return next();

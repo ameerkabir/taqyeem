@@ -1,7 +1,10 @@
 import { clientEntry, type Handle } from "remix/component";
 import { votingButtonStyle } from "../organiser-controls.styles.ts";
+import type { Locale } from "../../../i18n/locales.ts";
+import { createTranslator } from "../../../i18n/translator.ts";
 
 interface VotingButtonProps {
+  locale: Locale;
   votingOpen: boolean;
   disabled: boolean;
 }
@@ -33,7 +36,8 @@ export const VotingButton = clientEntry(
     });
 
     return () => {
-      let { votingOpen, disabled } = handle.props;
+      let { locale, votingOpen, disabled } = handle.props;
+      let { t } = createTranslator(locale);
 
       return (
         <button
@@ -45,10 +49,10 @@ export const VotingButton = clientEntry(
           mix={votingButtonStyle}
         >
           {pending
-            ? "جارٍ الحفظ…"
+            ? t("organiser.saving")
             : votingOpen
-              ? "إغلاق التصويت"
-              : "فتح التصويت"}
+              ? t("organiser.closeVoting")
+              : t("organiser.openVoting")}
         </button>
       );
     };

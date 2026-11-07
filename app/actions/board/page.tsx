@@ -17,21 +17,18 @@ import { Frame, type Handle } from "remix/component";
 import { Document } from "../document.tsx";
 import type {
   Board,
-  BoardStatus,
   Card,
   Category,
 } from "../../data/fake-board.ts";
 import { routes } from "../../routes.ts";
 import { OrganiserControls } from "./organiser-controles.tsx";
-
-const statusLabels: Record<BoardStatus, string> = {
-  collecting: "جمع الملاحظات",
-  meeting: "اجتماع",
-  closed: "مغلق",
-};
+import type { I18n } from "../../middleware/locale.ts";
+import { isolate } from "../../i18n/translator.ts";
+import { visuallyHiddenStyle } from "../../ui/visually-hidden.ts";
 
 export function BoardPage(
   handle: Handle<{
+    i18n: I18n;
     activeId: string;
     cards: Card[];
     categories: Category[];
@@ -40,22 +37,33 @@ export function BoardPage(
   }>,
 ) {
   return () => {
+    let { i18n } = handle.props;
+    let { t } = i18n;
     let sectionId = handle.props.activeId;
     let categories = handle.props.categories;
     let cards = handle.props.cards;
 
     return (
-      <Document>
+      <Document
+        i18n={i18n}
+        title={t("page.title", {
+          title: isolate(handle.props.board.title),
+          suffix: t("app.name"),
+        })}
+      >
         <main mix={mainStyle}>
           <header mix={headerStyle}>
-            <h1 mix={titleStyle}>{handle.props.board.title}</h1>
+            <h1 dir="auto" mix={titleStyle}>
+              {handle.props.board.title}
+            </h1>
             <span mix={statusPillStyle}>
-              {statusLabels[handle.props.board.status]}
+              {t(`board.status.${handle.props.board.status}`)}
             </span>
           </header>
 
           {handle.props.isOrganiser && (
             <OrganiserControls
+              i18n={i18n}
               boardId={handle.props.board.id}
               status={handle.props.board.status}
               votingOpen={handle.props.board.votingOpen}
@@ -65,15 +73,15 @@ export function BoardPage(
 
           {handle.props.board.status === "meeting" &&
             handle.props.board.votingOpen && (
-              <div aria-label="حالة التصويت" mix={votingBannerStyle}>
+              <div aria-label={t("board.voting.label")} mix={votingBannerStyle}>
                 <span aria-hidden="true" mix={votingDotStyle} />
                 <div>
-                  <p mix={votingTitleStyle}>التصويت مفتوح</p>
-                  <p mix={votingHintStyle}>صوّت للملاحظات التي تودّ مناقشتها</p>
+                  <p mix={votingTitleStyle}>{t("board.voting.openTitle")}</p>
+                  <p mix={votingHintStyle}>{t("board.voting.openHint")}</p>
                 </div>
               </div>
             )}
-          <nav aria-label="الأقسام" mix={navStyle}>
+          <nav aria-label={t("board.sections")} mix={navStyle}>
             {categories.map((cat) => {
               let count = cards.filter(
                 (card) => card.categoryId === cat.id,
@@ -86,7 +94,13 @@ export function BoardPage(
                   href={`${routes.board.href({ boardId: handle.props.board.id })}?section=${cat.id}`}
                   aria-current={cat.id === sectionId ? "page" : undefined}
                 >
-                  {cat.label} <span mix={tabCounter}>{count}</span>
+                  <span dir="auto">{cat.label}</span>{" "}
+                  <span mix={tabCounter} aria-hidden="true">
+                    {i18n.formatNumber(count)}
+                  </span>
+                  <span mix={visuallyHiddenStyle}>
+                    {t("board.tabCount", { count })}
+                  </span>
                 </a>
               );
             })}
@@ -104,10 +118,10 @@ export function BoardPage(
                 aria-describedby="closed-board-note"
                 mix={addNoteStyle}
               >
-                + أضف ملاحظة هنا
+                {t("board.addNote")}
               </button>
               <p id="closed-board-note" mix={closedNoteStyle}>
-                اللوحة مغلقة، لا يمكن إضافة ملاحظات
+                {t("board.closedNote")}
               </p>
             </>
           ) : (
@@ -115,7 +129,7 @@ export function BoardPage(
               href={`${routes.newCard.index.href({ boardId: handle.props.board.id })}?category=${sectionId}`}
               mix={addNoteStyle}
             >
-              + أضف ملاحظة هنا
+              {t("board.addNote")}
             </a>
           )}
         </main>
