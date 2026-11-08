@@ -7,6 +7,7 @@ import {
   categories as categoriesTable,
   members as membersTable,
 } from "../data/tables.ts";
+import { memberNameKey } from "../models/members/name-key.ts";
 import { board, cards, categories, members, viewerMemberId } from "./fake-board.ts";
 
 type AppRouter = ReturnType<typeof createAppRouter>;
@@ -32,6 +33,7 @@ export async function seedDemoBoard(db: Database) {
       id: member.id,
       board_id: member.boardId,
       display_name: member.displayName,
+      name_key: memberNameKey(member.displayName),
       role: member.id === board.organiserMemberId ? ("organiser" as const) : ("participant" as const),
     })),
   );

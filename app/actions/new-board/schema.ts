@@ -5,6 +5,7 @@ import {
   MAX_MEMBER_NAME_LENGTH,
 } from "../../data/limits.ts";
 import type { Translator } from "../../i18n/translator.ts";
+import { memberNameKey } from "../../models/members/name-key.ts";
 
 const newBoardForm = s.object({
   title: s
@@ -13,6 +14,8 @@ const newBoardForm = s.object({
     .pipe(checks.minLength(1), checks.maxLength(MAX_BOARD_TITLE_LENGTH)),
   organiserDisplayName: s
     .string()
+    // A name made only of invisible characters is as good as empty.
+    .refine((value) => memberNameKey(value) !== "")
     .transform((value) => value.trim())
     .pipe(checks.minLength(1), checks.maxLength(MAX_MEMBER_NAME_LENGTH)),
 });

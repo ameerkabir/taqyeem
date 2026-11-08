@@ -29,6 +29,9 @@ export let members = table({
     board_id: column.uuid(),
     display_name: column.varchar(MAX_MEMBER_NAME_LENGTH),
     role: column.enum(["organiser", "participant"] as const),
+    // Normalised display_name, unique per board. Set by insertMember; nullable only because
+    // of how the column was added (see 0006_member_name_key.sql).
+    name_key: column.text().nullable(),
   },
 });
 

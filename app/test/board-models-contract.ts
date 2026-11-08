@@ -95,6 +95,41 @@ export function runBoardModelsContract(name: string, make: MakeModels) {
       assert.equal(closed?.votingOpen, false);
     });
 
+    it("joins a participant who then appears in the member list and can vote", async () => {
+      let { models, board, organiser, categories } = await start(make);
+      let joined = await models.joinBoard(board.id, "  Pat  ");
+      assert.ok(joined?.ok);
+      assert.equal(joined.member.displayName, "Pat");
+      assert.equal(joined.member.boardId, board.id);
+      assert.deepEqual(
+        (await models.listMembers(board.id)).map((m) => m.id).sort(),
+        [organiser.id, joined.member.id].sort(),
+      );
+      let draft = cardFor(board.id, categories[0].id, organiser.id);
+      await models.createCard(draft, "s1");
+      let vote = await models.setCardVote(board.id, draft.id, joined.member.id, true);
+      assert.deepEqual(vote, { voted: true, count: 1 });
+    });
+
+    it("refuses a name that is already taken on the board, including the organiser's", async () => {
+      let { models, board } = await start(make); // organiser: ريم
+      assert.ok((await models.joinBoard(board.id, "Pat"))?.ok);
+      for (let name of ["Pat", "pat", " PAT ", "ريم"]) {
+        assert.deepEqual(await models.joinBoard(board.id, name), { ok: false, reason: "name_taken" }, name);
+      }
+      assert.equal((await models.listMembers(board.id)).length, 2);
+      let other = await models.createBoard({ ...input, title: "Other" });
+      assert.ok((await models.joinBoard(other.board.id, "Pat"))?.ok);
+    });
+
+    it("refuses to join a closed board and reports a missing one", async () => {
+      let { models, board } = await start(make);
+      assert.equal(await models.joinBoard(crypto.randomUUID(), "Pat"), null);
+      await models.setBoardStatus(board.id, "closed");
+      assert.deepEqual(await models.joinBoard(board.id, "Pat"), { ok: false, reason: "closed" });
+      assert.equal((await models.listMembers(board.id)).length, 1);
+    });
+
     it("identifies the viewer", async () => {
       let { models, board, organiser, setViewer } = await start(make);
       assert.equal(await models.getViewerMemberId(board.id), organiser.id);

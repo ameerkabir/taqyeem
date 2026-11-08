@@ -1,9 +1,20 @@
+import { ACCESS_REASON_HEADER } from "../../../data/access.ts";
 import { DEFAULT_LOCALE } from "../../../i18n/locales.ts";
 import { createTranslator, type Translator } from "../../../i18n/translator.ts";
 
 export interface VoteState {
   voted: boolean;
   count: number;
+}
+
+/** The server answered and said no (as opposed to the request never completing). */
+export class VoteRejectedError extends Error {
+  readonly reason: string | null;
+  constructor(message: string, reason: string | null) {
+    super(message);
+    this.name = "VoteRejectedError";
+    this.reason = reason;
+  }
 }
 
 type VoteMessages = Pick<Translator, "t">["t"];
@@ -53,8 +64,10 @@ export function createVoteModel(
         };
         signal.throwIfAborted();
         if (!response.ok) {
-          throw new Error(typeof result.error === "string"
-            ? result.error : t("vote.saveFailed"));
+          throw new VoteRejectedError(
+            typeof result.error === "string" ? result.error : t("vote.saveFailed"),
+            response.headers.get(ACCESS_REASON_HEADER),
+          );
         }
         if (typeof result.voted !== "boolean" ||
             typeof result.count !== "number" ||

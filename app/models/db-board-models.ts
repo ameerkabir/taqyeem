@@ -11,6 +11,7 @@ import {
   updateCard,
 } from "./cards/card.ts";
 import { createBoard } from "./boards/create.ts";
+import { joinBoard } from "./boards/join.ts";
 import { listViewerVotes, setCardVote } from "./cards/vote.ts";
 
 /**
@@ -44,6 +45,7 @@ export function createDbBoardModels(
 
     listCategories: (boardId) => loadCategories(db, boardId),
     listMembers: (boardId) => loadMembers(db, boardId),
+    joinBoard: (boardId, displayName) => joinBoard(db, boardId, displayName),
 
     listCards: (boardId) => listCards(db, boardId),
     getCard: (boardId, cardId) => getCard(db, boardId, cardId),

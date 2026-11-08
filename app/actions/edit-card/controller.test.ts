@@ -141,7 +141,14 @@ describe("edit card", () => {
     ]) {
       it(`${method} rejects ${scenario.name} without updating`, async () => {
         let app = await setup(scenario.overrides);
+        // A non-member opening the page in a browser is sent to the join form; the JSON
+        // flavour of the same request (what the enhanced form sends) and a POST get a 403.
         assert.equal((await app.request(method)).status, scenario.status);
+        if (method === "GET" && scenario.name === "missing member") {
+          let navigation = await app.request("GET", undefined, false);
+          assert.equal(navigation.status, 303);
+          assert.equal(navigation.headers.get("Location"), "/boards/demo/join");
+        }
         assert.equal(app.updates, 0);
         assert.equal(app.saved[0].body, app.original.body);
       });

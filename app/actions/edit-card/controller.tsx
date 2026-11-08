@@ -10,7 +10,7 @@ import { parseEditCardForm, readEditValues } from "./schema.ts";
 export default createController(routes.editCard, {
   middleware: [
     loadBoard({ onError: cardAccessError }),
-    requireBoardMember({ onError: cardAccessError }),
+    requireBoardMember({ onError: cardAccessError, redirectToJoin: true }),
   ],
   actions: {
     async index(context) {

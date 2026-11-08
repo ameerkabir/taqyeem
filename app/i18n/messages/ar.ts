@@ -29,6 +29,18 @@ export const ar = {
   "newBoard.error.nameRequired": "يرجى إدخال اسمك",
   "newBoard.error.saveFailed": "حدث خطأ ولم يتم إنشاء اللوحة. يرجى المحاولة مرة أخرى",
 
+  "join.documentTitle": "الانضمام إلى لوحة",
+  "join.heading": "الانضمام إلى {title}",
+  "join.intro": "أدخل اسمك لعرض اللوحة وإضافة الملاحظات",
+  "join.nameLabel": "اسمك",
+  "join.nameHint": "سيظهر هذا الاسم لفريقك بجانب ملاحظاتك، ما لم تنشر ملاحظة بدون اسمك",
+  "join.submit": "انضم إلى اللوحة",
+  "join.closedNote": "هذه اللوحة مغلقة ولم تعد تقبل أعضاء جددًا",
+  "join.error.nameMax": "الحد الأقصى للاسم {max} حرفًا",
+  "join.error.nameRequired": "يرجى إدخال اسمك",
+  "join.error.nameTaken": "هذا الاسم مستخدم بالفعل في هذه اللوحة. جرّب إضافة اسم العائلة أو حرف من اسمك",
+  "join.error.saveFailed": "حدث خطأ ولم تتم إضافتك. يرجى المحاولة مرة أخرى",
+
   "board.defaultCategory.good": "ما سار بشكل جيد",
   "board.defaultCategory.bad": "ما لم يسر جيدًا",
   "board.defaultCategory.ideas": "أفكار",
@@ -70,6 +82,7 @@ export const ar = {
   "cards.boardClosed": "اللوحة مغلقة",
   "cards.lockedDuringVoting": "التعديل والحذف غير متاحين أثناء التصويت",
   "cards.anonymous": "بدون اسم",
+  "cards.organiserBadge": "المنظم",
 
   "vote.count": {
     zero: "لا أصوات",
@@ -117,7 +130,9 @@ export const ar = {
 
   "access.requestFailedTitle": "تعذّر إكمال الطلب",
   "access.boardNotFound": "اللوحة غير موجودة",
+  "boardNotFound.body": "ربما يكون الرابط غير صحيح، أو أن اللوحة أُزيلت. تحقق من الرابط الذي وصلك، أو ابدأ لوحة جديدة خاصة بك.",
   "access.joinBoard": "يرجى الانضمام إلى اللوحة",
+  "access.joinLink": "انضم إلى اللوحة",
   "access.memberNotFound": "العضو غير موجود في هذه اللوحة",
   "access.organiserOnly": "هذا الإجراء متاح للمنظم فقط",
   "access.boardClosed": "اللوحة مغلقة",

@@ -13,7 +13,7 @@ export default createController(routes.newCard, {
   middleware: [
     loadBoard({ onError: newCardError }),
     requireCreationAllowed(),
-    requireBoardMember({ onError: newCardError }),
+    requireBoardMember({ onError: newCardError, redirectToJoin: true }),
   ],
   actions: {
     async index(context) {

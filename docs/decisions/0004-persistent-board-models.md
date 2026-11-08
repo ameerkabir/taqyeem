@@ -75,6 +75,38 @@ Our driver rejects transactions, so there are no multi-statement rollbacks. The 
 Not enforced by the database (model rules): a board has at least one category;
 `current_section_id` belongs to the same board.
 
+## Membership and access
+
+A browser is tied to a member by its session (`board-member:<boardId>` -> member id). The
+board URL (an unguessable UUID) is the invitation: anyone with it may open the join form,
+enter a name and become a participant. Everything else needs that membership.
+
+- **The server is the gate.** `requireBoardMember` runs on every board route (page,
+  cards fragment, new/edit/delete note, vote, voting, status). Hiding buttons is only UX.
+- **HTML navigations redirect, everything else is 403.** A page GET that is not asking for
+  JSON is sent to `/boards/:id/join` (303). Mutations, the cards fragment and anything
+  with `Accept: application/json` get 403, JSON for JSON clients, never a redirect, because
+  a `fetch` would follow it and read the join page as if it were JSON.
+- **`X-Access-Reason: not_member`** is set on every "not a member" 403 so clients can react
+  without parsing translated text (the vote button shows the server's message plus a link
+  to join). A member being refused for another reason (not the organiser, board closed)
+  does not get it.
+- **Joining** is one insert (`joinBoard`), refused on a closed board, idempotent per
+  session (a repeated submit with the new session redirects instead of adding a second
+  member). A person who loses their cookie joins again as a new member and cannot reclaim
+  old notes; there are no accounts to recover from. There is no cap on members.
+- **Names are unique per board** after normalising: NFKC, case, spacing, zero-width
+  characters, Arabic marks/tatweel and alef variants (`members/name-key.ts`). The app computes
+  `members.name_key`; `UNIQUE (board_id, name_key)` enforces it, so two simultaneous joins
+  cannot both win. `insertMember` is the only writer. A taken name is a 409 with a message and
+  the typed value kept; the organiser's name is protected the same way. Known limits: look-alikes
+  from different scripts are not merged (hence the **organiser badge** on notes); a person who
+  clears cookies cannot rejoin under their old name (no accounts to reclaim it); `name_key`
+  is nullable only because SQLite cannot add a NOT NULL column to a populated table and
+  rebuilding `members` would cascade-delete cards and votes.
+- `app/actions/access.test.ts` is the authorization matrix: every route tried as visitor,
+  member of another board, participant and organiser.
+
 ## Tests
 
 - Model tests use `createTestDatabase()` and cover constraints, cascades and failure paths.

@@ -28,6 +28,17 @@ export const cardAuthorStyle = css({
   color: "var(--color-text-muted)",
 });
 
+export const organiserBadgeStyle = css({
+  marginInlineStart: "var(--space-2)",
+  paddingBlock: "0.05rem",
+  paddingInline: "var(--space-2)",
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--radius-md)",
+  fontSize: "var(--text-sm, 0.8125rem)",
+  color: "var(--color-text)",
+  whiteSpace: "nowrap",
+});
+
 export const cardHeaderStyle = css({
   display: "flex",
   alignItems: "flex-start",

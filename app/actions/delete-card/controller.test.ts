@@ -92,7 +92,14 @@ describe("delete card access", () => {
     ]) {
       it(`${method} rejects ${testCase.name} without deleting`, async () => {
         let app = await setup(testCase.overrides);
+        // A non-member opening the page in a browser is sent to the join form; the JSON
+        // flavour of the same request (what the enhanced form sends) and a POST get a 403.
         assert.equal((await app.request(method)).status, testCase.status);
+        if (method === "GET" && testCase.name === "missing membership") {
+          let navigation = await app.request("GET", "own-card", false);
+          assert.equal(navigation.status, 303);
+          assert.equal(navigation.headers.get("Location"), "/boards/demo/join");
+        }
         assert.equal(app.saved.length, 1);
         assert.equal(app.deletes, 0);
       });

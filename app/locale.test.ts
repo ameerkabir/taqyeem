@@ -237,8 +237,13 @@ describe("localized errors", () => {
     let en = await get("/boards/missing", { "Accept-Language": "en" });
     assert.equal(ar.status, 404);
     assert.equal(en.status, 404);
-    assert.equal(await ar.text(), "اللوحة غير موجودة");
-    assert.equal(await en.text(), "Board not found");
+    let arHtml = await ar.text();
+    let enHtml = await en.text();
+    assert.ok(arHtml.includes("اللوحة غير موجودة"));
+    assert.ok(enHtml.includes("Board not found"));
+    assert.equal(html(arHtml).lang, "ar");
+    assert.equal(html(enHtml).lang, "en");
+    assert.equal(html(enHtml).dir, "ltr");
   });
 
   it("localizes validation errors and keeps the numeric limit", async () => {

@@ -9,7 +9,7 @@ import { DeleteCardPage } from "./page.tsx";
 export default createController(routes.deleteCard, {
   middleware: [
     loadBoard({ onError: cardAccessError }),
-    requireBoardMember({ onError: cardAccessError }),
+    requireBoardMember({ onError: cardAccessError, redirectToJoin: true }),
   ],
   actions: {
     async index(context) {

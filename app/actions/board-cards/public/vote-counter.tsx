@@ -3,7 +3,8 @@ import type { Card } from "../../../data/board.ts";
 import { routes } from "../../../routes.ts";
 import { errorStyle } from "../../../ui/public/card-form-styles.ts";
 import { votePillStyle } from "../styles.ts";
-import { createVoteModel } from "./vote-model.ts";
+import { NOT_MEMBER_REASON } from "../../../data/access.ts";
+import { createVoteModel, VoteRejectedError } from "./vote-model.ts";
 import type { Locale } from "../../../i18n/locales.ts";
 import { createTranslator } from "../../../i18n/translator.ts";
 
@@ -20,6 +21,9 @@ export const VoteCounter = clientEntry(
     let model = createVoteModel(undefined, createTranslator(handle.props.locale).t);
     let pending = false;
     // Keep a message key, not text, so the message follows the current locale prop.
+    // The server said no (its own message, and a join link if the fix is to join)...
+    let rejection: { message: string; joinHref?: string } | undefined;
+    // ...or the request itself failed.
     let error: "vote.refreshFailed" | "vote.confirmFailed" | undefined;
 
     return () => {
@@ -39,6 +43,7 @@ export const VoteCounter = clientEntry(
             let body = new FormData(form, event.submitter);
             pending = true;
             error = undefined;
+            rejection = undefined;
             handle.update();
             try {
               await model.save({
@@ -56,9 +61,20 @@ export const VoteCounter = clientEntry(
                 // Saving succeeded; retain the confirmed vote if refreshing fails.
                 error = "vote.refreshFailed";
               }
-            } catch {
+            } catch (cause) {
               if (!handle.signal.aborted) {
-                error = "vote.confirmFailed";
+                if (cause instanceof VoteRejectedError) {
+                  // Show what the server said; a non-member is pointed at the join form.
+                  rejection = {
+                    message: cause.message,
+                    joinHref:
+                      cause.reason === NOT_MEMBER_REASON
+                        ? routes.joinBoard.index.href({ boardId: card.boardId })
+                        : undefined,
+                  };
+                } else {
+                  error = "vote.confirmFailed";
+                }
               }
             } finally {
               if (!handle.signal.aborted) {
@@ -80,6 +96,17 @@ export const VoteCounter = clientEntry(
             <span aria-hidden="true">👍</span> {formatNumber(displayed.count)}
           </button>
           {error && <p role="alert" mix={errorStyle}>{t(error)}</p>}
+          {rejection && (
+            <p role="alert" mix={errorStyle}>
+              {rejection.message}
+              {rejection.joinHref && (
+                <>
+                  {" "}
+                  <a href={rejection.joinHref}>{t("access.joinLink")}</a>
+                </>
+              )}
+            </p>
+          )}
         </form>
       );
     };

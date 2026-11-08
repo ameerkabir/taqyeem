@@ -17,7 +17,7 @@ import controller from "./controller.tsx";
 import boardCardsController from "../board-cards/controller.tsx";
 import { routes } from "../../routes.ts";
 
-async function page(
+async function respond(
   overrides: Partial<Board> = {},
   viewerMemberId: string | null = "m1",
   section = "good",
@@ -61,7 +61,15 @@ async function page(
   let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.board, controller);
   router.map(routes.boardCards, boardCardsController);
-  let response = await router.fetch(`http://localhost/boards/demo?section=${encodeURIComponent(section)}`);
+  return router.fetch(`http://localhost/boards/demo?section=${encodeURIComponent(section)}`);
+}
+
+async function page(
+  overrides: Partial<Board> = {},
+  viewerMemberId: string | null = "m1",
+  section = "good",
+) {
+  let response = await respond(overrides, viewerMemberId, section);
   assert.equal(response.status, 200);
   return response.text();
 }
@@ -93,9 +101,17 @@ describe("own-card menu", () => {
     assert.ok(!html.includes(routes.editCard.index.href({ boardId: "demo", cardId: "own" })));
     assert.ok(!html.includes(routes.deleteCard.index.href({ boardId: "demo", cardId: "own" })));
   });
-  it("does not expose management links without a viewer identity", async () => {
-    let html = await page({}, null);
-    assert.ok(!/href="[^"]*\/(?:edit|delete)"/.test(html));
+  it("sends a visitor who has not joined to the join form instead of showing the board", async () => {
+    let response = await respond({}, null);
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("Location"), routes.joinBoard.index.href({ boardId: "demo" }));
+    assert.equal(await response.text(), "");
+  });
+
+  it("sends a visitor whose session names a member of a different board to the join form", async () => {
+    let response = await respond({}, "not-a-member-of-demo");
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("Location"), routes.joinBoard.index.href({ boardId: "demo" }));
   });
 });
 

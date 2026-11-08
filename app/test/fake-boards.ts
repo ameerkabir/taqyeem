@@ -7,6 +7,7 @@ import {
 } from "./fake-board.ts";
 import { MAX_CARDS, WINDOW_MS } from "../data/limits.ts";
 import type { BoardModels } from "../models/board-models.ts";
+import { memberNameKey } from "../models/members/name-key.ts";
 import { createFakeBoardStore, type FakeBoardStore } from "./fake-board-store.ts";
 
 // Shared between requests in this Worker instance, just like the demo cards.
@@ -161,6 +162,28 @@ export function createFakeBoardModels(
     },
     listMembers: async (boardId: string) =>
       store.members.filter((m) => m.boardId === boardId),
+
+    joinBoard: async (boardId, displayName) => {
+      let board = store.boards.get(boardId);
+      if (!board) return null;
+      if (board.status === "closed") return { ok: false, reason: "closed" };
+      let key = memberNameKey(displayName);
+      if (key === "") throw new Error("A member name must contain a visible character");
+      if (
+        store.members.some(
+          (m) => m.boardId === boardId && memberNameKey(m.displayName) === key,
+        )
+      ) {
+        return { ok: false, reason: "name_taken" };
+      }
+      let member: Member = {
+        id: crypto.randomUUID(),
+        boardId,
+        displayName: displayName.trim(),
+      };
+      store.members.push(member);
+      return { ok: true, member };
+    },
 
     listViewerVotes: async (boardId: string) => {
       let memberId = await resolveViewerMemberId(boardId);

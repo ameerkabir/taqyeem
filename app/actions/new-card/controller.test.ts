@@ -469,15 +469,13 @@ describe("new card error feedback without JavaScript", () => {
     assert.equal(app.saved.length, 0);
   });
 
-  it("renders a membership error on GET without trying to parse a form body", async () => {
+  it("sends a non-member opening the page to the join form without trying to parse a form body", async () => {
     let app = await setup({ getViewerMemberId: async () => null });
     let response = await app.router.fetch(
       new URL(routes.newCard.index.href({ boardId: "demo" }), "http://localhost"),
     );
-    assert.equal(response.status, 403);
-    let html = await response.text();
-    assert.ok(html.includes("يرجى الانضمام إلى اللوحة"));
-    assert.match(html, /role="alert"/);
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("Location"), routes.joinBoard.index.href({ boardId: "demo" }));
     assert.equal(app.saved.length, 0);
   });
 

@@ -4,7 +4,7 @@ import { MAX_MEMBER_NAME_LENGTH } from "../../data/limits.ts";
 import { boards, members } from "../../data/tables.ts";
 import { createTestDatabase } from "../../test/db.ts";
 import { insertBoard } from "../boards/board.ts";
-import { findMember, insertMember, listMembers } from "./member.ts";
+import { findMember, insertMember, listMembers, MemberNameTakenError } from "./member.ts";
 
 type TestDb = Awaited<ReturnType<typeof createTestDatabase>>;
 
@@ -113,6 +113,7 @@ describe("members model", () => {
           id: crypto.randomUUID(),
           board_id: board.id,
           display_name: "Sam",
+          name_key: "sam",
           role: "admin" as "organiser",
         }),
       );
@@ -152,6 +153,73 @@ describe("members model", () => {
       assert.equal(await db.delete(boards, a.id), true);
       assert.equal((await listMembers(db, a.id)).length, 0);
       assert.equal((await listMembers(db, b.id)).length, 1);
+    });
+  });
+
+  it("stores the normalised key next to the display name", async () => {
+    await withDb(async (db) => {
+      let board = await insertBoard(db, "Retro");
+      let member = await insertMember(db, {
+        boardId: board.id,
+        displayName: "  Élodie  Martin ",
+        role: "participant",
+      });
+      assert.equal(member.display_name, "Élodie  Martin");
+      assert.equal(member.name_key, "élodie martin");
+    });
+  });
+
+  it("refuses a second member whose name has the same key on the same board", async () => {
+    await withDb(async (db) => {
+      let board = await insertBoard(db, "Retro");
+      await insertMember(db, { boardId: board.id, displayName: "Sam", role: "organiser" });
+      for (let displayName of ["Sam", "sam", " SAM ", "S\u200Bam", "Ｓａｍ"]) {
+        await assert.rejects(
+          () => insertMember(db, { boardId: board.id, displayName, role: "participant" }),
+          MemberNameTakenError,
+          displayName,
+        );
+      }
+      assert.equal(await countMembers(db), 1);
+    });
+  });
+
+  it("allows the same name on another board", async () => {
+    await withDb(async (db) => {
+      let a = await insertBoard(db, "A");
+      let b = await insertBoard(db, "B");
+      await insertMember(db, { boardId: a.id, displayName: "Sam", role: "organiser" });
+      await insertMember(db, { boardId: b.id, displayName: "sam", role: "organiser" });
+      assert.equal(await countMembers(db), 2);
+    });
+  });
+
+  it("does not call a different failure a taken name", async () => {
+    await withDb(async (db) => {
+      let board = await insertBoard(db, "Retro");
+      await insertMember(db, { boardId: board.id, displayName: "Sam", role: "organiser" });
+      // A second organiser with a free name fails on the one-organiser rule, not on the name.
+      await assert.rejects(
+        () => insertMember(db, { boardId: board.id, displayName: "Pat", role: "organiser" }),
+        (error: unknown) => !(error instanceof MemberNameTakenError),
+      );
+      // A board that does not exist fails on the foreign key.
+      await assert.rejects(
+        () => insertMember(db, { boardId: crypto.randomUUID(), displayName: "Pat", role: "participant" }),
+        (error: unknown) => !(error instanceof MemberNameTakenError),
+      );
+    });
+  });
+
+  it("rejects a name with no visible characters", async () => {
+    await withDb(async (db) => {
+      let board = await insertBoard(db, "Retro");
+      for (let displayName of ["\u200B", "\uFEFF", "\u064B\u0640"]) {
+        await assert.rejects(() =>
+          insertMember(db, { boardId: board.id, displayName, role: "participant" }),
+        );
+      }
+      assert.equal(await countMembers(db), 0);
     });
   });
 });
