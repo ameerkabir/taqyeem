@@ -6,7 +6,7 @@ import { insertBoard } from "./board.ts";
 import { setBoardStatus } from "./state.ts";
 import { createBoard } from "./create.ts";
 import { joinBoard } from "./join.ts";
-import { loadMembers } from "./load.ts";
+import { loadBoard, loadMembers } from "./load.ts";
 import { findMember, MemberNameTakenError } from "../members/member.ts";
 
 const input = {
@@ -56,12 +56,44 @@ describe("joinBoard", () => {
     assert.equal(await joinBoard(db, orphan.id, "Pat"), null);
   });
 
-  it("refuses a closed board and adds no one", async () => {
+  it("joins a closed board as an ordinary participant", async () => {
+    let db = await testDatabase();
+    let { board, organiser } = await createBoard(db, input);
+    await setBoardStatus(db, board.id, "closed");
+    let result = await joinBoard(db, board.id, "Pat");
+    assert.ok(result?.ok);
+    assert.equal((await findMember(db, result.member.id))?.role, "participant");
+    // The board is still closed and still has the same organiser.
+    let reloaded = await loadBoard(db, board.id);
+    assert.equal(reloaded?.status, "closed");
+    assert.equal(reloaded?.organiserMemberId, organiser.id);
+    assert.equal((await loadMembers(db, board.id)).length, 2);
+  });
+
+  it("keeps a member's membership when the board is closed and reopened", async () => {
+    let db = await testDatabase();
+    let { board } = await createBoard(db, input);
+    let joined = await joinBoard(db, board.id, "Pat");
+    assert.ok(joined?.ok);
+    await setBoardStatus(db, board.id, "closed");
+    assert.equal((await findMember(db, joined.member.id))?.display_name, "Pat");
+    await setBoardStatus(db, board.id, "collecting");
+    assert.equal((await findMember(db, joined.member.id))?.role, "participant");
+    assert.equal((await loadMembers(db, board.id)).length, 2);
+  });
+
+  it("still refuses a taken name, and a blank one, on a closed board", async () => {
     let db = await testDatabase();
     let { board } = await createBoard(db, input);
     await setBoardStatus(db, board.id, "closed");
-    assert.deepEqual(await joinBoard(db, board.id, "Pat"), { ok: false, reason: "closed" });
+    assert.deepEqual(await joinBoard(db, board.id, "sam"), { ok: false, reason: "name_taken" });
+    await assert.rejects(() => joinBoard(db, board.id, "   "));
     assert.equal((await loadMembers(db, board.id)).length, 1);
+  });
+
+  it("returns null for a missing board whatever its state would have been", async () => {
+    let db = await testDatabase();
+    assert.equal(await joinBoard(db, crypto.randomUUID(), "Pat"), null);
   });
 
   it("allows joining again after a closed board is reopened", async () => {

@@ -166,7 +166,6 @@ export function createFakeBoardModels(
     joinBoard: async (boardId, displayName) => {
       let board = store.boards.get(boardId);
       if (!board) return null;
-      if (board.status === "closed") return { ok: false, reason: "closed" };
       let key = memberNameKey(displayName);
       if (key === "") throw new Error("A member name must contain a visible character");
       if (

@@ -91,10 +91,21 @@ enter a name and become a participant. Everything else needs that membership.
   without parsing translated text (the vote button shows the server's message plus a link
   to join). A member being refused for another reason (not the organiser, board closed)
   does not get it.
-- **Joining** is one insert (`joinBoard`), refused on a closed board, idempotent per
-  session (a repeated submit with the new session redirects instead of adding a second
-  member). A person who loses their cookie joins again as a new member and cannot reclaim
-  old notes; there are no accounts to recover from. There is no cap on members.
+- **Joining** is one insert (`joinBoard`) and works on any board, **including a closed one**.
+  Closing a board blocks contributions (notes, edits, deletes, votes), not membership or
+  reading: a visitor with the link joins as an ordinary participant and can read what exists.
+  There is no read-only member role; the contribution routes enforce the board's state on
+  every request, so when the organiser reopens the board members simply get whatever the
+  current state allows. The join form shows a plain explanation that a closed board can only be
+  viewed. Joining is idempotent per session (a repeated submit with the new session redirects
+  instead of adding a second member). A person who loses their cookie joins again as a new
+  member and cannot reclaim old notes; there are no accounts to recover from. There is no cap
+  on members.
+- **The requested category survives joining.** The redirect from a gated page carries the
+  `section` (or `category`) the visitor asked for to the join form; the join controller keeps it
+  only if it names a real category of that board (checked on both the form and the submit, so a
+  forged value is dropped) and redirects to `/boards/:id?section=...`. It travels in a native
+  hidden field, so it works without JavaScript.
 - **Names are unique per board** after normalising: NFKC, case, spacing, zero-width
   characters, Arabic marks/tatweel and alef variants (`members/name-key.ts`). The app computes
   `members.name_key`; `UNIQUE (board_id, name_key)` enforces it, so two simultaneous joins

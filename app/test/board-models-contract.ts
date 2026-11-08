@@ -122,12 +122,45 @@ export function runBoardModelsContract(name: string, make: MakeModels) {
       assert.ok((await models.joinBoard(other.board.id, "Pat"))?.ok);
     });
 
-    it("refuses to join a closed board and reports a missing one", async () => {
-      let { models, board } = await start(make);
+    it("reports a missing board", async () => {
+      let { models } = await start(make);
       assert.equal(await models.joinBoard(crypto.randomUUID(), "Pat"), null);
+    });
+
+    it("lets someone join a closed board as an ordinary member, and the board stays closed", async () => {
+      let { models, board, organiser } = await start(make);
       await models.setBoardStatus(board.id, "closed");
-      assert.deepEqual(await models.joinBoard(board.id, "Pat"), { ok: false, reason: "closed" });
-      assert.equal((await models.listMembers(board.id)).length, 1);
+      let joined = await models.joinBoard(board.id, "Pat");
+      assert.ok(joined?.ok);
+      assert.equal(joined.member.displayName, "Pat");
+      assert.equal(joined.member.boardId, board.id);
+      assert.deepEqual(
+        (await models.listMembers(board.id)).map((m) => m.id).sort(),
+        [organiser.id, joined.member.id].sort(),
+      );
+      let after = await models.getBoard(board.id);
+      assert.equal(after?.status, "closed");
+      assert.equal(after?.organiserMemberId, organiser.id); // joining never changes who organises
+    });
+
+    it("keeps names unique on a closed board too", async () => {
+      let { models, board } = await start(make);
+      await models.setBoardStatus(board.id, "closed");
+      assert.ok((await models.joinBoard(board.id, "Pat"))?.ok);
+      assert.deepEqual(await models.joinBoard(board.id, "pat"), { ok: false, reason: "name_taken" });
+    });
+
+    it("gives a member who joined while closed the same standing once the board reopens", async () => {
+      let { models, board, categories } = await start(make);
+      await models.setBoardStatus(board.id, "closed");
+      let joined = await models.joinBoard(board.id, "Pat");
+      assert.ok(joined?.ok);
+      await models.setBoardStatus(board.id, "collecting");
+      // An ordinary member: can contribute through the same operations any member can.
+      let draft = cardFor(board.id, categories[0].id, joined.member.id);
+      let created = await models.createCard(draft, "s1");
+      assert.ok(created.ok);
+      assert.equal(created.card.memberId, joined.member.id);
     });
 
     it("identifies the viewer", async () => {

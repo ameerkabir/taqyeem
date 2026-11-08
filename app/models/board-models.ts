@@ -4,11 +4,12 @@ export type CreateCardResult =
   { ok: true; card: Card } | { ok: false; retryAfter: number };
 
 /**
- * A joiner can be refused: the board is closed, or another member already has that name
- * (compared after normalising case, spacing and similar). null from joinBoard means no such board.
+ * A joiner is refused only when another member already has that name (compared after
+ * normalising case, spacing and similar). A closed board does NOT refuse: closing blocks
+ * contributions, not membership or reading. null from joinBoard means no such board.
  */
 export type JoinBoardResult =
-  { ok: true; member: Member } | { ok: false; reason: "closed" | "name_taken" };
+  { ok: true; member: Member } | { ok: false; reason: "name_taken" };
 
 export interface VoteResult {
   voted: boolean;

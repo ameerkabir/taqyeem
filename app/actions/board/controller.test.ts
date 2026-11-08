@@ -104,14 +104,16 @@ describe("own-card menu", () => {
   it("sends a visitor who has not joined to the join form instead of showing the board", async () => {
     let response = await respond({}, null);
     assert.equal(response.status, 303);
-    assert.equal(response.headers.get("Location"), routes.joinBoard.index.href({ boardId: "demo" }));
+    // The helper asks for ?section=good, and joining brings them back to that category.
+    assert.equal(response.headers.get("Location"), `${routes.joinBoard.index.href({ boardId: "demo" })}?section=good`);
     assert.equal(await response.text(), "");
   });
 
   it("sends a visitor whose session names a member of a different board to the join form", async () => {
     let response = await respond({}, "not-a-member-of-demo");
     assert.equal(response.status, 303);
-    assert.equal(response.headers.get("Location"), routes.joinBoard.index.href({ boardId: "demo" }));
+    // The helper asks for ?section=good, and joining brings them back to that category.
+    assert.equal(response.headers.get("Location"), `${routes.joinBoard.index.href({ boardId: "demo" })}?section=good`);
   });
 });
 

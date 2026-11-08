@@ -1,7 +1,7 @@
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import type { Database } from "remix/data-table";
-import { boards, members } from "../../data/tables.ts";
+import { boards, categories, members } from "../../data/tables.ts";
 import { MAX_MEMBER_NAME_LENGTH } from "../../data/limits.ts";
 import { createAppRouter } from "../../router.ts";
 import { testDatabase } from "../../test/dependencies.ts";
@@ -149,22 +149,6 @@ describe("join form", () => {
     assert.ok(ar.includes(String(MAX_MEMBER_NAME_LENGTH)));
   });
 
-  it("refuses to add members to a closed board, on the form and on submit", async () => {
-    let db = await testDatabase();
-    let { path, organiserCookie } = await createBoard(db);
-    await call(db, `${path}/status`, { method: "POST", cookie: organiserCookie, fields: { status: "closed" } });
-
-    let form = await call(db, `${path}/join`, { headers: { "Accept-Language": "en" } });
-    assert.equal(form.status, 403);
-    let html = await form.text();
-    assert.ok(html.includes("no longer accepting new members"));
-    assert.ok(!html.includes('name="displayName"'));
-
-    let submit = await call(db, `${path}/join`, { method: "POST", fields: { displayName: "Pat" } });
-    assert.equal(submit.status, 403);
-    assert.equal((await db.findMany(members)).length, 1);
-  });
-
   it("shows a retry message and keeps the name when saving fails", async () => {
     let db = await testDatabase();
     let { path } = await createBoard(db);
@@ -242,5 +226,181 @@ describe("join form", () => {
     let response = await call(db, `${path}/join`, { method: "POST", fields: { displayName: "\u200B\u200B" } });
     assert.equal(response.status, 400);
     assert.equal((await db.findMany(members)).length, 1);
+  });
+});
+
+async function categoryIds(db: Database, path: string) {
+  let rows = await db.findMany(categories, { where: { board_id: path.split("/").pop()! } });
+  return rows.map((row) => row.id);
+}
+
+async function closeBoard(db: Database, path: string, organiserCookie: string) {
+  let response = await call(db, `${path}/status`, { method: "POST", cookie: organiserCookie, fields: { status: "closed" } });
+  assert.equal(response.status, 303);
+}
+
+describe("joining a closed board", () => {
+  it("shows the form with a clear view-only explanation, not an error, in English", async () => {
+    let db = await testDatabase();
+    let { path, organiserCookie } = await createBoard(db);
+    await closeBoard(db, path, organiserCookie);
+    let response = await call(db, `${path}/join`, { headers: { "Accept-Language": "en" } });
+    assert.equal(response.status, 200);
+    let html = await response.text();
+    assert.ok(html.includes("This board is closed. You can join and read its notes"));
+    assert.ok(html.includes("can no longer be added, edited, deleted or voted on"));
+    assert.ok(html.includes('role="note"'));
+    assert.ok(!html.includes('role="alert"'), "closed is an explanation, not an error");
+    assert.ok(html.includes('name="displayName"'));
+    assert.ok(html.includes("Join to view"));
+    assert.ok(!html.includes("no longer accepting"));
+  });
+
+  it("explains it in Arabic, right-to-left, with the same form", async () => {
+    let db = await testDatabase();
+    let { path, organiserCookie } = await createBoard(db);
+    await closeBoard(db, path, organiserCookie);
+    let html = await (await call(db, `${path}/join`)).text();
+    assert.match(html, /<html[^>]*\blang="ar"/);
+    assert.match(html, /<html[^>]*\bdir="rtl"/);
+    assert.ok(html.includes("هذه اللوحة مغلقة. يمكنك الانضمام وقراءة ملاحظاتها"));
+    assert.ok(html.includes("انضم للعرض"));
+    assert.ok(html.includes('name="displayName"'));
+  });
+
+  it("does not show the view-only explanation on an open board", async () => {
+    let db = await testDatabase();
+    let { path } = await createBoard(db);
+    let html = await (await call(db, `${path}/join`, { headers: { "Accept-Language": "en" } })).text();
+    assert.ok(!html.includes("This board is closed"));
+    assert.ok(html.includes("Join board"));
+  });
+
+  it("is a native form that posts without JavaScript", async () => {
+    let db = await testDatabase();
+    let { path, organiserCookie } = await createBoard(db);
+    await closeBoard(db, path, organiserCookie);
+    let html = await (await call(db, `${path}/join`)).text();
+    let form = html.match(/<form[^>]*action="[^"]*\/join"[^>]*>/)?.[0] ?? "";
+    assert.match(form, /method="post"/i);
+    // Posting the fields a browser would send, with no script, joins.
+    let joined = await call(db, `${path}/join`, { method: "POST", fields: { displayName: "Pat" } });
+    assert.equal(joined.status, 303);
+  });
+
+  it("joins as an ordinary participant, signs them in, and lets them read the closed board", async () => {
+    let db = await testDatabase();
+    let { path, organiserCookie } = await createBoard(db);
+    await closeBoard(db, path, organiserCookie);
+    let joined = await call(db, `${path}/join`, { method: "POST", fields: { displayName: "Pat" } });
+    assert.equal(joined.status, 303);
+    assert.equal(joined.headers.get("Location"), path);
+    let [pat] = await db.findMany(members, { where: { display_name: "Pat" } });
+    assert.equal(pat.role, "participant");
+    let cookie = sessionCookie(joined);
+    let board = await call(db, path, { cookie });
+    assert.equal(board.status, 200);
+    let [category] = await categoryIds(db, path);
+    assert.equal((await call(db, `${path}/cards?section=${category}`, { cookie })).status, 200);
+    assert.equal((await db.findMany(boards))[0].status, "closed");
+  });
+
+  it("still rejects an invalid name, a taken name, and a missing board", async () => {
+    let db = await testDatabase();
+    let { path, organiserCookie } = await createBoard(db);
+    await closeBoard(db, path, organiserCookie);
+    for (let name of ["", "   ", "\u200B", "a".repeat(MAX_MEMBER_NAME_LENGTH + 1)]) {
+      let response = await call(db, `${path}/join`, { method: "POST", fields: { displayName: name } });
+      assert.equal(response.status, 400, JSON.stringify(name));
+      // They are told it is view-only even while correcting the name.
+      assert.ok((await response.text()).includes('role="note"'));
+    }
+    assert.equal((await call(db, `${path}/join`, { method: "POST", fields: { displayName: "sam" } })).status, 409);
+    assert.equal((await call(db, `/boards/${crypto.randomUUID()}/join`, { method: "POST", fields: { displayName: "Pat" } })).status, 404);
+    assert.equal((await db.findMany(members)).length, 1);
+  });
+
+  it("does not add a second member when a returning member submits the form again", async () => {
+    let db = await testDatabase();
+    let { path, organiserCookie } = await createBoard(db);
+    await closeBoard(db, path, organiserCookie);
+    let first = await call(db, `${path}/join`, { method: "POST", fields: { displayName: "Pat" } });
+    let cookie = sessionCookie(first);
+    let again = await call(db, `${path}/join`, { method: "POST", cookie, fields: { displayName: "Pat" } });
+    let visit = await call(db, `${path}/join`, { cookie });
+    assert.equal(again.status, 303);
+    assert.equal(visit.status, 303);
+    assert.equal((await db.findMany(members, { where: { display_name: "Pat" } })).length, 1);
+  });
+});
+
+describe("returning to the requested category after joining", () => {
+  it("carries a valid category in the form so it survives a submit without JavaScript", async () => {
+    let db = await testDatabase();
+    let { path } = await createBoard(db);
+    let [, second] = await categoryIds(db, path);
+    let html = await (await call(db, `${path}/join?section=${second}`)).text();
+    assert.ok(new RegExp(`<input[^>]*name="section"[^>]*value="${second}"|<input[^>]*value="${second}"[^>]*name="section"`).test(html));
+  });
+
+  it("lands on the board and the category they asked for", async () => {
+    let db = await testDatabase();
+    let { path } = await createBoard(db);
+    let [, second] = await categoryIds(db, path);
+    let response = await call(db, `${path}/join`, { method: "POST", fields: { displayName: "Pat", section: second } });
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("Location"), `${path}?section=${second}`);
+  });
+
+  it("drops a category that is not one of this board's, an unknown one, and an empty one", async () => {
+    let db = await testDatabase();
+    let { path } = await createBoard(db, "Board A");
+    let other = await createBoard(db, "Board B");
+    let [foreign] = await categoryIds(db, other.path);
+    // Each attempt joins as a new person, since a returning member is redirected before joining.
+    let attempts = [foreign, "nonsense", "", "../../etc", "x".repeat(500)];
+    for (let [index, section] of attempts.entries()) {
+      let response = await call(db, `${path}/join`, {
+        method: "POST",
+        fields: { displayName: `Guest ${index}`, section },
+      });
+      assert.equal(response.status, 303, section);
+      assert.equal(response.headers.get("Location"), path, section); // dropped, not followed
+    }
+    // And the form never offers a hidden field for an invalid one.
+    let html = await (await call(db, `${path}/join?section=${foreign}`)).text();
+    assert.ok(!html.includes('name="section"'));
+  });
+
+  it("keeps the category when the form is re-shown after an invalid name", async () => {
+    let db = await testDatabase();
+    let { path } = await createBoard(db);
+    let [, second] = await categoryIds(db, path);
+    let response = await call(db, `${path}/join`, { method: "POST", fields: { displayName: "  ", section: second } });
+    assert.equal(response.status, 400);
+    assert.ok((await response.text()).includes(`value="${second}"`));
+  });
+
+  it("sends a returning member to the board and the category they asked for", async () => {
+    let db = await testDatabase();
+    let { path, organiserCookie } = await createBoard(db);
+    let [, second] = await categoryIds(db, path);
+    let response = await call(db, `${path}/join?section=${second}`, { cookie: organiserCookie });
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("Location"), `${path}?section=${second}`);
+  });
+
+  it("is reached with the category already attached when a non-member opens a board or note page", async () => {
+    let db = await testDatabase();
+    let { path } = await createBoard(db);
+    let [, second] = await categoryIds(db, path);
+    let board = await call(db, `${path}?section=${second}`);
+    assert.equal(board.status, 303);
+    assert.equal(board.headers.get("Location"), `${path}/join?section=${second}`);
+    let note = await call(db, `${path}/new?category=${second}`);
+    assert.equal(note.status, 303);
+    assert.equal(note.headers.get("Location"), `${path}/join?section=${second}`);
+    // Nothing asked for: nothing attached.
+    assert.equal((await call(db, path)).headers.get("Location"), `${path}/join`);
   });
 });
