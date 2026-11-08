@@ -1,3 +1,4 @@
+import { testDatabase } from "../../test/dependencies.ts";
 import { loadLocale } from "../../middleware/locale.ts";
 import { loadAppDependencies } from "../../middleware/dependencies.ts";
 import { loadSession } from "../../sessions.ts";
@@ -20,7 +21,7 @@ import {
 } from "../../middleware/models.ts";
 
 // Each test gets its own writes; never mutate the shared demo fixtures.
-function setup(
+async function setup(
   overrides: Partial<BoardModels> = {},
   now: () => number = Date.now,
 ) {
@@ -33,7 +34,7 @@ function setup(
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.board, boardController);
   router.map(routes.boardCards, boardCardsController);
   router.map(routes.newCard, newCardController);
@@ -110,7 +111,7 @@ describe("new card guards", () => {
 
   for (let testCase of cases) {
     it(`rejects ${testCase.name} without saving`, async () => {
-      let app = setup(testCase.overrides);
+      let app = await setup(testCase.overrides);
       let response = await app.submit();
       assert.equal(response.status, testCase.status);
       assert.equal(
@@ -191,7 +192,7 @@ describe("new card guards", () => {
 
   for (let testCase of invalidFields) {
     it(`rejects ${testCase.name} before looking up categories`, async () => {
-      let app = setup({ listCategories: mustNotRun });
+      let app = await setup({ listCategories: mustNotRun });
       let data = validForm();
       if (testCase.value === null) data.delete(testCase.field);
       else if (typeof testCase.value === "string")
@@ -209,7 +210,7 @@ describe("new card guards", () => {
   }
 
   it("rejects a category outside the board without saving", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     data.set("categoryId", "category-from-another-board");
     let response = await app.submit(data);
@@ -222,7 +223,7 @@ describe("new card guards", () => {
   });
 
   it("accepts exactly 500 characters after trimming and redirects to that category", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     data.set("text", `  ${"س".repeat(500)}  `);
     let response = await app.submit(data);
@@ -235,7 +236,7 @@ describe("new card guards", () => {
   });
 
   it("renders submitted HTML as escaped card text on the board", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     data.set("text", '<script>alert("note")</script>');
     let response = await app.submit(data);
@@ -252,7 +253,7 @@ describe("new card guards", () => {
 
 describe("new card idempotency", () => {
   it("renders a fresh submission ID on each form visit", async () => {
-    let app = setup();
+    let app = await setup();
     let ids: string[] = [];
     for (let visit = 0; visit < 2; visit++) {
       let response = await app.router.fetch(
@@ -270,7 +271,7 @@ describe("new card idempotency", () => {
   });
 
   it("saves once for repeated POSTs and keeps the original content and redirect", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     let first = await app.submit(data);
     let originalId = app.saved[0].id;
@@ -289,7 +290,7 @@ describe("new card idempotency", () => {
   });
 
   it("saves once when matching POSTs arrive concurrently", async () => {
-    let app = setup();
+    let app = await setup();
     let submissionId = crypto.randomUUID();
     let responses = await Promise.all(
       Array.from({ length: 5 }, () => {
@@ -306,7 +307,7 @@ describe("new card idempotency", () => {
   });
 
   it("creates separate cards for separate submission IDs, even with identical text", async () => {
-    let app = setup();
+    let app = await setup();
     assert.equal((await app.submit()).status, 303);
     assert.equal((await app.submit()).status, 303);
     assert.equal(app.saved.length, 2);
@@ -314,7 +315,7 @@ describe("new card idempotency", () => {
   });
 
   it("does not consume the submission ID when validation fails", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     data.set("text", "");
     assert.equal((await app.submit(data)).status, 400);
@@ -344,7 +345,7 @@ describe("new card rate limit", () => {
   }
 
   it("allows five new cards and rejects the sixth without saving it", async () => {
-    let app = setup();
+    let app = await setup();
     for (let count = 0; count < 5; count++) {
       assert.equal((await app.submit()).status, 303);
     }
@@ -361,7 +362,7 @@ describe("new card rate limit", () => {
   });
 
   it("accepts retries at the limit without consuming another allowance", async () => {
-    let app = setup();
+    let app = await setup();
     let original = validForm();
     assert.equal((await app.submit(original)).status, 303);
     assert.equal((await app.submit(original)).status, 303);
@@ -375,7 +376,7 @@ describe("new card rate limit", () => {
 
   it("allows a rejected submission to succeed when the oldest card leaves the window", async () => {
     let time = Date.now();
-    let app = setup({}, () => time);
+    let app = await setup({}, () => time);
     // Only the oldest card expires after one second.
     app.saved.push(seedCard(time - 59_000));
     app.saved.push(...Array.from({ length: 4 }, () => seedCard(time - 10_000)));
@@ -395,7 +396,7 @@ describe("new card rate limit", () => {
   for (let scope of ["member", "board"] as const) {
     it(`does not count cards belonging to another ${scope}`, async () => {
       let time = Date.now();
-      let app = setup({}, () => time);
+      let app = await setup({}, () => time);
       app.saved.push(
         ...Array.from({ length: 5 }, () =>
           seedCard(
@@ -412,14 +413,14 @@ describe("new card rate limit", () => {
 
   it("does not count expired cards", async () => {
     let time = Date.now();
-    let app = setup({}, () => time);
+    let app = await setup({}, () => time);
     app.saved.push(...Array.from({ length: 5 }, () => seedCard(time - 60_000)));
     assert.equal((await app.submit()).status, 303);
     assert.equal(app.saved.length, 6);
   });
 
   it("does not consume allowance for invalid submissions", async () => {
-    let app = setup();
+    let app = await setup();
     for (let count = 0; count < 6; count++) {
       let data = validForm();
       data.set("text", "");
@@ -433,7 +434,7 @@ describe("new card rate limit", () => {
   });
 
   it("enforces the limit when distinct submissions arrive concurrently", async () => {
-    let app = setup();
+    let app = await setup();
     let responses = await Promise.all(
       Array.from({ length: 8 }, () => app.submit()),
     );
@@ -451,7 +452,7 @@ describe("new card rate limit", () => {
 
 describe("new card error feedback without JavaScript", () => {
   it("preserves the native draft when membership middleware rejects the POST", async () => {
-    let app = setup({ getViewerMemberId: async () => null });
+    let app = await setup({ getViewerMemberId: async () => null });
     let data = validForm();
     data.set("text", "مسودة تحتاج الانضمام إلى اللوحة");
     data.set("categoryId", "bad");
@@ -469,7 +470,7 @@ describe("new card error feedback without JavaScript", () => {
   });
 
   it("renders a membership error on GET without trying to parse a form body", async () => {
-    let app = setup({ getViewerMemberId: async () => null });
+    let app = await setup({ getViewerMemberId: async () => null });
     let response = await app.router.fetch(
       new URL(routes.newCard.index.href({ boardId: "demo" }), "http://localhost"),
     );
@@ -481,7 +482,7 @@ describe("new card error feedback without JavaScript", () => {
   });
 
   it("renders the rate-limit error and preserves every draft field", async () => {
-    let app = setup();
+    let app = await setup();
     for (let count = 0; count < 5; count++) {
       assert.equal((await app.submit()).status, 303);
     }
@@ -505,7 +506,7 @@ describe("new card error feedback without JavaScript", () => {
   });
 
   it("renders validation errors with the submitted text and a usable form", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     data.set("text", "س".repeat(501));
     let response = await app.submit(data, false);
@@ -519,7 +520,7 @@ describe("new card error feedback without JavaScript", () => {
   });
 
   it("replaces an invalid submission ID so the native form can be retried", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     data.set("submissionId", "bad-id");
     let response = await app.submit(data, false);
@@ -538,7 +539,7 @@ describe("new card error feedback without JavaScript", () => {
 describe("new card anonymity", () => {
   for (let isAnonymous of [false, true]) {
     it(`saves isAnonymous=${isAnonymous} from the checkbox submission`, async () => {
-      let app = setup();
+      let app = await setup();
       let data = validForm();
       if (isAnonymous) data.set("isAnonymous", "true");
       let response = await app.submit(data);

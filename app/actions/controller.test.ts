@@ -1,3 +1,4 @@
+import { testDatabase } from "../test/dependencies.ts";
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
@@ -6,7 +7,7 @@ import { routes } from '../routes.ts'
 
 describe('root controller', () => {
   it('GET / returns the home page', async () => {
-    let router = createAppRouter({ sessionSecret: 'test-only-session-secret', config: { appEnv: 'test' }, waitUntil() {} })
+    let router = createAppRouter({ db: await testDatabase(), sessionSecret: 'test-only-session-secret', config: { appEnv: 'test' }, waitUntil() {} })
     let response = await router.fetch(new URL(routes.home.href(), 'http://localhost'))
 
     assert.equal(response.status, 200)

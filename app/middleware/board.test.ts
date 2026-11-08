@@ -1,3 +1,4 @@
+import { testDatabase } from "../test/dependencies.ts";
 import { loadLocale } from "./locale.ts";
 import { loadAppDependencies } from "./dependencies.ts";
 import { loadSession } from "../sessions.ts";
@@ -14,14 +15,14 @@ import { boardModelsContext, type loadBoardModels } from "./models.ts";
 import { loadBoard } from "./board.ts";
 import { requireBoardMember } from "./board-member.ts";
 
-function setup(overrides: Partial<BoardModels> = {}, boardId = "demo") {
+async function setup(overrides: Partial<BoardModels> = {}, boardId = "demo") {
   let models = { ...createFakeBoardModels(createFakeBoardStore()), ...overrides };
   let provideModels: ReturnType<typeof loadBoardModels> = (context, next) => {
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
   let routes = route({ protected: "/protected" });
-  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.get("/public", () => new Response("Public"));
   router.map(
     routes,
@@ -47,7 +48,7 @@ async function mustNotRun(): Promise<never> {
 describe("board access middleware", () => {
   it("provides the board and verified member and loads the board only once", async () => {
     let loads = 0;
-    let router = setup({
+    let router = await setup({
       getBoard: async (id) => {
         loads++;
         assert.equal(id, "demo");
@@ -67,7 +68,7 @@ describe("board access middleware", () => {
   });
 
   it("uses the configured board for identity and membership lookups", async () => {
-    let router = setup(
+    let router = await setup(
       {
         getBoard: async (id) => ({ ...board, id }),
         getViewerMemberId: async (id) => {
@@ -88,7 +89,7 @@ describe("board access middleware", () => {
   });
 
   it("rejects a missing board before looking up membership", async () => {
-    let router = setup({
+    let router = await setup({
       getBoard: async () => null,
       getViewerMemberId: mustNotRun,
     });
@@ -98,7 +99,7 @@ describe("board access middleware", () => {
   });
 
   it("rejects missing identity before listing members", async () => {
-    let router = setup({
+    let router = await setup({
       getViewerMemberId: async () => null,
       listMembers: mustNotRun,
     });
@@ -113,14 +114,14 @@ describe("board access middleware", () => {
   });
 
   it("rejects a member ID absent from the board", async () => {
-    let router = setup({ getViewerMemberId: async () => "unknown" });
+    let router = await setup({ getViewerMemberId: async () => "unknown" });
     let response = await router.fetch("http://localhost/protected");
     assert.equal(response.status, 403);
     assert.equal(await response.text(), "العضو غير موجود في هذه اللوحة");
   });
 
   it("rejects matching member IDs belonging to another board", async () => {
-    let router = setup({
+    let router = await setup({
       listMembers: async () => [
         { id: "m1", boardId: "another-board", displayName: "عضو" },
       ],
@@ -132,7 +133,7 @@ describe("board access middleware", () => {
   });
 
   it("does not apply board access checks to public routes", async () => {
-    let router = setup({ getBoard: mustNotRun });
+    let router = await setup({ getBoard: mustNotRun });
     assert.equal((await router.fetch("http://localhost/public")).status, 200);
   });
 });

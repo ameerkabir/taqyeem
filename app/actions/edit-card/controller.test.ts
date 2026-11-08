@@ -1,3 +1,4 @@
+import { testDatabase } from "../../test/dependencies.ts";
 import { loadLocale } from "../../middleware/locale.ts";
 import { loadAppDependencies } from "../../middleware/dependencies.ts";
 import { loadSession } from "../../sessions.ts";
@@ -22,7 +23,7 @@ function validForm() {
   data.set("categoryId", "bad");
   return data;
 }
-function setup(overrides: Partial<BoardModels> = {}) {
+async function setup(overrides: Partial<BoardModels> = {}) {
   let original: Card = {
     id: "own-card",
     boardId: "demo",
@@ -49,7 +50,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.editCard, controller);
   return {
     original,
@@ -77,7 +78,7 @@ function setup(overrides: Partial<BoardModels> = {}) {
 
 describe("edit card", () => {
   it("prefills the escaped text, category and anonymity without mutating on GET", async () => {
-    let app = setup();
+    let app = await setup();
     let response = await app.request("GET");
     assert.equal(response.status, 200);
     let html = await response.text();
@@ -88,7 +89,7 @@ describe("edit card", () => {
     assert.equal(app.updates, 0);
   });
   it("saves editable fields, preserves identity and votes, and redirects to the selected category", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     data.set("id", "forged");
     data.set("memberId", "m2");
@@ -107,7 +108,7 @@ describe("edit card", () => {
     assert.equal(app.updates, 1);
   });
   it("can retain anonymity and accepts exactly 500 trimmed characters without a submission ID", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     data.set("text", ` ${"س".repeat(500)} `);
     data.set("isAnonymous", "true");
@@ -139,7 +140,7 @@ describe("edit card", () => {
       },
     ]) {
       it(`${method} rejects ${scenario.name} without updating`, async () => {
-        let app = setup(scenario.overrides);
+        let app = await setup(scenario.overrides);
         assert.equal((await app.request(method)).status, scenario.status);
         assert.equal(app.updates, 0);
         assert.equal(app.saved[0].body, app.original.body);
@@ -148,7 +149,7 @@ describe("edit card", () => {
     for (let status of ["collecting", "meeting", "closed"] as const) {
       for (let votingOpen of [false, true]) {
         it(`${method} checks ${status} with voting ${votingOpen ? "open" : "closed"}`, async () => {
-          let app = setup({
+          let app = await setup({
             getBoard: async () => ({ ...board, status, votingOpen }),
           });
           let allowed = status !== "closed" && !votingOpen;
@@ -170,7 +171,7 @@ describe("edit card", () => {
     { name: "foreign category", field: "categoryId", value: "unknown" },
   ]) {
     it(`rejects ${scenario.name} without updating`, async () => {
-      let app = setup();
+      let app = await setup();
       let data = validForm();
       if (scenario.value === null) data.delete(scenario.field);
       else if (typeof scenario.value === "string")
@@ -184,7 +185,7 @@ describe("edit card", () => {
     });
   }
   it("preserves the native draft and choices when validation fails", async () => {
-    let app = setup();
+    let app = await setup();
     let data = validForm();
     let text = `<script>${"س".repeat(501)}</script>`;
     data.set("text", text);
@@ -202,7 +203,7 @@ describe("edit card", () => {
   });
   it("rechecks voting on POST and preserves the native edit draft", async () => {
     let votingOpen = false;
-    let app = setup({ getBoard: async () => ({ ...board, votingOpen }) });
+    let app = await setup({ getBoard: async () => ({ ...board, votingOpen }) });
     assert.equal((await app.request("GET")).status, 200);
     votingOpen = true;
     let response = await app.request("POST", validForm(), false);

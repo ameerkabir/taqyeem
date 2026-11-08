@@ -1,3 +1,4 @@
+import { testDatabase } from "./test/dependencies.ts";
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createAppRouter } from "./router.ts";
@@ -15,12 +16,12 @@ async function localeCookie(locale: "ar" | "en") {
   return (await serializeLocaleCookie(locale, false)).split(";")[0];
 }
 
-function get(path: string, headers: Record<string, string> = {}) {
-  return createAppRouter(options).fetch(new Request(origin + path, { headers }));
+async function get(path: string, headers: Record<string, string> = {}) {
+  return createAppRouter({ ...options, db: await testDatabase() }).fetch(new Request(origin + path, { headers }));
 }
 
-function post(path: string, fields: Record<string, string>, headers: Record<string, string> = {}) {
-  return createAppRouter(options).fetch(
+async function post(path: string, fields: Record<string, string>, headers: Record<string, string> = {}) {
+  return createAppRouter({ ...options, db: await testDatabase() }).fetch(
     new Request(origin + path, { method: "POST", body: new URLSearchParams(fields), headers }),
   );
 }
@@ -104,7 +105,7 @@ describe("POST /locale", () => {
   });
 
   it("marks the cookie Secure over https", async () => {
-    let response = await createAppRouter(options).fetch(
+    let response = await createAppRouter({ ...options, db: await testDatabase() }).fetch(
       new Request("https://taqyeem.example/locale", {
         method: "POST",
         body: new URLSearchParams({ locale: "ar" }),
@@ -333,7 +334,7 @@ describe("card forms in English", () => {
   });
 
   it("localizes the rate-limit JSON error without changing the status", async () => {
-    let router = createAppRouter(options);
+    let router = createAppRouter({ ...options, db: await testDatabase() });
     let status = 0;
     let message = "";
     for (let i = 0; i < 8; i++) {
