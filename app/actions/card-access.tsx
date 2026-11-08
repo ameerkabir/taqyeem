@@ -1,6 +1,6 @@
 import type { RequestContext } from "remix/router";
 import { Renderer, type RenderFunction } from "remix/middleware/render";
-import type { Board, Card } from "../data/fake-board.ts";
+import type { Board, Card } from "../data/board.ts";
 import { boardContext } from "../middleware/board.ts";
 import { routes } from "../routes.ts";
 import { CardPage } from "../ui/card-page.tsx";

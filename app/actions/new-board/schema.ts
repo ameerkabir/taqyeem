@@ -1,9 +1,10 @@
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
+import {
+  MAX_BOARD_TITLE_LENGTH,
+  MAX_MEMBER_NAME_LENGTH,
+} from "../../data/limits.ts";
 import type { Translator } from "../../i18n/translator.ts";
-
-export const MAX_BOARD_TITLE_LENGTH = 120;
-export const MAX_MEMBER_NAME_LENGTH = 60;
 
 const newBoardForm = s.object({
   title: s

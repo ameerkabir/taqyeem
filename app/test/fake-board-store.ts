@@ -7,7 +7,7 @@ import {
   type Category,
   type Member,
   type Card,
-} from "../data/fake-board.ts";
+} from "./fake-board.ts";
 
 export interface FakeBoardStore {
   boards: Map<string, Board>;

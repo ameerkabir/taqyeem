@@ -4,8 +4,9 @@ import { describe, it } from "remix/test";
 import { createAppRouter, type AppContext } from "./router.ts";
 import { appConfigContext, waitUntilContext, databaseContext } from "./middleware/dependencies.ts";
 import { createRequestOptions } from "../server.ts";
+import type { Database } from "remix/data-table";
 
-async function setup(appEnv = "test") {
+async function setup(appEnv = "test", db?: Database) {
   let pending: Promise<unknown>[] = [];
   let execution = {
     waitUntil(work: Promise<unknown>) {
@@ -13,7 +14,7 @@ async function setup(appEnv = "test") {
       pending.push(work);
     },
   };
-  let options = createRequestOptions({ APP_ENV: appEnv, SESSION_SECRET: "test-only-session-secret" }, execution, await testDatabase());
+  let options = createRequestOptions({ APP_ENV: appEnv, SESSION_SECRET: "test-only-session-secret" }, execution, db ?? (await testDatabase()));
   return { router: createAppRouter(options), pending, options };
 }
 
@@ -59,8 +60,10 @@ describe("request dependency boundary", () => {
   });
 
   it("preserves boards and signed organiser sessions across fresh routers and native forms", async () => {
+    // One database for every request: boards now live in it, not in module memory.
+    let db = await testDatabase();
     async function request(path: string, init?: RequestInit) {
-      return (await setup()).router.fetch(`http://localhost${path}`, init);
+      return (await setup("test", db)).router.fetch(`http://localhost${path}`, init);
     }
     let created = await request("/boards/new", {
       method: "POST",

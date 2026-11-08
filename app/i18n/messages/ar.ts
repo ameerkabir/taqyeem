@@ -27,6 +27,7 @@ export const ar = {
   "newBoard.error.titleInvalid": "يرجى إدخال اسم صالح للوحة",
   "newBoard.error.nameMax": "الحد الأقصى للاسم {max} حرفًا",
   "newBoard.error.nameRequired": "يرجى إدخال اسمك",
+  "newBoard.error.saveFailed": "حدث خطأ ولم يتم إنشاء اللوحة. يرجى المحاولة مرة أخرى",
 
   "board.defaultCategory.good": "ما سار بشكل جيد",
   "board.defaultCategory.bad": "ما لم يسر جيدًا",

@@ -1,5 +1,5 @@
 import type { Handle } from "remix/component";
-import type { BoardStatus } from "../../data/fake-board.ts";
+import type { BoardStatus } from "../../data/board.ts";
 import {
   panelStyle,
   badgeStyle,

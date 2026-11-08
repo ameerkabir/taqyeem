@@ -7,7 +7,7 @@ import {
   cancelStyle,
 } from "./styles.ts";
 import type { Handle } from "remix/component";
-import type { Board } from "../../data/fake-board.ts";
+import type { Board } from "../../data/board.ts";
 import { routes } from "../../routes.ts";
 import { Document } from "../document.tsx";
 import type { I18n } from "../../middleware/locale.ts";

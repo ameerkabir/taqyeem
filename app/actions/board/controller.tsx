@@ -1,7 +1,7 @@
 import { createAction } from "remix/router";
 import { routes } from "../../routes.ts";
 import { loadBoard } from "../../middleware/board.ts";
-import { resolveActiveSection } from "../../models/section.ts";
+import { resolveActiveSection } from "../../models/boards/section.ts";
 import { BoardPage } from "./page.tsx";
 
 export default createAction(routes.board, {

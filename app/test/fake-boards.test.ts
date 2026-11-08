@@ -1,8 +1,9 @@
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
-import type { Card } from "../data/fake-board.ts";
+import type { Card } from "../data/board.ts";
 import { createFakeBoardModels } from "./fake-boards.ts";
 import { createFakeBoardStore } from "./fake-board-store.ts";
+import { runBoardModelsContract } from "./board-models-contract.ts";
 
 function card(time: number): Card {
   return {
@@ -276,3 +277,12 @@ describe("in-memory card voting", () => {
     assert.equal((await models.listViewerVotes("demo")).length, 0);
   });
 });
+
+// The double must behave like the real implementation for everything the contract covers.
+runBoardModelsContract("in-memory test double", async (resolveViewer) =>
+  createFakeBoardModels(
+    createFakeBoardStore({ boards: new Map(), categories: [], members: [], cards: [] }),
+    Date.now,
+    resolveViewer,
+  ),
+);

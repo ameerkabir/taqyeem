@@ -1,6 +1,6 @@
 import { questionStyle, previewStyle, hintStyle } from "./styles.ts";
 import { clientEntry, on, type Handle } from "remix/component";
-import type { Card } from "../../../data/fake-board.ts";
+import type { Card } from "../../../data/board.ts";
 import { routes } from "../../../routes.ts";
 import { submitMutation } from "../../../ui/public/submit-mutation.ts";
 import {

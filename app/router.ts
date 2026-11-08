@@ -43,7 +43,7 @@ export function createAppRouter(options: AppRouterOptions) {
     ],
   });
 
-  router.map({ home: routes.home, demoBoard: routes.demoBoard }, controller);
+  router.map({ home: routes.home }, controller);
   router.map(routes.board, boardController);
   router.map(routes.newCard, newCardController);
   router.map(routes.editCard, editCardController);

@@ -1,6 +1,8 @@
 import { testDatabase } from "./test/dependencies.ts";
+import { DEMO_BOARD_ID, DEMO_VIEWER_MEMBER_ID, loginAs, seedDemoBoard } from "./test/seed.ts";
 import * as assert from "remix/assert";
-import { describe, it } from "remix/test";
+import { beforeEach, describe, it } from "remix/test";
+import type { Database } from "remix/data-table";
 import { createAppRouter } from "./router.ts";
 import { routes } from "./routes.ts";
 import { serializeLocaleCookie } from "./middleware/locale.ts";
@@ -16,13 +18,32 @@ async function localeCookie(locale: "ar" | "en") {
   return (await serializeLocaleCookie(locale, false)).split(";")[0];
 }
 
+// One database per test, seeded with the demo board, shared by every request in the test
+// (like the real app, each request still gets a fresh router). Requests are signed in as the
+// demo viewer unless the caller already sends a session, e.g. the one a board creator got.
+let db: Database;
+beforeEach(async () => {
+  db = await testDatabase();
+  await seedDemoBoard(db);
+});
+
+async function app(headers: Record<string, string>) {
+  let router = createAppRouter({ ...options, db });
+  if (/(?:^|;\s*)taqyeem_session=/.test(headers.Cookie ?? "")) return { router, headers };
+  let viewer = await loginAs(router, DEMO_BOARD_ID, DEMO_VIEWER_MEMBER_ID);
+  let cookie = [headers.Cookie, viewer].filter(Boolean).join("; ");
+  return { router, headers: { ...headers, Cookie: cookie } };
+}
+
 async function get(path: string, headers: Record<string, string> = {}) {
-  return createAppRouter({ ...options, db: await testDatabase() }).fetch(new Request(origin + path, { headers }));
+  let { router, headers: withViewer } = await app(headers);
+  return router.fetch(new Request(origin + path, { headers: withViewer }));
 }
 
 async function post(path: string, fields: Record<string, string>, headers: Record<string, string> = {}) {
-  return createAppRouter({ ...options, db: await testDatabase() }).fetch(
-    new Request(origin + path, { method: "POST", body: new URLSearchParams(fields), headers }),
+  let { router, headers: withViewer } = await app(headers);
+  return router.fetch(
+    new Request(origin + path, { method: "POST", body: new URLSearchParams(fields), headers: withViewer }),
   );
 }
 
@@ -334,14 +355,15 @@ describe("card forms in English", () => {
   });
 
   it("localizes the rate-limit JSON error without changing the status", async () => {
-    let router = createAppRouter({ ...options, db: await testDatabase() });
+    // One router for all attempts, so the limit accumulates; signed in as the demo viewer.
+    let { router, headers: viewerHeaders } = await app({});
     let status = 0;
     let message = "";
     for (let i = 0; i < 8; i++) {
       let response = await router.fetch(
         new Request(origin + "/boards/demo/new", {
           method: "POST",
-          headers: { Accept: "application/json", "Accept-Language": "en" },
+          headers: { ...viewerHeaders, Accept: "application/json", "Accept-Language": "en" },
           body: new URLSearchParams({
             submissionId: crypto.randomUUID(),
             text: `note ${i}`,

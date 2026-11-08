@@ -1,5 +1,5 @@
 import { createContextKey, type Middleware } from "remix/router";
-import type { Member } from "../data/fake-board.ts";
+import type { Member } from "../data/board.ts";
 import {
   boardAccessError,
   boardContext,

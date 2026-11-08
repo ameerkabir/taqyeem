@@ -4,7 +4,7 @@ import { routes } from "../../routes.ts";
 import { loadBoard } from "../../middleware/board.ts";
 import { requireBoardMember } from "../../middleware/board-member.ts";
 import { requireBoardOrganiser } from "../../middleware/board-organiser.ts";
-import { resolveActiveSection } from "../../models/section.ts";
+import { resolveActiveSection } from "../../models/boards/section.ts";
 import { cardAccessError } from "../card-access.tsx";
 
 export default createAction(routes.boardStatus, {

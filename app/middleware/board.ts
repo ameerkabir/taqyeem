@@ -3,7 +3,7 @@ import {
   type Middleware,
   type RequestContext,
 } from "remix/router";
-import type { Board } from "../data/fake-board.ts";
+import type { Board } from "../data/board.ts";
 import { boardModelsContext } from "./models.ts";
 import { getI18n } from "./locale.ts";
 

@@ -19,7 +19,7 @@ import type {
   Board,
   Card,
   Category,
-} from "../../data/fake-board.ts";
+} from "../../data/board.ts";
 import { routes } from "../../routes.ts";
 import { OrganiserControls } from "./organiser-controles.tsx";
 import type { I18n } from "../../middleware/locale.ts";

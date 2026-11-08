@@ -26,6 +26,7 @@ export const en = {
   "newBoard.error.titleInvalid": "Please enter a valid board name",
   "newBoard.error.nameMax": "The name can be at most {max} characters",
   "newBoard.error.nameRequired": "Please enter your name",
+  "newBoard.error.saveFailed": "Something went wrong and the board was not created. Please try again",
 
   "board.defaultCategory.good": "What went well",
   "board.defaultCategory.bad": "What didn't go well",

@@ -1,4 +1,4 @@
-import type { Board, BoardStatus, Category, Card, Member } from "../data/fake-board.ts";
+import type { Board, BoardStatus, Category, Card, Member } from "../data/board.ts";
 
 export type CreateCardResult =
   { ok: true; card: Card } | { ok: false; retryAfter: number };

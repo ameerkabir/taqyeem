@@ -1,5 +1,5 @@
 import { clientEntry, on, type Handle } from "remix/component";
-import type { Card, Category } from "../../../data/fake-board.ts";
+import type { Card, Category } from "../../../data/board.ts";
 import { routes } from "../../../routes.ts";
 import { submitMutation } from "../../../ui/public/submit-mutation.ts";
 import {

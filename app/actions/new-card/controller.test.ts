@@ -11,10 +11,10 @@ import boardController from "../board/controller.tsx";
 import boardCardsController from "../board-cards/controller.tsx";
 import newCardController from "./controller.tsx";
 import { routes } from "../../routes.ts";
-import { board, type Card } from "../../data/fake-board.ts";
-import type { BoardModels } from "../../models/boards.ts";
-import { createFakeBoardModels } from "../../models/fake-boards.ts";
-import { createFakeBoardStore } from "../../models/fake-board-store.ts";
+import { board, type Card } from "../../test/fake-board.ts";
+import type { BoardModels } from "../../models/board-models.ts";
+import { createFakeBoardModels } from "../../test/fake-boards.ts";
+import { createFakeBoardStore } from "../../test/fake-board-store.ts";
 import {
   boardModelsContext,
   type loadBoardModels,

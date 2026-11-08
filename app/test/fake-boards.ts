@@ -4,14 +4,15 @@ import {
   type Member,
   type Category,
   type Card,
-} from "../data/fake-board.ts";
-import type { BoardModels } from "./boards.ts";
+} from "./fake-board.ts";
+import { MAX_CARDS, WINDOW_MS } from "../data/limits.ts";
+import type { BoardModels } from "../models/board-models.ts";
 import { createFakeBoardStore, type FakeBoardStore } from "./fake-board-store.ts";
 
 // Shared between requests in this Worker instance, just like the demo cards.
 export const defaultStore = createFakeBoardStore();
-export const MAX_CARDS = 5;
-export const WINDOW_MS = 60_000;
+// Re-exported so the fake test can keep importing the limits from here.
+export { MAX_CARDS, WINDOW_MS };
 
 export function createFakeBoardModels(
   store: FakeBoardStore = defaultStore,

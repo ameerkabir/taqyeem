@@ -1,4 +1,4 @@
-import type { BoardStatus, Card } from "../data/fake-board.ts";
+import type { BoardStatus, Card } from "../../data/board.ts";
 
 export function compareCards(status: BoardStatus) {
   return (a: Card, b: Card) => {

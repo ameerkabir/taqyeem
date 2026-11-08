@@ -5,6 +5,7 @@ import { boardMemberSessionKey } from "../../sessions.ts";
 import { NewBoardPage } from "./page.tsx";
 import { parseNewBoardForm, readNewBoardValues } from "./schema.ts";
 import { defaultCategoryLabels } from "../../data/board-defaults.ts";
+import { CreateBoardError } from "../../models/boards/create.ts";
 
 export default createController(routes.newBoard, {
   actions: {
@@ -31,10 +32,30 @@ export default createController(routes.newBoard, {
         );
       }
 
-      let { board, organiser } = await context.models.createBoard({
-        ...parsed.value,
-        categoryLabels: defaultCategoryLabels(context.i18n.t),
-      });
+      let created;
+      try {
+        created = await context.models.createBoard({
+          ...parsed.value,
+          categoryLabels: defaultCategoryLabels(context.i18n.t),
+        });
+      } catch (error) {
+        // Only storage failures are turned into a retry page; anything else is a bug.
+        if (!(error instanceof CreateBoardError)) throw error;
+        if (error.cleanupFailed) {
+          // The failed board could not be removed; surface its id so it can be cleaned up.
+          console.error("createBoard cleanup failed", { orphanedBoardId: error.orphanedBoardId });
+        }
+        console.error("createBoard failed", error.cause);
+        return context.render(
+          <NewBoardPage
+            i18n={context.i18n}
+            values={readNewBoardValues(data)}
+            submitError={context.i18n.t("newBoard.error.saveFailed")}
+          />,
+          { status: 500 },
+        );
+      }
+      let { board, organiser } = created;
 
       context.session.regenerateId(true);
       context.session.set(boardMemberSessionKey(board.id), organiser.id);

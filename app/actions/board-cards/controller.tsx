@@ -2,7 +2,7 @@ import { createAction } from "remix/router";
 import { routes } from "../../routes.ts";
 import { loadBoard } from "../../middleware/board.ts";
 import { Cardlist } from "./card-list.tsx";
-import { resolveActiveSection } from "../../models/section.ts";
+import { resolveActiveSection } from "../../models/boards/section.ts";
 
 export default createAction(routes.boardCards, {
   middleware: [loadBoard()],

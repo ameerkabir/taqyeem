@@ -8,7 +8,7 @@ import {
   errorStyle,
 } from "./styles.ts";
 import { clientEntry, navigate, on, type Handle } from "remix/component";
-import type { Category } from "../../../data/fake-board.ts";
+import type { Category } from "../../../data/board.ts";
 import { routes } from "../../../routes.ts";
 import { NoteField } from "./note-field.tsx";
 import type { Locale } from "../../../i18n/locales.ts";

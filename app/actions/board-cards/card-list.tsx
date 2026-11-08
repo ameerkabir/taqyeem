@@ -1,5 +1,5 @@
 import { type Handle } from "remix/component";
-import type { Board, Card, Member } from "../../data/fake-board.ts";
+import type { Board, Card, Member } from "../../data/board.ts";
 import {
   cardAuthorStyle,
   cardBodyStyle,
@@ -16,7 +16,7 @@ import {
 } from "./styles.ts";
 import { routes } from "../../routes.ts";
 import { VoteCounter } from "./public/vote-counter.tsx";
-import { compareCards } from "../../models/cards.ts";
+import { compareCards } from "../../models/cards/sort.ts";
 import type { I18n } from "../../middleware/locale.ts";
 
 interface CardListProps {
