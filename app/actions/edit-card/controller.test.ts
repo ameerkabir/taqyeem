@@ -6,10 +6,10 @@ import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { createRouter } from "remix/router";
 import { render } from "remix/middleware/render";
-import { board, type Card } from "../../data/fake-board.ts";
-import type { BoardModels } from "../../models/boards.ts";
-import { createFakeBoardModels } from "../../models/fake-boards.ts";
-import { createFakeBoardStore } from "../../models/fake-board-store.ts";
+import { board, type Card } from "../../test/fake-board.ts";
+import type { BoardModels } from "../../models/board-models.ts";
+import { createFakeBoardModels } from "../../test/fake-boards.ts";
+import { createFakeBoardStore } from "../../test/fake-board-store.ts";
 import {
   boardModelsContext,
   type loadBoardModels,
@@ -141,7 +141,14 @@ describe("edit card", () => {
     ]) {
       it(`${method} rejects ${scenario.name} without updating`, async () => {
         let app = await setup(scenario.overrides);
+        // A non-member opening the page in a browser is sent to the join form; the JSON
+        // flavour of the same request (what the enhanced form sends) and a POST get a 403.
         assert.equal((await app.request(method)).status, scenario.status);
+        if (method === "GET" && scenario.name === "missing member") {
+          let navigation = await app.request("GET", undefined, false);
+          assert.equal(navigation.status, 303);
+          assert.equal(navigation.headers.get("Location"), "/boards/demo/join");
+        }
         assert.equal(app.updates, 0);
         assert.equal(app.saved[0].body, app.original.body);
       });

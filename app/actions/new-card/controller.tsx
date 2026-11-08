@@ -3,7 +3,7 @@ import { redirect } from "remix/response/redirect";
 import { routes } from "../../routes.ts";
 import { boardContext, loadBoard } from "../../middleware/board.ts";
 import { requireBoardMember } from "../../middleware/board-member.ts";
-import { resolveActiveSection } from "../../models/section.ts";
+import { resolveActiveSection } from "../../models/boards/section.ts";
 import { NewCardPage } from "./page.tsx";
 import { parseNewCardForm } from "./schema.ts";
 import { newCardError } from "./error-response.tsx";
@@ -13,7 +13,7 @@ export default createController(routes.newCard, {
   middleware: [
     loadBoard({ onError: newCardError }),
     requireCreationAllowed(),
-    requireBoardMember({ onError: newCardError }),
+    requireBoardMember({ onError: newCardError, redirectToJoin: true }),
   ],
   actions: {
     async index(context) {

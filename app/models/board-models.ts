@@ -1,7 +1,15 @@
-import type { Board, BoardStatus, Category, Card, Member } from "../data/fake-board.ts";
+import type { Board, BoardStatus, Category, Card, Member } from "../data/board.ts";
 
 export type CreateCardResult =
   { ok: true; card: Card } | { ok: false; retryAfter: number };
+
+/**
+ * A joiner is refused only when another member already has that name (compared after
+ * normalising case, spacing and similar). A closed board does NOT refuse: closing blocks
+ * contributions, not membership or reading. null from joinBoard means no such board.
+ */
+export type JoinBoardResult =
+  { ok: true; member: Member } | { ok: false; reason: "name_taken" };
 
 export interface VoteResult {
   voted: boolean;
@@ -40,6 +48,8 @@ export interface BoardModels {
 
   createCard(card: Card, submissionId: string): Promise<CreateCardResult>;
   listMembers(boardId: string): Promise<Member[]>;
+  /** Adds a participant. The caller records the returned member in the viewer's session. */
+  joinBoard(boardId: string, displayName: string): Promise<JoinBoardResult | null>;
   listViewerVotes(boardId: string): Promise<string[]>;
   getViewerMemberId(boardId: string): Promise<string | null>;
 

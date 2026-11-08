@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "db:migration:create": "wrangler d1 migrations create DB",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:migrations:list:remote": "wrangler d1 migrations list DB --remote",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrations:list": "wrangler d1 migrations list DB --local",
     "dev": "vite dev",

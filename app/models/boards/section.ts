@@ -1,4 +1,4 @@
-import type { Board, Category } from "../data/fake-board.ts";
+import type { Board, Category } from "../../data/board.ts";
 
 export function resolveActiveSection(
   requestId: string | null,

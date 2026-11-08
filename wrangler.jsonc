@@ -1,15 +1,22 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "taqyeem",
-  "compatibility_date": "2026-10-24",
-  "main": "./server.ts",
-  "secrets": { "required": ["SESSION_SECRET"] },
-  "d1_databases": [{
-    "binding": "DB",
-    "database_name": "taqyeem",
-    "migrations_dir": "database/migrations"
-  }],
-  "vars": {
-    "APP_ENV": "productation",
-  },
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "taqyeem",
+	"compatibility_date": "2026-10-24",
+	"main": "./server.ts",
+	"secrets": {
+		"required": [
+			"SESSION_SECRET"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "taqyeem",
+			"migrations_dir": "database/migrations",
+			"database_id": "055d1ac3-ba67-45ee-8810-1c805a92e8a6"
+		}
+	],
+	"vars": {
+		"APP_ENV": "productation",
+	},
 }

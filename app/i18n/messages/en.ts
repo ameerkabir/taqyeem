@@ -26,6 +26,21 @@ export const en = {
   "newBoard.error.titleInvalid": "Please enter a valid board name",
   "newBoard.error.nameMax": "The name can be at most {max} characters",
   "newBoard.error.nameRequired": "Please enter your name",
+  "newBoard.error.saveFailed": "Something went wrong and the board was not created. Please try again",
+
+  "join.documentTitle": "Join a board",
+  "join.heading": "Join {title}",
+  "join.intro": "Enter your name to see the board and add notes",
+  "join.nameLabel": "Your name",
+  "join.nameHint": "Your team will see this name next to your notes, unless you post a note without your name",
+  "join.submit": "Join board",
+  "join.introClosed": "Enter your name to view the board",
+  "join.closedNotice": "This board is closed. You can join and read its notes, but notes can no longer be added, edited, deleted or voted on.",
+  "join.submitClosed": "Join to view",
+  "join.error.nameMax": "The name can be at most {max} characters",
+  "join.error.nameRequired": "Please enter your name",
+  "join.error.nameTaken": "That name is already used on this board. Try adding your last name or an initial",
+  "join.error.saveFailed": "Something went wrong and you were not added. Please try again",
 
   "board.defaultCategory.good": "What went well",
   "board.defaultCategory.bad": "What didn't go well",
@@ -64,6 +79,7 @@ export const en = {
   "cards.boardClosed": "The board is closed",
   "cards.lockedDuringVoting": "Editing and deleting are unavailable during voting",
   "cards.anonymous": "Anonymous",
+  "cards.organiserBadge": "Organiser",
 
   "vote.count": {
     one: "{count} vote",
@@ -107,7 +123,9 @@ export const en = {
 
   "access.requestFailedTitle": "Couldn't complete the request",
   "access.boardNotFound": "Board not found",
+  "boardNotFound.body": "The link may be wrong, or the board may have been removed. Check the link you were given, or start a new board of your own.",
   "access.joinBoard": "Please join the board",
+  "access.joinLink": "Join the board",
   "access.memberNotFound": "You are not a member of this board",
   "access.organiserOnly": "This action is only available to the organiser",
   "access.boardClosed": "The board is closed",

@@ -4,7 +4,7 @@ export const routes = route({
   home: "/",
   setLocale: post("/locale"),
   newBoard: form("/boards/new"),
-  demoBoard: get("/board"),
+  joinBoard: form("/boards/:boardId/join"),
   board: get("/boards/:boardId"),
   newCard: form("/boards/:boardId/new"),
   deleteCard: form("/boards/:boardId/cards/:cardId/delete"),

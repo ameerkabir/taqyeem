@@ -2,7 +2,10 @@ import { Document } from "../document.tsx";
 import { routes } from "../../routes.ts";
 import type { Handle } from "remix/component";
 import type { I18n } from "../../middleware/locale.ts";
-import { MAX_BOARD_TITLE_LENGTH, MAX_MEMBER_NAME_LENGTH } from "./schema.ts";
+import {
+  MAX_BOARD_TITLE_LENGTH,
+  MAX_MEMBER_NAME_LENGTH,
+} from "../../data/limits.ts";
 import { defaultCategoryLabels } from "../../data/board-defaults.ts";
 import {
   pageStyle,
@@ -22,11 +25,13 @@ interface NewBoardPageProps {
   values?: { title: string; organiserDisplayName: string };
   titleError?: string;
   organiserNameError?: string;
+  /** Something went wrong saving the board; nothing was kept, so trying again is safe. */
+  submitError?: string;
 }
 
 export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
   return () => {
-    let { i18n, values, titleError, organiserNameError } = handle.props;
+    let { i18n, values, titleError, organiserNameError, submitError } = handle.props;
     let { t } = i18n;
 
     return (
@@ -45,6 +50,12 @@ export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
             </p>
 
             <form method="post" action={routes.newBoard.action.href()} mix={formStyle}>
+              {submitError && (
+                <p id="board-submit-error" role="alert" mix={errorStyle}>
+                  {submitError}
+                </p>
+              )}
+
               <label mix={fieldStyle}>
                 <span>{t("newBoard.titleLabel")}</span>
                 <input

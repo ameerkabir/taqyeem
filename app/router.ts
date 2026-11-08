@@ -18,6 +18,7 @@ import boardVotingController from "./actions/board-voting/controller.ts";
 import boardStatusController from "./actions/board-status/controller.ts";
 import localeController from "./actions/locale/controller.ts";
 import newBoardController from "./actions/new-board/controller.tsx";
+import joinController from "./actions/join/controller.tsx";
 
 // Static files under `public/` and compiled client scripts under `/assets/*` are served
 // directly by Vite in dev and by Cloudflare's Workers Assets in production (see
@@ -43,7 +44,7 @@ export function createAppRouter(options: AppRouterOptions) {
     ],
   });
 
-  router.map({ home: routes.home, demoBoard: routes.demoBoard }, controller);
+  router.map({ home: routes.home }, controller);
   router.map(routes.board, boardController);
   router.map(routes.newCard, newCardController);
   router.map(routes.editCard, editCardController);
@@ -53,6 +54,7 @@ export function createAppRouter(options: AppRouterOptions) {
   router.map(routes.boardVoting, boardVotingController);
   router.map(routes.boardStatus, boardStatusController);
   router.map(routes.newBoard, newBoardController);
+  router.map(routes.joinBoard, joinController);
   router.map(routes.setLocale, localeController);
 
   return router;

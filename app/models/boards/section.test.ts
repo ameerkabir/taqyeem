@@ -1,7 +1,7 @@
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 
-import type { Board, Category } from "../data/fake-board.ts";
+import type { Board, Category } from "../../data/board.ts";
 import { resolveActiveSection } from "./section.ts";
 
 let categories: Category[] = [

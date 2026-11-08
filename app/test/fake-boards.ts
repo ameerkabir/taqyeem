@@ -4,14 +4,16 @@ import {
   type Member,
   type Category,
   type Card,
-} from "../data/fake-board.ts";
-import type { BoardModels } from "./boards.ts";
+} from "./fake-board.ts";
+import { MAX_CARDS, WINDOW_MS } from "../data/limits.ts";
+import type { BoardModels } from "../models/board-models.ts";
+import { memberNameKey } from "../models/members/name-key.ts";
 import { createFakeBoardStore, type FakeBoardStore } from "./fake-board-store.ts";
 
 // Shared between requests in this Worker instance, just like the demo cards.
 export const defaultStore = createFakeBoardStore();
-export const MAX_CARDS = 5;
-export const WINDOW_MS = 60_000;
+// Re-exported so the fake test can keep importing the limits from here.
+export { MAX_CARDS, WINDOW_MS };
 
 export function createFakeBoardModels(
   store: FakeBoardStore = defaultStore,
@@ -160,6 +162,27 @@ export function createFakeBoardModels(
     },
     listMembers: async (boardId: string) =>
       store.members.filter((m) => m.boardId === boardId),
+
+    joinBoard: async (boardId, displayName) => {
+      let board = store.boards.get(boardId);
+      if (!board) return null;
+      let key = memberNameKey(displayName);
+      if (key === "") throw new Error("A member name must contain a visible character");
+      if (
+        store.members.some(
+          (m) => m.boardId === boardId && memberNameKey(m.displayName) === key,
+        )
+      ) {
+        return { ok: false, reason: "name_taken" };
+      }
+      let member: Member = {
+        id: crypto.randomUUID(),
+        boardId,
+        displayName: displayName.trim(),
+      };
+      store.members.push(member);
+      return { ok: true, member };
+    },
 
     listViewerVotes: async (boardId: string) => {
       let memberId = await resolveViewerMemberId(boardId);

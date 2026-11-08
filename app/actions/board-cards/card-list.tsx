@@ -1,7 +1,8 @@
 import { type Handle } from "remix/component";
-import type { Board, Card, Member } from "../../data/fake-board.ts";
+import type { Board, Card, Member } from "../../data/board.ts";
 import {
   cardAuthorStyle,
+  organiserBadgeStyle,
   cardBodyStyle,
   cardFooterStyle,
   cardHeaderStyle,
@@ -16,7 +17,7 @@ import {
 } from "./styles.ts";
 import { routes } from "../../routes.ts";
 import { VoteCounter } from "./public/vote-counter.tsx";
-import { compareCards } from "../../models/cards.ts";
+import { compareCards } from "../../models/cards/sort.ts";
 import type { I18n } from "../../middleware/locale.ts";
 
 interface CardListProps {
@@ -118,6 +119,12 @@ export function Cardlist(handle: Handle<CardListProps>) {
                     {card.isAnonymous
                       ? t("cards.anonymous")
                       : memberNames.get(card.memberId)}
+                    {/* Names are unique per board but look-alike characters can slip past, so
+                        the organiser is marked: a note that says "Sam" without the badge is not
+                        from the person running the board. Anonymous notes name no one. */}
+                    {!card.isAnonymous && card.memberId === board.organiserMemberId && (
+                      <span mix={organiserBadgeStyle}>{t("cards.organiserBadge")}</span>
+                    )}
                   </p>
 
                   <VoteCounter

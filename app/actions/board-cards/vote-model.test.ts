@@ -1,6 +1,7 @@
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
-import { createVoteModel } from "./public/vote-model.ts";
+import { ACCESS_REASON_HEADER, NOT_MEMBER_REASON } from "../../data/access.ts";
+import { createVoteModel, VoteRejectedError } from "./public/vote-model.ts";
 import { createTranslator } from "../../i18n/translator.ts";
 const server = { voted: false, count: 3 };
 function options(voted = true, previous = server) {
@@ -81,4 +82,45 @@ describe("vote model fallback errors follow the translator", () => {
       await assert.rejects(() => invalid.save(options()), (error: Error) => error.message === unconfirmed);
     });
   }
+
+  it("surfaces the server's message and reason when it rejects a non-member", async () => {
+    let model = createVoteModel(async () =>
+      Response.json(
+        { error: "Please join the board" },
+        { status: 403, headers: { [ACCESS_REASON_HEADER]: NOT_MEMBER_REASON } },
+      ),
+    );
+    let error = await model.save(options(true, server)).then(
+      () => undefined,
+      (cause: unknown) => cause,
+    );
+    assert.ok(error instanceof VoteRejectedError);
+    assert.equal(error.message, "Please join the board");
+    assert.equal(error.reason, NOT_MEMBER_REASON);
+    // The optimistic vote is rolled back.
+    assert.deepEqual(model.read(server), server);
+  });
+
+  it("reports a rejection without a reason header as a rejection with no reason", async () => {
+    let model = createVoteModel(async () =>
+      Response.json({ error: "Voting is not open" }, { status: 403 }),
+    );
+    let error = await model.save(options(true, server)).then(
+      () => undefined,
+      (cause: unknown) => cause,
+    );
+    assert.ok(error instanceof VoteRejectedError);
+    assert.equal(error.reason, null);
+  });
+
+  it("does not turn a network failure into a rejection", async () => {
+    let model = createVoteModel(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    let error = await model.save(options(true, server)).then(
+      () => undefined,
+      (cause: unknown) => cause,
+    );
+    assert.ok(!(error instanceof VoteRejectedError));
+  });
 });

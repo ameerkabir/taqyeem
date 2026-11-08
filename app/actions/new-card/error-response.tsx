@@ -1,9 +1,9 @@
 import type { RequestContext } from "remix/router";
 import { Renderer, type RenderFunction } from "remix/middleware/render";
-import type { Category } from "../../data/fake-board.ts";
+import type { Category } from "../../data/board.ts";
 import { boardAccessError, boardContext } from "../../middleware/board.ts";
 import { boardModelsContext } from "../../middleware/models.ts";
-import { resolveActiveSection } from "../../models/section.ts";
+import { resolveActiveSection } from "../../models/boards/section.ts";
 import { NewCardPage } from "./page.tsx";
 import { getI18n } from "../../middleware/locale.ts";
 import { isSubmissionId } from "./schema.ts";

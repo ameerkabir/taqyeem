@@ -1,40 +1,9 @@
-// Fake board data shaped like the #7 tables. Replace with D1 queries later.
-// Field names mirror the future columns so the swap is mechanical.
+// Test fixtures: a demo board in the app's shapes. Production data comes from D1 now; this
+// file backs the in-memory test double (fake-boards.ts) and seedDemoBoard (seed.ts).
+import type { Board, Card, Category, Member } from "../data/board.ts";
 
-export type BoardStatus = "collecting" | "meeting" | "closed";
-
-export interface Board {
-  id: string;
-  title: string;
-  organiserMemberId: string;
-  status: BoardStatus;
-  votingOpen: boolean;
-  currentSectionId: string | null;
-}
-
-export interface Category {
-  id: string;
-  boardId: string;
-  label: string;
-  position: number;
-}
-
-export interface Member {
-  id: string;
-  boardId: string;
-  displayName: string;
-}
-
-export interface Card {
-  id: string;
-  boardId: string;
-  categoryId: string;
-  memberId: string;
-  body: string;
-  isAnonymous: boolean;
-  voteCount: number;
-  createdAt: string;
-}
+// Re-exported so tests that used to import the types from here keep working.
+export type { Board, BoardStatus, Card, Category, Member } from "../data/board.ts";
 
 export const board: Board = {
   id: "demo",

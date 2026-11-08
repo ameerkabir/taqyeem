@@ -11,10 +11,10 @@ import boardController from "../board/controller.tsx";
 import boardCardsController from "../board-cards/controller.tsx";
 import newCardController from "./controller.tsx";
 import { routes } from "../../routes.ts";
-import { board, type Card } from "../../data/fake-board.ts";
-import type { BoardModels } from "../../models/boards.ts";
-import { createFakeBoardModels } from "../../models/fake-boards.ts";
-import { createFakeBoardStore } from "../../models/fake-board-store.ts";
+import { board, type Card } from "../../test/fake-board.ts";
+import type { BoardModels } from "../../models/board-models.ts";
+import { createFakeBoardModels } from "../../test/fake-boards.ts";
+import { createFakeBoardStore } from "../../test/fake-board-store.ts";
 import {
   boardModelsContext,
   type loadBoardModels,
@@ -469,15 +469,13 @@ describe("new card error feedback without JavaScript", () => {
     assert.equal(app.saved.length, 0);
   });
 
-  it("renders a membership error on GET without trying to parse a form body", async () => {
+  it("sends a non-member opening the page to the join form without trying to parse a form body", async () => {
     let app = await setup({ getViewerMemberId: async () => null });
     let response = await app.router.fetch(
       new URL(routes.newCard.index.href({ boardId: "demo" }), "http://localhost"),
     );
-    assert.equal(response.status, 403);
-    let html = await response.text();
-    assert.ok(html.includes("يرجى الانضمام إلى اللوحة"));
-    assert.match(html, /role="alert"/);
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("Location"), routes.joinBoard.index.href({ boardId: "demo" }));
     assert.equal(app.saved.length, 0);
   });
 

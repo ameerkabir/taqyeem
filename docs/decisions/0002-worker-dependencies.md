@@ -51,6 +51,8 @@ secret separately. The Worker still rejects an empty secret.
 
 ## Database follow-up (#2)
 
+> Done: see `0004-persistent-board-models.md`. The text below is the original plan.
+
 Construct a `remix/data-table` Database around a D1 DatabaseDriver adapter at the
 Worker/bootstrap boundary and inject the constructed Database through options and
 middleware. Cache only suitable database services around stable bindings, never
