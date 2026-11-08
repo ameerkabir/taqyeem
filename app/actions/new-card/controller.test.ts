@@ -1,4 +1,5 @@
 import { testDatabase } from "../../test/dependencies.ts";
+import { loadLocale } from "../../middleware/locale.ts";
 import { loadAppDependencies } from "../../middleware/dependencies.ts";
 import { loadSession } from "../../sessions.ts";
 import * as assert from "remix/assert";
@@ -33,7 +34,7 @@ async function setup(
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.map(routes.board, boardController);
   router.map(routes.boardCards, boardCardsController);
   router.map(routes.newCard, newCardController);

@@ -1,8 +1,9 @@
 import { Document } from "../document.tsx";
 import { routes } from "../../routes.ts";
 import type { Handle } from "remix/component";
+import type { I18n } from "../../middleware/locale.ts";
 import { MAX_BOARD_TITLE_LENGTH, MAX_MEMBER_NAME_LENGTH } from "./schema.ts";
-import { DEFAULT_CATEGORY_LABELS } from "../../data/board-defaults.ts";
+import { defaultCategoryLabels } from "../../data/board-defaults.ts";
 import {
   pageStyle,
   panelStyle,
@@ -17,6 +18,7 @@ import {
 } from "./styles.ts";
 
 interface NewBoardPageProps {
+  i18n: I18n;
   values?: { title: string; organiserDisplayName: string };
   titleError?: string;
   organiserNameError?: string;
@@ -24,23 +26,27 @@ interface NewBoardPageProps {
 
 export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
   return () => {
-    let { values, titleError, organiserNameError } = handle.props;
+    let { i18n, values, titleError, organiserNameError } = handle.props;
+    let { t } = i18n;
 
     return (
-      <Document title="إنشاء لوحة · تقييم">
+      <Document
+        i18n={i18n}
+        title={t("page.title", { title: t("newBoard.documentTitle"), suffix: t("app.name") })}
+      >
         <main mix={pageStyle}>
           <section mix={panelStyle} aria-labelledby="new-board-title">
-            <a href={routes.home.href()}>العودة للرئيسية</a>
+            <a href={routes.home.href()}>{t("newBoard.back")}</a>
             <h1 id="new-board-title" mix={titleStyle}>
-              ابدأ لوحة جديدة
+              {t("newBoard.heading")}
             </h1>
             <p mix={hintStyle}>
-              مساحة لفريقك لمشاركة الملاحظات ومناقشتها
+              {t("newBoard.intro")}
             </p>
 
             <form method="post" action={routes.newBoard.action.href()} mix={formStyle}>
               <label mix={fieldStyle}>
-                <span>اسم اللوحة</span>
+                <span>{t("newBoard.titleLabel")}</span>
                 <input
                   type="text"
                   name="title"
@@ -48,7 +54,7 @@ export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
                   maxLength={MAX_BOARD_TITLE_LENGTH}
                   aria-invalid={titleError ? "true" : undefined}
                   aria-describedby={titleError ? "board-title-error" : undefined}
-                  placeholder="مثلًا: مراجعة السبرنت ١٥"
+                  placeholder={t("newBoard.titlePlaceholder")}
                   required
                   dir="auto"
                   mix={inputStyle}
@@ -62,7 +68,7 @@ export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
               )}
 
               <label mix={fieldStyle}>
-                <span>اسمك</span>
+                <span>{t("newBoard.nameLabel")}</span>
                 <input
                   type="text"
                   name="organiserDisplayName"
@@ -82,7 +88,7 @@ export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
               </label>
 
               <p id="organiser-name-hint" mix={hintStyle}>
-                ستصبح منظم اللوحة، وسيظهر هذا الاسم لفريقك
+                {t("newBoard.nameHint")}
               </p>
 
               {organiserNameError && (
@@ -92,17 +98,17 @@ export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
               )}
 
               <section aria-labelledby="default-categories-title">
-                <h2 id="default-categories-title">أقسام اللوحة</h2>
-                <p mix={hintStyle}>ستبدأ لوحتك بهذه الأقسام الثلاثة</p>
+                <h2 id="default-categories-title">{t("newBoard.categoriesHeading")}</h2>
+                <p mix={hintStyle}>{t("newBoard.categoriesHint")}</p>
                 <ul mix={categoriesStyle}>
-                  {DEFAULT_CATEGORY_LABELS.map((label) => (
+                  {defaultCategoryLabels(t).map((label) => (
                     <li key={label}>{label}</li>
                   ))}
                 </ul>
               </section>
 
               <button type="submit" mix={submitStyle}>
-                إنشاء اللوحة
+                {t("newBoard.submit")}
               </button>
             </form>
           </section>

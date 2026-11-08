@@ -1,4 +1,5 @@
 import { testDatabase } from "../test/dependencies.ts";
+import { loadLocale } from "./locale.ts";
 import { loadAppDependencies } from "./dependencies.ts";
 import { loadSession } from "../sessions.ts";
 import * as assert from "remix/assert";
@@ -21,7 +22,7 @@ async function setup(overrides: Partial<BoardModels> = {}, boardId = "demo") {
     return next();
   };
   let routes = route({ protected: "/protected" });
-  let router = createRouter({ middleware: [loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
   router.get("/public", () => new Response("Public"));
   router.map(
     routes,

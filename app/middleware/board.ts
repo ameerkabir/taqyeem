@@ -5,6 +5,7 @@ import {
 } from "remix/router";
 import type { Board } from "../data/fake-board.ts";
 import { boardModelsContext } from "./models.ts";
+import { getI18n } from "./locale.ts";
 
 export const boardContext = createContextKey<Board>();
 
@@ -38,7 +39,7 @@ export function loadBoard(
     if (!board) {
       return (options.onError ?? boardAccessError)(
         context,
-        "اللوحة غير موجودة",
+        getI18n(context).t("access.boardNotFound"),
         404,
       );
     }

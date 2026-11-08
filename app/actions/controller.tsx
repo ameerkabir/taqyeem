@@ -8,7 +8,7 @@ export default createController(
   {
     actions: {
       home(context) {
-        return context.render(<HomePage />);
+        return context.render(<HomePage i18n={context.i18n} />);
       },
       demoBoard(context) {
         return redirect(

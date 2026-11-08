@@ -7,7 +7,6 @@ import {
 } from "../data/fake-board.ts";
 import type { BoardModels } from "./boards.ts";
 import { createFakeBoardStore, type FakeBoardStore } from "./fake-board-store.ts";
-import { DEFAULT_CATEGORY_LABELS } from "../data/board-defaults.ts";
 
 // Shared between requests in this Worker instance, just like the demo cards.
 export const defaultStore = createFakeBoardStore();
@@ -31,7 +30,7 @@ export function createFakeBoardModels(
   }
 
   return {
-    createBoard: async ({ title, organiserDisplayName }) => {
+    createBoard: async ({ title, organiserDisplayName, categoryLabels }) => {
       let boardId = crypto.randomUUID();
       let organiserId = crypto.randomUUID();
 
@@ -50,7 +49,7 @@ export function createFakeBoardModels(
         displayName: organiserDisplayName,
       };
 
-      let categories: Category[] = DEFAULT_CATEGORY_LABELS.map(
+      let categories: Category[] = categoryLabels.map(
         (label, position) => ({
           id: crypto.randomUUID(),
           boardId,

@@ -11,8 +11,11 @@ import { clientEntry, navigate, on, type Handle } from "remix/component";
 import type { Category } from "../../../data/fake-board.ts";
 import { routes } from "../../../routes.ts";
 import { NoteField } from "./note-field.tsx";
+import type { Locale } from "../../../i18n/locales.ts";
+import { createTranslator } from "../../../i18n/translator.ts";
 
 export interface NewCardFormProps {
+  locale: Locale;
   boardId: string;
   categories: Category[];
   activeCategoryId?: string;
@@ -28,7 +31,9 @@ export const NewCardForm = clientEntry(
     let error = handle.props.error;
 
     return () => {
-      let { boardId, categories, activeCategoryId, submissionId, values } = handle.props;
+      let { locale, boardId, categories, activeCategoryId, submissionId, values } =
+        handle.props;
+      let { t } = createTranslator(locale);
       return (
         <form
           method="post"
@@ -68,9 +73,9 @@ export const NewCardForm = clientEntry(
                     error =
                       typeof result.error === "string"
                         ? result.error
-                        : "تعذّر نشر الملاحظة، يرجى المحاولة مجددًا";
+                        : t("newCard.failed");
                   } else {
-                    error = "تعذّر نشر الملاحظة، يرجى المحاولة مجددًا";
+                    error = t("newCard.failed");
                   }
                   return;
                 }
@@ -78,8 +83,7 @@ export const NewCardForm = clientEntry(
                 await navigate(response.url, { history: "replace" });
               } catch {
                 if (!signal.aborted) {
-                  error =
-                    "تعذّر الاتصال، يرجى التحقق من اتصالك والمحاولة مجددًا";
+                  error = t("form.networkError");
                 }
               } finally {
                 if (!signal.aborted) {
@@ -92,7 +96,7 @@ export const NewCardForm = clientEntry(
         >
           <input type="hidden" name="submissionId" value={submissionId} />
           <fieldset mix={fieldsetStyle}>
-            <legend mix={labelStyle}>اختر التصنيف</legend>
+            <legend mix={labelStyle}>{t("form.category")}</legend>
             <div mix={choicesStyle}>
               {categories.map((category) => (
                 <label mix={choiceStyle}>
@@ -103,13 +107,13 @@ export const NewCardForm = clientEntry(
                     defaultChecked={category.id === activeCategoryId}
                     required
                   />
-                  <span>{category.label}</span>
+                  <span dir="auto">{category.label}</span>
                 </label>
               ))}
             </div>
           </fieldset>
 
-          <NoteField initialValue={values?.text} />
+          <NoteField locale={locale} initialValue={values?.text} />
 
           <label mix={choiceStyle}>
             <input
@@ -118,7 +122,7 @@ export const NewCardForm = clientEntry(
               value="true"
               defaultChecked={values?.isAnonymous}
             />
-            <span>انشر بدون اسمي</span>
+            <span>{t("form.anonymous")}</span>
           </label>
 
           {error && (
@@ -127,7 +131,7 @@ export const NewCardForm = clientEntry(
             </p>
           )}
           <button type="submit" disabled={pending} mix={submitStyle}>
-            {pending ? "جارٍ النشر…" : "نشر الملاحظة"}
+            {pending ? t("newCard.submitting") : t("newCard.submit")}
           </button>
         </form>
       );

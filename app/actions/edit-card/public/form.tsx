@@ -13,6 +13,8 @@ import {
   errorStyle,
 } from "../../../ui/public/card-form-styles.ts";
 import { NoteField } from "../../new-card/public/note-field.tsx";
+import type { Locale } from "../../../i18n/locales.ts";
+import { createTranslator } from "../../../i18n/translator.ts";
 
 export interface EditCardValues {
   text: string;
@@ -20,6 +22,7 @@ export interface EditCardValues {
   isAnonymous: boolean;
 }
 export interface EditCardFormProps {
+  locale: Locale;
   card: Card;
   categories: Category[];
   values?: EditCardValues;
@@ -32,7 +35,8 @@ export const EditCardForm = clientEntry(
     let pending = false;
     let error = handle.props.error;
     return () => {
-      let { card, categories } = handle.props;
+      let { locale, card, categories } = handle.props;
+      let { t } = createTranslator(locale);
       let values = handle.props.values ?? {
         text: card.body,
         categoryId: card.categoryId,
@@ -55,7 +59,10 @@ export const EditCardForm = clientEntry(
               let message = await submitMutation(
                 event.currentTarget,
                 handle.signal,
-                "تعذّر حفظ التعديلات، يرجى المحاولة مجددًا",
+                {
+                  failure: t("editCard.failed"),
+                  network: t("form.networkError"),
+                },
               );
               if (!handle.signal.aborted) {
                 error = message;
@@ -66,7 +73,7 @@ export const EditCardForm = clientEntry(
           ]}
         >
           <fieldset mix={fieldsetStyle}>
-            <legend mix={labelStyle}>اختر التصنيف</legend>
+            <legend mix={labelStyle}>{t("form.category")}</legend>
             <div mix={choicesStyle}>
               {categories.map((category) => (
                 <label mix={choiceStyle}>
@@ -77,12 +84,12 @@ export const EditCardForm = clientEntry(
                     defaultChecked={category.id === values.categoryId}
                     required
                   />
-                  <span>{category.label}</span>
+                  <span dir="auto">{category.label}</span>
                 </label>
               ))}
             </div>
           </fieldset>
-          <NoteField initialValue={values.text} />
+          <NoteField locale={locale} initialValue={values.text} />
           <label mix={choiceStyle}>
             <input
               type="checkbox"
@@ -90,7 +97,7 @@ export const EditCardForm = clientEntry(
               value="true"
               defaultChecked={values.isAnonymous}
             />
-            <span>انشر بدون اسمي</span>
+            <span>{t("form.anonymous")}</span>
           </label>
           {error && (
             <p role="alert" mix={errorStyle}>
@@ -98,10 +105,10 @@ export const EditCardForm = clientEntry(
             </p>
           )}
           <button type="submit" disabled={pending} mix={submitStyle}>
-            {pending ? "جارٍ الحفظ…" : "حفظ التعديلات"}
+            {pending ? t("editCard.submitting") : t("editCard.submit")}
           </button>
           <a href={cancelHref} mix={cancelStyle}>
-            إلغاء
+            {t("common.cancel")}
           </a>
         </form>
       );
