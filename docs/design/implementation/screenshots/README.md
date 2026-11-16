@@ -12,5 +12,8 @@ These are renders of the implementation running in the local Worker, captured on
 - `empty-collect-desktop.png`: classic category lanes, count badges and one prominent note action.
 - `empty-collect-phone-arabic.png`: one active custom category and reachable note action.
 - `group-enhanced-desktop-ar-dark.png` and `group-native-phone-ar-dark.png`: existing-theme grouping actions and complete source evidence in Arabic/dark mode.
+- `discuss-desktop.png`: the shared topic, source feedback, outcome, decision and related actions in the revised discussion layout.
+- `discuss-private-phone.png`: a private reading view that still names the team’s current topic and offers a return link.
+- `discuss-native-phone-ar-dark.png`: current discussion and recorded decision/action context in Arabic/dark mode without JavaScript.
 
 The adjacent manifest records SHA-256 digests. Screenshots are inspection evidence, not proof of native-speaker, screen-reader or physical-device acceptance.

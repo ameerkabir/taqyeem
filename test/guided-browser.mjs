@@ -228,9 +228,28 @@ try {
   await clickCommand(owner, "advance");
   assert.equal((await state(owner, path)).state.stage, "discuss");
   let live = (await state(owner, path)).state.liveTopic;
+  await owner
+    .locator(
+      `.discussion-subject[data-topic="${live}"] .discussion-topic-header h3`,
+    )
+    .waitFor({ state: "visible" });
+  assert.equal(
+    await owner.locator(".discussion-mode").innerText(),
+    "Now discussing",
+  );
+  assert.ok(
+    (await owner
+      .locator(".discussion-feedback > .note-stack .feedback-card")
+      .count()) > 0,
+  );
   await member.waitForTimeout(3200);
   await member.locator(".agenda select").selectOption({ index: 1 });
   await pause();
+  assert.equal(await member.locator(".discussion-context").count(), 1);
+  assert.equal(
+    await member.locator(".discussion-context strong").innerText(),
+    await owner.locator(".discussion-topic-header h3").innerText(),
+  );
   assert.equal((await state(owner, path)).state.liveTopic, live);
   assert.deepEqual((await state(owner, path)).state.outcomes, {});
   checks.push(

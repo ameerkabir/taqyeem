@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "Enhanced discussion appears on stage entry; shared changes reach followers while private reading stays put; live/private labels are explicit; source evidence and both mounted editor drafts keep their topic across shared changes and preferences",
+    "Native forms show the current discussion and full feedback, distinguish private browsing, target decisions/actions to the viewed topic, and return to the shared view after changing it"
+  ],
+  "pageErrors": [],
+  "runDate": "2026-11-16",
+  "runtime": "Local Cloudflare Worker / Miniflare; Chromium emulation"
+}

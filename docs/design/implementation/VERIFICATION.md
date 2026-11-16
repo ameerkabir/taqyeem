@@ -22,6 +22,7 @@ node test/guided-editors.mjs
 node test/guided-native.mjs
 node test/category-setup-browser.mjs
 node test/grouping-browser.mjs
+node test/discussion-browser.mjs
 node test/guided-stress.mjs
 ```
 
@@ -34,11 +35,14 @@ Run the stress fixture separately: it seeds an explicitly labelled disposable bo
 | `guided-native.mjs` | Full 390px phone journey with JavaScript disabled: Create, note POST, category GET navigation, ballot, discussion, decision, agreed action, Summary and independent language/appearance native forms. |
 | `category-setup-browser.mjs` | Facilitator classic/custom choice before note taking; participant waiting and automatic transition to the real configured board; custom labels and radio selection retained across theme/language changes; note posted into the confirmed custom categories; empty Collect bounds at five widths; native custom setup and editable validation recovery with JavaScript disabled. |
 | `grouping-browser.mjs` | Enhanced desktop and native phone create/rename duplicate rejection with retained fields and selected notes; adding selected notes to an existing theme with a blank new title; stable theme identity, retained new-title draft, original source evidence and participant read-only view; Arabic/dark layout and subsequent progression to Vote. |
+| `discussion-browser.mjs` | Enters Discuss through the real ballot/stage buttons and verifies the current headline and original feedback are visible immediately. Checks all source notes, independent browsing and return, shared changes reaching followers while private views stay put, facilitator-only sharing, retained mounted decision/action drafts and their topic across shared changes and preferences, native contextual decision/action POSTs targeting the viewed topic, Arabic/dark mode and five-width bounds including open editors. |
 | `guided-stress.mjs` | 240 inspections: six stages × five viewports × two languages × two themes × two roles. Actual fixture has 50 mixed 500-character notes, eight categories, 20 themes, 80 members and 30 proposals/actions. Checks bounds, active named category including category eight, real action filter counts/empty recovery, actual locale/theme and page errors. |
 
 The viewports are 375×812, 390×844, 768×1024, 1280×800 and 1440×900. Core/browser/editor/native checks are completed journeys or targeted interactions; the 240 stress states are inspection coverage. These are not 240 completed meetings. The [application screenshots](screenshots/) include Home, desktop Collect/Actions, an Arabic phone draft and Arabic/dark Summary. The screenshots in this directory are application renders, unlike `../final/screenshots`, which preserve prototype provenance.
 
 The category-setup follow-up adds classic/custom setup, a participant waiting screen, and a clearer empty Collect composition: compact board context, one prominent Add note action, colour markers and count badges, and purposeful empty lanes. New setup and empty-board screenshots are included alongside the completed-journey captures. Migration 0010 was applied to the local development D1 before these checks; branch checkouts need `npm run db:migrate:local` before starting the Worker.
+
+The discussion follow-up replaces the three-column arrangement with a compact agenda and dominant topic/evidence area. **Now discussing** identifies the shared topic; private views retain the team’s actual topic in a banner. Related outcomes, decisions and actions remain attached to the viewed topic. Native capture links explicitly select their intended topic, and the two existing editors stay mounted for draft retention. The focused discussion journey, full two-identity journey, editor/native regressions and layout inspections run against the local Worker; this update requires no new database migration.
 
 A parallel test attempt ran the local SQL stress seeder while other browser journeys were writing. Miniflare emitted an internal D1 session-commit-token error on one request. The fixture is now documented to run in isolation; the final journeys are rerun sequentially. This is not claimed as production load or multi-region testing.
 

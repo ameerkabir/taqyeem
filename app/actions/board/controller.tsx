@@ -23,7 +23,8 @@ export default createAction(routes.board, {
       let view = await readSession(context.db, board.id);
       return context.render(
         <Document i18n={context.i18n} title={board.title}>
-          <Workspace key={`${board.id}:${member.id}`}
+          <Workspace
+            key={`${board.id}:${member.id}`}
             origin={context.url.origin}
             initial={viewerPayload(view!, member.id)}
             locale={context.i18n.locale}
@@ -36,6 +37,7 @@ export default createAction(routes.board, {
               filter: context.url.searchParams.get("filter") ?? "all",
               capture: context.url.searchParams.get("capture") ?? "",
               captureNote: context.url.searchParams.get("captureNote") ?? "",
+              decision: context.url.searchParams.get("decision") ?? "",
             }}
           />
         </Document>,

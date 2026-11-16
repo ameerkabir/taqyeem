@@ -42,6 +42,7 @@ type WorkspaceProps = {
     filter: string;
     capture?: string;
     captureNote?: string;
+    decision?: string;
   };
 };
 export const Workspace = clientEntry(
@@ -77,6 +78,17 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       handle.props.initialView?.category || data.categories[0]?.id || "";
   let lastInitial = handle.props.initial,
     lastView = JSON.stringify(handle.props.initialView);
+  // HTML option defaults must survive later browsing/polling without retargeting a draft.
+  const initialTopics = sourceTopics(data);
+  const initialCaptureTopic =
+    initialTopics.find(
+      (topic) => topic.id === handle.props.initialView?.capture,
+    )?.id ?? "";
+  const initialDecisionTopic = [
+    handle.props.initialView?.decision,
+    handle.props.initialView?.topic,
+    data.state.liveTopic,
+  ].find((id) => initialTopics.some((topic) => topic.id === id));
   let status = "",
     error = "",
     pending = false;
@@ -378,6 +390,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         let next: ViewerPayload = await response.json();
         if (next.revision >= data.revision) data = next;
         let kind = (form.elements.namedItem("kind") as HTMLInputElement).value;
+        if (kind === "live") {
+          privateTopic = "";
+          expanded = false;
+          persist();
+        }
         if (
           ["theme", "propose", "decision"].includes(kind) &&
           new URLSearchParams(
@@ -452,9 +469,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       ranked = [...topics].sort(
         (a, b) => (data.counts[b.id] ?? 0) - (data.counts[a.id] ?? 0),
       );
+    if (privateTopic && !ranked.some((topic) => topic.id === privateTopic))
+      privateTopic = "";
+    let sharedTopic = ranked.find((topic) => topic.id === state.liveTopic);
     let active =
-        ranked.find((x) => x.id === (privateTopic || state.liveTopic)) ??
-        ranked[0],
+        ranked.find((x) => x.id === privateTopic) ?? sharedTopic ?? ranked[0],
       mine = state.votes[data.memberId] ?? [];
     let currentCategory =
         data.categories.find((c) => c.id === category) ?? data.categories[0],
@@ -496,6 +515,25 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
             topic ??
             topics.find((topic) => card && topic.notes.includes(card.id))
           )?.id ?? "";
+      }
+      text.focus();
+      save(form);
+      persist();
+      detail.scrollIntoView({ block: "start" });
+    }
+    function recordDecision(topic: Topic) {
+      let detail = root().querySelector<HTMLDetailsElement>(
+        'details[data-editor="decision"]',
+      )!;
+      detail.open = true;
+      let form = detail.querySelector<HTMLFormElement>("form")!,
+        text = form.querySelector<HTMLTextAreaElement>("textarea")!,
+        select = form.querySelector(
+          'select[name="topic"]',
+        ) as unknown as HTMLSelectElement;
+      if (!text.value.trim()) {
+        select.value = topic.id;
+        text.value = state.decisions[topic.id] ?? "";
       }
       text.focus();
       save(form);
@@ -1071,31 +1109,75 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
               </section>
             )}
             {state.stage === "discuss" && (
-              <section>
-                <p class="reading-hint">{t("guided.readingHint")}</p>
+              <section
+                class="discussion-workspace"
+                aria-label={t("guided.discuss")}
+              >
+                {(privateTopic || !sharedTopic) && (
+                  <div
+                    class="discussion-context"
+                    data-private={privateTopic ? "true" : "false"}
+                  >
+                    <div aria-live="polite" aria-atomic="true">
+                      <span class="eyebrow">
+                        {t(
+                          sharedTopic
+                            ? "discuss.teamTopic"
+                            : "discuss.noShared",
+                        )}
+                      </span>
+                      {sharedTopic && (
+                        <strong dir="auto">{sharedTopic.title}</strong>
+                      )}
+                      {privateTopic && <p>{t("discuss.privateHint")}</p>}
+                    </div>
+                    {privateTopic && sharedTopic && (
+                      <a
+                        href={routes.board.href({ boardId: data.board.id })}
+                        mix={on("click", (event) => {
+                          event.preventDefault();
+                          privateTopic = "";
+                          expanded = false;
+                          persist();
+                          handle.update();
+                        })}
+                      >
+                        {t("guided.follow")}
+                      </a>
+                    )}
+                  </div>
+                )}
                 <div class="discussion-layout">
-                  <aside class="agenda">
+                  <aside
+                    class="agenda discussion-agenda"
+                    aria-label={t("guided.agenda")}
+                  >
                     <h3>{t("guided.agenda")}</h3>
                     <form method="get" data-view-form>
                       <label>
-                        {t("guided.agenda")}
-                        <select
-                          name="topic"
-                          defaultValue={active?.id ?? ""}
-                          data-view="topic"
-                        >
+                        {t("discuss.browse")}
+                        <select name="topic" data-view="topic">
                           {ranked.map((topic, i) => (
-                            <option key={topic.id} value={topic.id}>
+                            <option
+                              key={topic.id}
+                              value={topic.id}
+                              selected={topic.id === active?.id}
+                            >
                               {formatNumber(i + 1)}. {topic.title}
                             </option>
                           ))}
                         </select>
                       </label>
-                      <button>{t("guided.refresh")}</button>
+                      <button>{t("discuss.browse")}</button>
                     </form>
                     <ol>
-                      {ranked.map((topic) => (
-                        <li key={topic.id}>
+                      {ranked.map((topic, i) => (
+                        <li
+                          key={topic.id}
+                          data-live={
+                            topic.id === sharedTopic?.id ? "true" : "false"
+                          }
+                        >
                           <a
                             href={`?topic=${topic.id}`}
                             aria-current={
@@ -1109,93 +1191,169 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                               handle.update();
                             })}
                           >
-                            <bdi>{topic.title}</bdi>
+                            <span class="agenda-number" aria-hidden="true">
+                              {formatNumber(i + 1)}
+                            </span>
+                            <span class="agenda-title">
+                              <bdi>{topic.title}</bdi>
+                              {topic.id === sharedTopic?.id && (
+                                <span class="agenda-live">
+                                  {t("discuss.current")}
+                                </span>
+                              )}
+                            </span>
                           </a>
-                          <span>
-                            {t(
-                              `guided.${state.outcomes[topic.id] ?? "unaddressed"}`,
-                            )}
+                          <span class="agenda-outcome">
+                            {state.outcomes[topic.id]
+                              ? t(`guided.${state.outcomes[topic.id]}`)
+                              : t("discuss.noOutcome")}
                           </span>
                         </li>
                       ))}
                     </ol>
                   </aside>
-                  <section class="discussion-subject">
+                  <section
+                    class="discussion-subject"
+                    aria-labelledby={`${rootId}-discussion-title`}
+                    data-topic={active?.id}
+                    data-following={
+                      !privateTopic && sharedTopic ? "true" : "false"
+                    }
+                  >
                     {active ? (
                       <>
-                        <p>
-                          {privateTopic
-                            ? t("guided.private")
-                            : t("guided.live")}{" "}
-                          · {formatNumber(ranked.indexOf(active) + 1)} /{" "}
-                          {formatNumber(ranked.length)}
-                        </p>
-                        <h3 dir="auto">{active.title}</h3>
-                        <div class="control-row">
-                          <a
-                            href={routes.board.href({ boardId: data.board.id })}
-                            mix={on("click", (event) => {
-                              event.preventDefault();
-                              privateTopic = "";
-                              expanded = false;
-                              handle.update();
-                            })}
+                        <header class="discussion-topic-header">
+                          <div class="discussion-topic-label">
+                            <span class="discussion-mode">
+                              {t(
+                                privateTopic || !sharedTopic
+                                  ? "discuss.viewing"
+                                  : "discuss.now",
+                              )}
+                            </span>
+                            <span class="discussion-position">
+                              {t("discuss.position", {
+                                current: ranked.indexOf(active) + 1,
+                                total: ranked.length,
+                              })}
+                            </span>
+                          </div>
+                          <h3
+                            id={`${rootId}-discussion-title`}
+                            dir="auto"
+                            aria-live="polite"
+                            aria-atomic="true"
                           >
-                            {t("guided.follow")}
-                          </a>
-                          {facilitator &&
+                            {active.title}
+                          </h3>
+                          <div class="discussion-topic-meta">
+                            <span>
+                              {t("board.tabCount", {
+                                count: active.notes.length,
+                              })}
+                            </span>
+                            {state.ballot > 0 && (
+                              <span>
+                                {t("vote.count", {
+                                  count: data.counts[active.id] ?? 0,
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          {(privateTopic || !sharedTopic) &&
+                            facilitator &&
+                            active.id !== sharedTopic?.id &&
                             command(
                               "live",
                               { topic: active.id },
                               t("guided.share"),
                             )}
-                        </div>
-                        <div class="note-stack">
-                          {active.notes
-                            .slice(0, 2)
-                            .map((id) => data.cards.find((c) => c.id === id))
-                            .filter((c): c is Card => !!c)
-                            .map((c) => note(c))}
-                        </div>
-                        {active.notes.length > 2 && (
-                          <details class="more-notes">
-                            <summary>{t("guided.showAll")}</summary>
-                            <div class="note-stack">
-                              {active.notes
-                                .slice(2)
-                                .map((id) =>
-                                  data.cards.find((c) => c.id === id),
-                                )
-                                .filter((c): c is Card => !!c)
-                                .map((c) => note(c))}
-                            </div>
-                          </details>
-                        )}
-                        <p>
-                          {t(
-                            `guided.${state.outcomes[active.id] ?? "unaddressed"}`,
+                        </header>
+                        <section
+                          class="discussion-feedback"
+                          aria-labelledby={`${rootId}-feedback-title`}
+                        >
+                          <h4 id={`${rootId}-feedback-title`}>
+                            {t("discuss.feedback")}
+                          </h4>
+                          <div class="note-stack">
+                            {active.notes
+                              .slice(0, 2)
+                              .map((id) => data.cards.find((c) => c.id === id))
+                              .filter((c): c is Card => !!c)
+                              .map((c) => note(c))}
+                          </div>
+                          {active.notes.length > 2 && (
+                            <details class="more-notes">
+                              <summary>{t("guided.showAll")}</summary>
+                              <div class="note-stack">
+                                {active.notes
+                                  .slice(2)
+                                  .map((id) =>
+                                    data.cards.find((c) => c.id === id),
+                                  )
+                                  .filter((c): c is Card => !!c)
+                                  .map((c) => note(c))}
+                              </div>
+                            </details>
                           )}
-                        </p>
-                        <p dir="auto">
-                          {state.decisions[active.id] ?? t("guided.noDecision")}
-                        </p>
-                        {facilitator && (
-                          <div class="control-row">
-                            {command(
-                              "outcome",
-                              { topic: active.id, value: "discussed" },
-                              t("guided.markDiscussed"),
-                            )}
-                            {command(
-                              "outcome",
-                              { topic: active.id, value: "skipped" },
-                              t("guided.skip"),
+                        </section>
+                        <section
+                          class="discussion-record"
+                          aria-label={t("discuss.outcome")}
+                        >
+                          <div class="discussion-outcome">
+                            <h4>{t("discuss.outcome")}</h4>
+                            <span
+                              class="discussion-outcome-label"
+                              data-outcome={
+                                state.outcomes[active.id] ?? "unaddressed"
+                              }
+                            >
+                              {state.outcomes[active.id]
+                                ? t(`guided.${state.outcomes[active.id]}`)
+                                : t("discuss.noOutcome")}
+                            </span>
+                            {facilitator && (
+                              <div class="control-row">
+                                {command(
+                                  "outcome",
+                                  { topic: active.id, value: "discussed" },
+                                  t("guided.markDiscussed"),
+                                )}
+                                {command(
+                                  "outcome",
+                                  { topic: active.id, value: "skipped" },
+                                  t("guided.skip"),
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
+                          <div class="discussion-decision">
+                            <h4>{t("discuss.decision")}</h4>
+                            <p dir="auto">
+                              {state.decisions[active.id] ??
+                                t("guided.noDecision")}
+                            </p>
+                            {facilitator && (
+                              <a
+                                class="discussion-record-link"
+                                href={`?topic=${active.id}&decision=${active.id}#${rootId}-decision`}
+                                mix={on("click", (event) => {
+                                  event.preventDefault();
+                                  recordDecision(active);
+                                })}
+                              >
+                                {t("guided.recordDecision")}
+                              </a>
+                            )}
+                          </div>
+                        </section>
                         <div class="topic-navigation">
                           <a
-                            aria-disabled={ranked.indexOf(active) === 0}
+                            aria-disabled={
+                              ranked.indexOf(active) === 0 ? "true" : "false"
+                            }
                             href={
                               ranked.indexOf(active) > 0
                                 ? `?topic=${ranked[ranked.indexOf(active) - 1].id}`
@@ -1203,9 +1361,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                             }
                             mix={on("click", (event) => {
                               event.preventDefault();
-                              if (ranked.indexOf(active!) > 0) {
+                              if (ranked.indexOf(active) > 0) {
                                 privateTopic =
-                                  ranked[ranked.indexOf(active!) - 1].id;
+                                  ranked[ranked.indexOf(active) - 1].id;
                                 expanded = false;
                                 persist();
                                 handle.update();
@@ -1217,6 +1375,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                           <a
                             aria-disabled={
                               ranked.indexOf(active) === ranked.length - 1
+                                ? "true"
+                                : "false"
                             }
                             href={
                               ranked.indexOf(active) < ranked.length - 1
@@ -1225,9 +1385,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                             }
                             mix={on("click", (event) => {
                               event.preventDefault();
-                              if (ranked.indexOf(active!) < ranked.length - 1) {
+                              if (ranked.indexOf(active) < ranked.length - 1) {
                                 privateTopic =
-                                  ranked[ranked.indexOf(active!) + 1].id;
+                                  ranked[ranked.indexOf(active) + 1].id;
                                 expanded = false;
                                 persist();
                                 handle.update();
@@ -1239,35 +1399,49 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                         </div>
                       </>
                     ) : (
-                      <p>{t("guided.noTopics")}</p>
+                      <div class="empty-state">
+                        <p>{t("guided.noTopics")}</p>
+                      </div>
                     )}
                   </section>
-                  <aside>
-                    <h3>{t("guided.actions")}</h3>
-                    <a
-                      href={`?capture=${active?.id ?? ""}#${rootId}-capture`}
-                      mix={on("click", (event) => {
-                        event.preventDefault();
-                        capture(undefined, active);
-                      })}
-                    >
-                      {t(
-                        facilitator
-                          ? "guided.addAction"
-                          : "guided.suggestAction",
-                      )}
-                    </a>
+                  <aside
+                    class="discussion-actions"
+                    aria-label={t("discuss.actions")}
+                  >
+                    <div class="discussion-actions-heading">
+                      <h3>{t("discuss.actions")}</h3>
+                      <a
+                        href={`?topic=${active?.id ?? ""}&capture=${active?.id ?? ""}#${rootId}-capture`}
+                        mix={on("click", (event) => {
+                          event.preventDefault();
+                          capture(undefined, active);
+                        })}
+                      >
+                        {t(
+                          facilitator
+                            ? "guided.addAction"
+                            : "guided.suggestAction",
+                        )}
+                      </a>
+                    </div>
+                    {!state.proposals.some((p) => p.topic === active?.id) && (
+                      <p class="discussion-empty-actions">
+                        {t("discuss.noActions")}
+                      </p>
+                    )}
                     <div class="action-grid compact">
                       {state.proposals
                         .filter((p) => p.topic === active?.id)
                         .map((p) => actionCard(p))}
                     </div>
-                    <details class="review-actions">
-                      <summary>{t("guided.reviewActions")}</summary>
-                      <div class="action-grid compact">
-                        {state.proposals.map((p) => actionCard(p))}
-                      </div>
-                    </details>
+                    {state.proposals.length > 0 && (
+                      <details class="review-actions">
+                        <summary>{t("guided.reviewActions")}</summary>
+                        <div class="action-grid compact">
+                          {state.proposals.map((p) => actionCard(p))}
+                        </div>
+                      </details>
+                    )}
                   </aside>
                 </div>
               </section>
@@ -1437,7 +1611,15 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
               </section>
             )}
             <section id={`${rootId}-capture-wrapper`} class="capture-editors">
-              <details data-editor="action">
+              <details
+                data-editor="action"
+                open={
+                  !!handle.props.initialView?.capture &&
+                  topics.some(
+                    (topic) => topic.id === handle.props.initialView?.capture,
+                  )
+                }
+              >
                 <summary>
                   {t(facilitator ? "guided.addAction" : "guided.suggestAction")}
                 </summary>
@@ -1461,13 +1643,16 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                   </label>
                   <label>
                     {t("guided.agenda")}
-                    <select
-                      name="topic"
-                      defaultValue={handle.props.initialView?.capture ?? ""}
-                    >
-                      <option value="">{t("guided.unassigned")}</option>
+                    <select name="topic">
+                      <option value="" selected={!initialCaptureTopic}>
+                        {t("guided.unassigned")}
+                      </option>
                       {topics.map((topic) => (
-                        <option key={topic.id} value={topic.id}>
+                        <option
+                          key={topic.id}
+                          value={topic.id}
+                          selected={topic.id === initialCaptureTopic}
+                        >
                           {topic.title}
                         </option>
                       ))}
@@ -1516,14 +1701,27 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                   </button>
                 </CommandForm>
               </details>
-              <details data-editor="decision">
+              <details
+                data-editor="decision"
+                open={
+                  facilitator &&
+                  state.stage === "discuss" &&
+                  topics.some(
+                    (topic) => topic.id === handle.props.initialView?.decision,
+                  )
+                }
+              >
                 <summary>{t("guided.recordDecision")}</summary>
                 <CommandForm data={data} kind="decision" draft="decision">
                   <label>
                     {t("guided.agenda")}
                     <select name="topic" required>
                       {topics.map((topic) => (
-                        <option key={topic.id} value={topic.id}>
+                        <option
+                          key={topic.id}
+                          value={topic.id}
+                          selected={topic.id === initialDecisionTopic}
+                        >
                           {topic.title}
                         </option>
                       ))}
@@ -1532,6 +1730,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                   <label>
                     {t("guided.decision")}
                     <textarea
+                      id={`${rootId}-decision`}
                       name="text"
                       rows={4}
                       maxLength={2000}

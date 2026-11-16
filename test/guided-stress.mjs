@@ -218,6 +218,20 @@ try {
             );
             assert.equal(bounds.lang, language);
             assert.equal(bounds.theme, theme);
+            if (stage === "discuss" && width < 768) {
+              const sizes = await page.evaluate(() => ({
+                layout: document
+                  .querySelector(".discussion-layout")
+                  .getBoundingClientRect().width,
+                subject: document
+                  .querySelector(".discussion-subject")
+                  .getBoundingClientRect().width,
+              }));
+              assert.ok(
+                Math.abs(sizes.layout - sizes.subject) < 1,
+                `Discussion subject fills the phone column: ${language}/${theme}/${role}/${width}`,
+              );
+            }
             if (stage === "collect") {
               await page
                 .locator("[data-view=category]")
