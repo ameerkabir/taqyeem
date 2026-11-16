@@ -37,32 +37,34 @@ export function Document(handle: Handle<DocumentProps>) {
             <a class="brand" href="/">
               {i18n.t("app.name")}
             </a>
-            <form
-              class="appearance"
-              method="post"
-              action="/appearance"
-              data-appearance-form
-              aria-label={i18n.t("guided.appearance")}
-            >
-              <input type="hidden" name="returnTo" value={i18n.returnTo} />
-              <button
-                type="submit"
-                name="appearance"
-                value="light"
-                data-appearance="light"
+            <div class="shell-preferences">
+              <form
+                class="appearance"
+                method="post"
+                action="/appearance"
+                data-appearance-form
+                aria-label={i18n.t("guided.appearance")}
               >
-                {i18n.t("guided.light")}
-              </button>
-              <button
-                type="submit"
-                name="appearance"
-                value="dark"
-                data-appearance="dark"
-              >
-                {i18n.t("guided.dark")}
-              </button>
-            </form>
-            <LocaleSwitcher i18n={i18n} />
+                <input type="hidden" name="returnTo" value={i18n.returnTo} />
+                <button
+                  type="submit"
+                  name="appearance"
+                  value="light"
+                  data-appearance="light"
+                >
+                  {i18n.t("guided.light")}
+                </button>
+                <button
+                  type="submit"
+                  name="appearance"
+                  value="dark"
+                  data-appearance="dark"
+                >
+                  {i18n.t("guided.dark")}
+                </button>
+              </form>
+              <LocaleSwitcher i18n={i18n} />
+            </div>
           </header>
           {children}
         </body>

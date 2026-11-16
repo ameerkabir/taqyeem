@@ -1,7 +1,11 @@
 {
-  "collect-desktop.png": "ac80d3ca690192199ddd5196a437bb2ddb5fbbae0b81040063ebb5b92505128d",
-  "summary-arabic-phone-dark.png": "f41e125233e575a84fc0247a8db65123155dd1e29a2bb53f718f3fccff649d36",
-  "arabic-phone-draft.png": "ffa40f0d3a6dbdfa67302883f963097b26272698a9d4769be5906e6e0f31fb7f",
+  "actions-desktop.png": "8961fe5a835cae7d316524ba173897ea74234f0b40d7a189ed903210995e77bf",
+  "arabic-phone-draft.png": "dd3576c93fe681f9dd16446af80954625b4f2fabc8618cfc928528776333fec9",
+  "choose-categories-desktop.png": "8832c9b38026c23674eb8994dcbf0ec472bbef0f1b2ee48b8a67303cdf8a5df0",
+  "collect-desktop.png": "ca8f9ff59a0f1a8f8579626970bcf8e1e0a93588ac8685b2243a135652e4becc",
+  "custom-categories-phone-arabic.png": "d2c6c6f9aea9e784f40279fbbb0c804c8a1a39a34e8ff487b49f0d6f033dd4be",
+  "empty-collect-desktop.png": "97883c69f867bff5053e744dfd08590451743a933853a7483766c29a72d3cdc8",
+  "empty-collect-phone-arabic.png": "52518ac854ff729397efe54b7073b004a3c7737cce836b4962d1d61e5d45d677",
   "home-desktop.png": "c8c58150123753e6d524207157bd6d4fcc490a94c962ba416bb765bfc40a8e0a",
-  "actions-desktop.png": "4c6198349648f3e7fae5f0ad1207896a50b44bf4c05ee965206c9de5ce72c2a0"
+  "summary-arabic-phone-dark.png": "719b4e34fa8386253b7390ae5b33df15e3787cedbff1ad8c156edc034400ab5f"
 }

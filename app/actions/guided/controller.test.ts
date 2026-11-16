@@ -10,7 +10,7 @@ const options = {
   config: { appEnv: "test" },
   waitUntil() {},
 };
-async function setup() {
+async function setup(autoConfigure = true) {
   let db = await testDatabase();
   const request = (
     path: string,
@@ -65,6 +65,11 @@ async function setup() {
       !native,
     );
   };
+  if (autoConfigure)
+    assert.equal(
+      (await command("configure", { choice: "classic" })).status,
+      200,
+    );
   return { db, path, owner, participant, request, read, command };
 }
 describe("guided route boundary", () => {
@@ -324,5 +329,135 @@ describe("guided route boundary", () => {
     assert.equal(changed.status, 200);
     assert.ok(changed.headers.get("ETag") !== tag);
     await changed.text();
+  });
+  it("requires facilitator category confirmation before notes or progression and supports custom labels atomically", async () => {
+    let f = await setup(false),
+      initial = await f.read();
+    assert.equal(initial.state.categorySetup?.confirmed, false);
+    let html = await (
+      await f.request(f.path, f.owner, undefined, false)
+    ).text();
+    assert.ok(html.includes('value="classic"'));
+    assert.ok(html.includes('value="custom"'));
+    assert.ok(!html.includes('class="primary add-note"'));
+    assert.equal(
+      (await f.command("configure", { choice: "classic" }, f.participant))
+        .status,
+      403,
+    );
+    assert.equal((await f.command("advance")).status, 409);
+    let noteFields = {
+      submissionId: crypto.randomUUID(),
+      text: "Not yet",
+      categoryId: initial.categories[0].id,
+    };
+    assert.equal(
+      (await f.request(f.path + "/new", f.owner, noteFields)).status,
+      403,
+    );
+    assert.equal(
+      (
+        await f.command("configure", {
+          choice: "custom",
+          labels: " Keep doing \nChange\nجرّب",
+        })
+      ).status,
+      200,
+    );
+    let configured = await f.read();
+    assert.deepEqual(
+      configured.categories.map((c) => c.label),
+      ["Keep doing", "Change", "جرّب"],
+    );
+    assert.deepEqual(
+      configured.categories.map((c) => c.tone),
+      [0, 1, 2],
+    );
+    assert.equal(configured.state.categorySetup?.confirmed, true);
+    assert.equal(
+      (
+        await f.request(f.path + "/new", f.owner, {
+          ...noteFields,
+          categoryId: configured.categories[0].id,
+        })
+      ).status,
+      303,
+    );
+    assert.equal(
+      (await f.command("configure", { choice: "classic" })).status,
+      409,
+    );
+    assert.equal((await f.read()).cards.length, 1);
+  });
+  it("validates category names without changing the board, preserves classic ids, and deduplicates setup retries", async () => {
+    let f = await setup(false),
+      original = await f.read();
+    for (let labels of [
+      "",
+      "A\nA",
+      "x".repeat(121),
+      Array(9)
+        .fill(0)
+        .map((_, i) => String(i))
+        .join("\n"),
+      "\u200b",
+    ]) {
+      assert.equal(
+        (await f.command("configure", { choice: "custom", labels })).status,
+        400,
+      );
+      assert.deepEqual((await f.read()).categories, original.categories);
+    }
+    let command = {
+      id: crypto.randomUUID(),
+      revision: String(original.revision),
+      kind: "configure",
+      choice: "classic",
+    };
+    assert.equal(
+      (await f.request(f.path + "/commands", f.owner, command)).status,
+      200,
+    );
+    let first = await f.read();
+    assert.deepEqual(
+      first.categories.map((c) => c.id),
+      original.categories.map((c) => c.id),
+    );
+    assert.equal(
+      (await f.request(f.path + "/commands", f.owner, command)).status,
+      200,
+    );
+    assert.equal((await f.read()).revision, first.revision);
+  });
+  it("serializes competing category choices and guards direct note writes before setup", async () => {
+    let f = await setup(false),
+      view = await f.read(),
+      blocked = false;
+    try {
+      await f.db.exec(
+        sql`INSERT INTO cards(id,board_id,category_id,member_id,submission_id,body,is_anonymous) VALUES (${crypto.randomUUID()},${view.board.id},${view.categories[0].id},${view.memberId},${crypto.randomUUID()},'blocked',0)`,
+      );
+    } catch {
+      blocked = true;
+    }
+    assert.ok(blocked);
+    let common = { revision: String(view.revision), kind: "configure" };
+    let results = await Promise.all([
+      f.request(f.path + "/commands", f.owner, {
+        ...common,
+        id: crypto.randomUUID(),
+        choice: "classic",
+      }),
+      f.request(f.path + "/commands", f.owner, {
+        ...common,
+        id: crypto.randomUUID(),
+        choice: "custom",
+        labels: "One\nTwo",
+      }),
+    ]);
+    assert.deepEqual(results.map((r) => r.status).sort(), [200, 409]);
+    let final = await f.read();
+    assert.equal(final.state.categorySetup?.confirmed, true);
+    assert.ok(final.categories.length === 2 || final.categories.length === 3);
   });
 });

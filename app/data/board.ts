@@ -9,6 +9,7 @@ export interface Board {
   organiserMemberId: string;
   status: BoardStatus;
   guidedStage?: string;
+  categorySetupRequired?: boolean;
   votingOpen: boolean;
   currentSectionId: string | null;
 }

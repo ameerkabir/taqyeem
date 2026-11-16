@@ -45,6 +45,10 @@ export interface Closure {
 }
 export interface SharedSession {
   stage: Stage;
+  categorySetup?: {
+    confirmed: boolean;
+    categories: { id: string; label: string; tone: number }[];
+  };
   themes: Theme[];
   budget: number;
   ballot: number;
@@ -120,11 +124,12 @@ export async function readSession(
   db: Database,
   boardId: string,
   legacy = false,
+  requireCategorySetup = false,
 ): Promise<SessionView | null> {
   let board = await loadBoard(db, boardId);
   if (!board) return null;
   await db.exec(
-    sql`INSERT OR IGNORE INTO guided_sessions(board_id,data) VALUES (${boardId},${JSON.stringify({ ...initialState(board), legacy: legacy || board.status !== "collecting" })})`,
+    sql`INSERT OR IGNORE INTO guided_sessions(board_id,data) VALUES (${boardId},${JSON.stringify({ ...initialState(board), legacy: legacy || board.status !== "collecting", ...(requireCategorySetup ? { categorySetup: { confirmed: false, categories: [] } } : {}) })})`,
   );
   // Read revision first: any evidence mutation during subsequent reads makes command CAS fail.
   let row = (
@@ -229,7 +234,62 @@ export function applyCommand(
     return id;
   };
   const noClosure = () => requireThat(state.stage !== "summary");
+  requireThat(
+    state.categorySetup?.confirmed !== false || command.kind === "configure",
+  );
   switch (command.kind) {
+    case "configure": {
+      shared();
+      requireThat(
+        state.stage === "collect" &&
+          cards.length === 0 &&
+          state.categorySetup?.confirmed === false,
+      );
+      requireThat(
+        command.choice === "classic" || command.choice === "custom",
+        "invalid",
+        400,
+      );
+      let labels =
+        command.choice === "classic"
+          ? view.categories.map((c) => c.label)
+          : command.labels;
+      requireThat(
+        Array.isArray(labels) && labels.length >= 1 && labels.length <= 8,
+        "invalid",
+        400,
+      );
+      const clean = labels.map((label) => text(label, 120));
+      requireThat(
+        clean.every(
+          (label) =>
+            !/[\u0000-\u001f\u007f]/.test(label) &&
+            label.replace(/\p{Default_Ignorable_Code_Point}/gu, "").trim()
+              .length > 0,
+        ),
+        "invalid",
+        400,
+      );
+      requireThat(
+        new Set(
+          clean.map((label) => label.normalize("NFKC").toLocaleLowerCase()),
+        ).size === clean.length,
+        "invalid",
+        400,
+      );
+      state.categorySetup = {
+        confirmed: true,
+        categories: clean.map((label, i) => ({
+          id:
+            command.choice === "classic"
+              ? view.categories[i].id
+              : crypto.randomUUID(),
+          label,
+          tone: i % 4,
+        })),
+      };
+      break;
+    }
     case "advance": {
       shared();
       noClosure();
@@ -488,6 +548,7 @@ export async function commandSession(
   let state = applyCommand(view, memberId, command);
   state.receipt = { id: command.id, member: memberId, fingerprint };
   let requiresFacilitator = [
+    "configure",
     "advance",
     "budget",
     "theme",
@@ -507,5 +568,6 @@ export async function commandSession(
     if (winner) return winner;
     throw new CommandError("conflict");
   }
+  if (command.kind === "configure") return (await readSession(db, boardId))!;
   return { ...view, state, revision: view.revision + 1 };
 }

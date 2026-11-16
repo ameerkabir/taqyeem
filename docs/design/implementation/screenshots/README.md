@@ -7,5 +7,9 @@ These are renders of the implementation running in the local Worker, captured on
 - `arabic-phone-draft.png`: mounted Arabic/dark phone composer with a retained mixed-script draft.
 - `actions-desktop.png`: actual agreed/pending proposals, filter and aligned capture control.
 - `summary-arabic-phone-dark.png`: immutable meeting record and later progress in Arabic/dark mode.
+- `choose-categories-desktop.png`: mandatory classic/custom category choice before contributions.
+- `custom-categories-phone-arabic.png`: custom labels retained through Arabic/dark preferences.
+- `empty-collect-desktop.png`: classic category lanes, count badges and one prominent note action.
+- `empty-collect-phone-arabic.png`: one active custom category and reachable note action.
 
 The adjacent manifest records SHA-256 digests. Screenshots are inspection evidence, not proof of native-speaker, screen-reader or physical-device acceptance.

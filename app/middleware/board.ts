@@ -50,13 +50,14 @@ export function loadBoard(
     if (db) {
       let row = (
         await db.exec(
-          sql`SELECT json_extract(data,'$.stage') AS stage FROM guided_sessions WHERE board_id=${board.id}`,
+          sql`SELECT json_extract(data,'$.categorySetup.confirmed') AS configured,json_extract(data,'$.stage') AS stage FROM guided_sessions WHERE board_id=${board.id}`,
         )
       ).rows?.[0];
       if (row)
         board = {
           ...board,
           guidedStage: String(row.stage),
+          categorySetupRequired: row.configured === 0,
           status:
             row.stage === "summary"
               ? "closed"

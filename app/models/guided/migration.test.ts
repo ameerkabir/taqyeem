@@ -82,3 +82,112 @@ it("additive migrations preserve populated/closed legacy boards, IDs, timestamps
     await db.close();
   }
 });
+
+it("category setup migration gates only empty collecting guided boards and preserves existing contributions and categories", async () => {
+  const db = createSqliteDatabase({ filename: ":memory:", foreignKeys: true });
+  try {
+    const files = (await readdir(migrationsDirectory))
+      .filter((f) => /^\d+.*\.sql$/.test(f))
+      .sort();
+    for (const file of files.filter((f) => f < "0010"))
+      await db.executeScript(
+        await readFile(new URL(file, migrationsDirectory), "utf8"),
+      );
+    const empty = await createBoard(db, {
+      title: "Empty",
+      organiserDisplayName: "Owner",
+      categoryLabels: ["One", "Two"],
+    });
+    const populated = await createBoard(db, {
+      title: "Populated",
+      organiserDisplayName: "Owner",
+      categoryLabels: ["Existing"],
+    });
+    const later = await createBoard(db, {
+      title: "Later",
+      organiserDisplayName: "Owner",
+      categoryLabels: ["Existing"],
+    });
+    const legacy = await createBoard(db, {
+      title: "Legacy",
+      organiserDisplayName: "Owner",
+      categoryLabels: ["Existing"],
+    });
+    for (const board of [empty, populated, later])
+      await readSession(db, board.board.id);
+    await createCard(
+      db,
+      {
+        id: crypto.randomUUID(),
+        boardId: populated.board.id,
+        memberId: populated.organiser.id,
+        categoryId: populated.categories[0].id,
+        body: "Keep this note",
+        isAnonymous: true,
+      },
+      crypto.randomUUID(),
+    );
+    await db.exec(
+      "UPDATE guided_sessions SET data=json_set(data,'$.stage','group') WHERE board_id=?",
+      [later.board.id],
+    );
+    const beforeCategories = (
+      await db.exec("SELECT * FROM categories ORDER BY id")
+    ).rows;
+    const beforeCards = (await db.exec("SELECT * FROM cards ORDER BY id")).rows;
+    const beforePopulated = (
+      await db.exec("SELECT * FROM guided_sessions WHERE board_id=?", [
+        populated.board.id,
+      ])
+    ).rows;
+    const beforeLater = (
+      await db.exec("SELECT * FROM guided_sessions WHERE board_id=?", [
+        later.board.id,
+      ])
+    ).rows;
+    await db.executeScript(
+      await readFile(
+        new URL("0010_category_setup.sql", migrationsDirectory),
+        "utf8",
+      ),
+    );
+    assert.deepEqual(
+      (await db.exec("SELECT * FROM cards ORDER BY id")).rows,
+      beforeCards,
+    );
+    assert.deepEqual(
+      (await db.exec("SELECT * FROM categories ORDER BY id")).rows,
+      beforeCategories,
+    );
+    assert.deepEqual(
+      (
+        await db.exec("SELECT * FROM guided_sessions WHERE board_id=?", [
+          populated.board.id,
+        ])
+      ).rows,
+      beforePopulated,
+    );
+    assert.deepEqual(
+      (
+        await db.exec("SELECT * FROM guided_sessions WHERE board_id=?", [
+          later.board.id,
+        ])
+      ).rows,
+      beforeLater,
+    );
+    assert.equal(
+      (await readSession(db, empty.board.id))!.state.categorySetup?.confirmed,
+      false,
+    );
+    assert.equal(
+      (
+        await db.exec("SELECT * FROM guided_sessions WHERE board_id=?", [
+          legacy.board.id,
+        ])
+      ).rows!.length,
+      0,
+    );
+  } finally {
+    await db.close();
+  }
+});

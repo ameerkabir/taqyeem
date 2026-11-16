@@ -183,7 +183,7 @@ describe("POST /locale", () => {
     let page = await (await get(boardPath, { Cookie: cookies })).text();
     // Still the organiser, and the page chrome is English.
     assert.match(page, /Facilitator/);
-    assert.match(page, /Continue to Group/);
+    assert.match(page, /Start collecting/);
   });
 });
 

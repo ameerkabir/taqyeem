@@ -30,25 +30,35 @@ export function CommandRetryPage(
             {[...form]
               .filter(([key]) => key !== "revision")
               .map(([key, value], i) =>
-                ["text", "title", "ownerSearch", "due"].includes(key) ? (
+                ["text", "title", "ownerSearch", "due", "labels"].includes(
+                  key,
+                ) ? (
                   <label key={i}>
                     {t(
-                      key === "text"
-                        ? kind === "decision"
-                          ? "guided.decision"
-                          : "guided.actionText"
-                        : key === "title"
-                          ? "guided.themeTitle"
-                          : key === "due"
-                            ? "guided.due"
-                            : "guided.owner",
+                      key === "labels"
+                        ? "setup.labels"
+                        : key === "text"
+                          ? kind === "decision"
+                            ? "guided.decision"
+                            : "guided.actionText"
+                          : key === "title"
+                            ? "guided.themeTitle"
+                            : key === "due"
+                              ? "guided.due"
+                              : "guided.owner",
                     )}
-                    {key === "text" ? (
+                    {key === "text" || key === "labels" ? (
                       <textarea
                         name={key}
                         defaultValue={String(value)}
                         dir="auto"
-                        maxLength={kind === "decision" ? 2000 : 500}
+                        maxLength={
+                          key === "labels"
+                            ? 1000
+                            : kind === "decision"
+                              ? 2000
+                              : 500
+                        }
                         required
                       />
                     ) : (

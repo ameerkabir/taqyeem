@@ -43,7 +43,7 @@ export default createController(routes.newBoard, {
           ...parsed.value,
           categoryLabels: defaultCategoryLabels(context.i18n.t),
         });
-        await readSession(context.db, created.board.id);
+        await readSession(context.db, created.board.id, false, true);
       } catch (error) {
         if (error instanceof DataTableDatabaseError && created) {
           let orphanedBoardId;

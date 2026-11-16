@@ -52,7 +52,10 @@ export function NewCardPage(handle: Handle<NewCardPageProps>) {
             </header>
 
             <NewCardForm
-              blocked={!!board.guidedStage && board.guidedStage !== "collect"}
+              blocked={
+                board.categorySetupRequired ||
+                (!!board.guidedStage && board.guidedStage !== "collect")
+              }
               boardId={board.id}
               locale={i18n.locale}
               {...formProps}

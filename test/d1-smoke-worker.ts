@@ -126,7 +126,21 @@ export default {
       });
       let id = created.board.id,
         actor = created.organiser.id;
-      await readSession(db, id);
+      await readSession(db, id, false, true);
+      let beforeSetup = (await readSession(db, id))!;
+      let blocked = false;
+      try {
+        await createCard(db, {
+          id: crypto.randomUUID(), boardId: id, memberId: actor,
+          categoryId: created.categories[0].id, body: "Before setup", isAnonymous: false,
+        }, crypto.randomUUID());
+      } catch { blocked = true; }
+      check(blocked && (await readSession(db, id))!.cards.length === 0, "D1 must reject notes before category setup");
+      let setup = {id: crypto.randomUUID(), revision: beforeSetup.revision, kind: "configure", choice: "custom", labels: ["Keep", "Change", "Try", "Appreciate"]};
+      let configured = await commandSession(db, id, actor, setup);
+      check(configured.categories.map(c => c.label).join(",") === "Keep,Change,Try,Appreciate", "D1 category trigger must replace categories in the setup command");
+      check(configured.categories.every((c, i) => c.tone === i), "D1 persists category tones");
+      check((await commandSession(db, id, actor, setup)).revision === configured.revision, "D1 category setup retry must be idempotent");
       for (let i = 0; i < 2; i++)
         await createCard(
           db,
@@ -134,7 +148,7 @@ export default {
             id: crypto.randomUUID(),
             boardId: id,
             memberId: actor,
-            categoryId: created.categories[i].id,
+            categoryId: configured.categories[i].id,
             body: `D1 note ${i}`,
             isAnonymous: false,
           },

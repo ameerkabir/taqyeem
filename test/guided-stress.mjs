@@ -45,6 +45,17 @@ try {
     path = new URL(create.headers().location, base).pathname;
   let data = await (await page.request.get(base + path + "/session")).json(),
     id = data.board.id;
+  let configured = await page.request.post(base + path + "/commands", {
+    headers: { Accept: "application/json" },
+    form: {
+      id: crypto.randomUUID(),
+      revision: String(data.revision),
+      kind: "configure",
+      choice: "classic",
+    },
+  });
+  assert.equal(configured.status(), 200);
+  data = await configured.json();
   let cats = [...data.categories];
   while (cats.length < 8)
     cats.push({

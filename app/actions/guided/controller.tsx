@@ -55,6 +55,7 @@ export const commandController = createAction(routes.sessionCommand, {
       kind: String(form.get("kind") ?? ""),
     };
     for (let key of [
+      "choice",
       "topic",
       "theme",
       "title",
@@ -64,6 +65,11 @@ export const commandController = createAction(routes.sessionCommand, {
       "proposal",
     ])
       if (form.has(key)) command[key] = form.get(key);
+    if (form.has("labels"))
+      command.labels = String(form.get("labels"))
+        .split(/\r?\n/)
+        .map((label) => label.trim())
+        .filter(Boolean);
     if (form.has("notes")) command.notes = form.getAll("notes");
     if (form.has("ballot")) command.ballot = Number(form.get("ballot"));
     if (form.has("value")) {
@@ -89,6 +95,8 @@ export const commandController = createAction(routes.sessionCommand, {
           "text",
           "owner",
           "ownerSearch",
+          "choice",
+          "labels",
           "due",
           "proposal",
           "ballot",

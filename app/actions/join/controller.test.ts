@@ -39,7 +39,23 @@ async function createBoard(db: Database, title = "لوحة الفريق") {
     fields: { title, organiserDisplayName: "Sam" },
   });
   assert.equal(response.status, 303);
-  return { path: response.headers.get("Location")!, organiserCookie: sessionCookie(response) };
+  let path = response.headers.get("Location")!,
+    organiserCookie = sessionCookie(response);
+  let state = (await (
+    await call(db, path + "/session", { cookie: organiserCookie })
+  ).json()) as { revision: number };
+  let configured = await call(db, path + "/commands", {
+    method: "POST",
+    cookie: organiserCookie,
+    fields: {
+      id: crypto.randomUUID(),
+      revision: String(state.revision),
+      kind: "configure",
+      choice: "classic",
+    },
+  });
+  assert.equal(configured.status, 303);
+  return { path, organiserCookie };
 }
 
 describe("join form", () => {

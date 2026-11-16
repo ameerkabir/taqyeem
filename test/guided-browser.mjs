@@ -77,10 +77,17 @@ async function api(page, path, kind, fields = {}) {
   assert.equal(r.status(), 200, await r.text());
   return r.json();
 }
-async function add(page, text, anonymous = false) {
+async function add(page, text, anonymous = false, categoryIndex) {
   await page.locator(".add-note").click();
   await page.locator("dialog[open]").waitFor();
-  assert.equal(await page.locator("dialog [name=categoryId]").inputValue(),await page.locator("[data-view=category]").inputValue());
+  assert.equal(
+    await page.locator("dialog [name=categoryId]").inputValue(),
+    await page.locator("[data-view=category]").inputValue(),
+  );
+  if (categoryIndex !== undefined)
+    await page
+      .locator("dialog [name=categoryId]")
+      .selectOption({ index: categoryIndex });
   await page.locator("dialog textarea").fill(text);
   if (anonymous) await page.locator("dialog input[type=checkbox]").check();
   await page.locator("dialog button.primary").click();
@@ -95,6 +102,7 @@ try {
   await owner.locator('form[action="/boards/new"] button').click();
   await owner.waitForURL(/\/boards\/[a-f0-9-]+$/);
   let path = new URL(owner.url()).pathname;
+  await owner.locator(".category-setup button.primary").click();
   await owner.locator(".add-note").waitFor();
   await pause();
   await member.goto(base + path + "/join");
@@ -102,9 +110,7 @@ try {
   await member.locator('form[action$="/join"] button').click();
   await member.waitForURL(base + path);
   await pause();
-  await owner.locator("[data-view=category]").selectOption({index:1});
-  await pause();
-  await add(owner, "First source note");
+  await add(owner, "First source note", false, 1);
   await add(member, "ملاحظة مجهولة في اجتماع حقيقي", true);
   await add(owner, "Third original source");
   checks.push(

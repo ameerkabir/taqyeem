@@ -4,9 +4,9 @@ These checks exercise the Remix 3/Workers application, separately from the archi
 
 ## Automated boundaries
 
-- `npm test`: 529 passing server tests in the final implementation run; complete server suite, including populated legacy migration preservation; Collect-only SQL guards; membership/role/board isolation; competing commands and budget boundary; ballot close/reopen/staleness; retry deduplication; hidden ballots and anonymous hydrated data; explicit outcomes/no-action decisions; retained proposals; proposal editing; immutable closure and later progress; durable sessions/fresh routers/expiry/tampering/key rotation; native appearance and error recovery.
+- `npm test`: 533 passing server tests in the final implementation run; complete server suite, including category setup authorization/validation/concurrency/retries, empty-session migration and populated-board preservation; Collect-only SQL guards; membership/role/board isolation; competing commands and budget boundary; ballot close/reopen/staleness; retry deduplication; hidden ballots and anonymous hydrated data; explicit outcomes/no-action decisions; retained proposals; proposal editing; immutable closure and later progress; durable sessions/fresh routers/expiry/tampering/key rotation; native appearance and error recovery.
 - `npm run typecheck` and `npm run build`: application and browser bundle validation.
-- `npm run test:d1`: isolated Miniflare D1, applying the actual numbered migrations with local Wrangler. Includes the existing adapter checks plus two real guided journeys with competing vote writes, stale closure rejection, evidence snapshots and fresh storage instances. It uses a disposable directory and does not contact production D1.
+- `npm run test:d1`: isolated Miniflare D1, applying the actual numbered migrations with local Wrangler. Includes the existing adapter checks plus two real guided journeys with enforced category setup, atomic custom category replacement, persistent tones, idempotent confirmation, competing vote writes, stale closure rejection, evidence snapshots and fresh storage instances. It uses a disposable directory and does not contact production D1.
 - `remix doctor --json`: environment/project/controller diagnostics. The existing `joinBoard` → `app/actions/join` naming warning is retained; it predates this change. The new edit-action controller follows the documented route directory convention.
 
 ## Browser checks
@@ -20,6 +20,7 @@ npm run dev -- --host 127.0.0.1
 node test/guided-browser.mjs
 node test/guided-editors.mjs
 node test/guided-native.mjs
+node test/category-setup-browser.mjs
 node test/guided-stress.mjs
 ```
 
@@ -30,9 +31,12 @@ Run the stress fixture separately: it seeds an explicitly labelled disposable bo
 | `guided-browser.mjs` | Creates a board, joins a second identity, posts anonymous/mixed-script notes, retains an editor node and caret across unrelated updates, switches appearance/language without losing fields, simulates a lost response after server commit and retries without duplication, groups original evidence, votes with hidden totals, browses privately without shared changes, records an outcome/no-action decision, captures agreement and an unresolved participant suggestion, closes and verifies historical immutability after completion. Checks Summary bounds at all five widths. |
 | `guided-editors.mjs` | Standalone and owned-note drafts across real language navigation; stable submission identity; newer typing during a slow save; actual mounted editor through a shared stage change; navigation between boards without state/draft leakage. |
 | `guided-native.mjs` | Full 390px phone journey with JavaScript disabled: Create, note POST, category GET navigation, ballot, discussion, decision, agreed action, Summary and independent language/appearance native forms. |
+| `category-setup-browser.mjs` | Facilitator classic/custom choice before note taking; participant waiting and automatic transition to the real configured board; custom labels and radio selection retained across theme/language changes; note posted into the confirmed custom categories; empty Collect bounds at five widths; native custom setup and editable validation recovery with JavaScript disabled. |
 | `guided-stress.mjs` | 240 inspections: six stages × five viewports × two languages × two themes × two roles. Actual fixture has 50 mixed 500-character notes, eight categories, 20 themes, 80 members and 30 proposals/actions. Checks bounds, active named category including category eight, real action filter counts/empty recovery, actual locale/theme and page errors. |
 
 The viewports are 375×812, 390×844, 768×1024, 1280×800 and 1440×900. Core/browser/editor/native checks are completed journeys or targeted interactions; the 240 stress states are inspection coverage. These are not 240 completed meetings. The [application screenshots](screenshots/) include Home, desktop Collect/Actions, an Arabic phone draft and Arabic/dark Summary. The screenshots in this directory are application renders, unlike `../final/screenshots`, which preserve prototype provenance.
+
+The category-setup follow-up adds classic/custom setup, a participant waiting screen, and a clearer empty Collect composition: compact board context, one prominent Add note action, colour markers and count badges, and purposeful empty lanes. New setup and empty-board screenshots are included alongside the completed-journey captures. Migration 0010 was applied to the local development D1 before these checks; branch checkouts need `npm run db:migrate:local` before starting the Worker.
 
 A parallel test attempt ran the local SQL stress seeder while other browser journeys were writing. Miniflare emitted an internal D1 session-commit-token error on one request. The fixture is now documented to run in isolation; the final journeys are rerun sequentially. This is not claimed as production load or multi-region testing.
 

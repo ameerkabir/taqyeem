@@ -76,7 +76,34 @@ describe("request dependency boundary", () => {
     let owner = await request(location, { headers: { Cookie: cookie } });
     assert.equal(owner.status, 200);
     assert.match(await owner.text(), /لوحة اختبار/);
-    assert.equal((await request(`${location}/new`, { headers: { Cookie: cookie } })).status, 200);
+    assert.equal(
+      (await request(`${location}/new`, { headers: { Cookie: cookie } }))
+        .status,
+      403,
+    );
+    let state = (await (
+      await request(`${location}/session`, { headers: { Cookie: cookie } })
+    ).json()) as { revision: number };
+    assert.equal(
+      (
+        await request(`${location}/commands`, {
+          method: "POST",
+          headers: { Cookie: cookie },
+          body: new URLSearchParams({
+            id: crypto.randomUUID(),
+            revision: String(state.revision),
+            kind: "configure",
+            choice: "classic",
+          }),
+        })
+      ).status,
+      303,
+    );
+    assert.equal(
+      (await request(`${location}/new`, { headers: { Cookie: cookie } }))
+        .status,
+      200,
+    );
     // Not a member: page navigations go to the join form.
     let outsider = await request(`${location}/new`);
     assert.equal(outsider.status, 303);

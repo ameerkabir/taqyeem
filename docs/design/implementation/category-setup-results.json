@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "Facilitator chooses custom categories before notes; participants wait, then see the real configured board",
+    "Custom choice and labels survive appearance/language changes; note posts to the confirmed categories",
+    "A pre-setup tab draft stays closed during setup, retains text/anonymity, and recovers a valid custom category",
+    "Classic categories are explicit; empty Collect has three readable lanes, one Add note control and no page overflow at five viewports",
+    "Custom category setup and editable validation recovery work through native forms with JavaScript disabled"
+  ],
+  "pageErrors": [],
+  "runDate": "2026-11-16",
+  "runtime": "Local Cloudflare Worker / Miniflare; Chromium emulation"
+}

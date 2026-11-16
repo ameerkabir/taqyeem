@@ -304,6 +304,33 @@ export const en = {
   "guided.stages": "Session stages",
   "guided.error.storage":
     "The save could not be confirmed. Your fields are kept. Retry the same command.",
-  "guided.legacyVotesHint": "Original unrestricted card votes are shown separately. They are not topic-ballot results.",
+  "guided.legacyVotesHint":
+    "Original unrestricted card votes are shown separately. They are not topic-ballot results.",
   "guided.closeMeeting": "Close meeting",
+  "setup.before": "Before you begin",
+  "setup.heading": "How would you like to collect feedback?",
+  "setup.intro":
+    "Choose categories for this session. Everyone will use the same board.",
+  "setup.classic": "Use the classic",
+  "setup.classicHint": "A familiar starting point for a good retrospective.",
+  "setup.custom": "Create your own",
+  "setup.customHint": "Name the categories that fit your conversation.",
+  "setup.labels": "Your categories",
+  "setup.limits":
+    "One category per line. Choose 1–8 unique names, up to 120 characters each.",
+  "setup.placeholder": "Keep doing\nChange\nTry next",
+  "setup.stable":
+    "Categories stay fixed once the session starts, so no feedback gets moved or lost.",
+  "setup.start": "Start collecting",
+  "setup.required": "Choose the board categories before adding notes.",
+  "setup.waiting": "Your facilitator is choosing the categories.",
+  "setup.waitingHint": "You can start writing as soon as the board is ready.",
+  "collect.intro":
+    "Make space for every perspective. Add one thought per note.",
+  "collect.emptyHint": "Use Add note to share your first thought.",
+  "collect.total": {
+    one: "{count} note shared",
+    other: "{count} notes shared",
+  },
+  "collect.settings": "Session settings",
 } as const;

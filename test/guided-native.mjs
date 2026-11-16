@@ -27,6 +27,7 @@ try {
   await page.locator("[name=title]").fill("Native form journey");
   await page.locator("[name=organiserDisplayName]").fill("Native owner");
   await nativeClick(page.locator('form[action="/boards/new"] button'));
+  await nativeClick(page.locator(".category-setup button.primary"));
   let path = new URL(page.url()).pathname;
   const read = async () =>
     await (await page.request.get(base + path + "/session")).json();

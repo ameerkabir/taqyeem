@@ -21,6 +21,7 @@ try {
   await page.locator("[name=organiserDisplayName]").fill("Owner");
   await page.locator('form[action="/boards/new"] button').click();
   await page.waitForURL(/\/boards\/[a-f0-9-]+$/);
+  await page.locator(".category-setup button.primary").click();
   let path = new URL(page.url()).pathname;
   await page.locator(".workspace[data-enhanced=true]").waitFor();
   // Standalone editor retains the submission key and fields across a real language navigation.
@@ -159,6 +160,7 @@ try {
     await page.locator(".board-heading h1").innerText(),
     "Another independent board",
   );
+  await page.locator(".category-setup button.primary").click();
   await page.locator(".add-note").click();
   assert.equal(await page.locator("dialog textarea").inputValue(), "");
   await page.locator("dialog .control-row button").first().click();

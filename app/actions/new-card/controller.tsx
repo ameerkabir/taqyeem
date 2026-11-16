@@ -108,6 +108,8 @@ function requireCreationAllowed(): Middleware {
   return (context, next) => {
     let board = context.get(boardContext);
     if (!board) throw new Error("Creation policy requires loadBoard");
+    if (board.categorySetupRequired)
+      return newCardError(context, getI18n(context).t("setup.required"), 403);
     if (board.guidedStage && board.guidedStage !== "collect")
       return newCardError(
         context,
