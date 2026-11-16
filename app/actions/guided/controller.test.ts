@@ -73,6 +73,81 @@ async function setup(autoConfigure = true) {
   return { db, path, owner, participant, request, read, command };
 }
 describe("guided route boundary", () => {
+  it("reports duplicate theme names and supports adding selected notes to an existing theme through native and enhanced commands", async () => {
+    let f = await setup(),
+      initial = await f.read();
+    for (let i = 0; i < 3; i++)
+      assert.equal(
+        (
+          await f.request(f.path + "/new", f.owner, {
+            submissionId: crypto.randomUUID(),
+            text: `Group note ${i}`,
+            categoryId: initial.categories[0].id,
+          })
+        ).status,
+        303,
+      );
+    await f.command("advance");
+    let ids = (await f.read()).cards.map((c) => c.id);
+    assert.equal(
+      (await f.command("theme", { title: "Delivery", notes: ids[0] })).status,
+      200,
+    );
+    let theme = (await f.read()).state.themes[0];
+    let duplicate = await f.command("theme", {
+      title: " DELIVERY ",
+      notes: ids[1],
+    });
+    assert.equal(duplicate.status, 400);
+    assert.equal(
+      ((await duplicate.json()) as { code: string }).code,
+      "duplicateTheme",
+    );
+    let native = await f.command(
+      "theme",
+      { title: "delivery", notes: ids[1] },
+      f.owner,
+      true,
+    );
+    assert.equal(native.status, 400);
+    let html = await native.text();
+    assert.ok(html.includes('name="title"'));
+    assert.ok(html.includes('value="delivery"'));
+    assert.ok(html.includes(ids[1]));
+    assert.equal(
+      (
+        await f.command(
+          "theme",
+          { theme: theme.id, title: "", notes: ids[1] },
+          f.owner,
+          true,
+        )
+      ).status,
+      303,
+    );
+    assert.equal(
+      (
+        await f.command(
+          "theme",
+          { theme: theme.id, notes: ids[2] },
+          f.participant,
+        )
+      ).status,
+      403,
+    );
+    let grouped = await f.read();
+    assert.deepEqual(grouped.state.themes, [
+      { ...theme, notes: ids.slice(0, 2) },
+    ]);
+    assert.equal(grouped.cards.length, 3);
+    html = await (await f.request(f.path, f.owner, undefined, false)).text();
+    assert.ok(html.includes("formnovalidate"));
+    assert.ok(html.includes(`value="${theme.id}"`));
+    let participantHtml = await (
+      await f.request(f.path, f.participant, undefined, false)
+    ).text();
+    assert.ok(!participantHtml.includes("formnovalidate"));
+  });
   it("completes a real native/enhanced journey with isolated identities and hidden ballots", async () => {
     let f = await setup(),
       initial = await f.read(),

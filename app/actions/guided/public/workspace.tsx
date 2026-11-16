@@ -342,12 +342,17 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     noteDialog().close();
     persist();
   }
-  async function submit(form: HTMLFormElement) {
+  async function submit(
+    form: HTMLFormElement,
+    submitter: HTMLElement | null = null,
+  ) {
     if (pending) return;
     save(form);
     let submitted = new URLSearchParams(
       [...new FormData(form)].map(([k, v]) => [k, String(v)]),
     ).toString();
+    // Capture the clicked theme button before pending UI disables it.
+    let body = new FormData(form, submitter);
     pending = true;
     error = "";
     status = translator().t("guided.saving");
@@ -355,7 +360,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     try {
       let response = await fetch(form.action, {
         method: "post",
-        body: new FormData(form),
+        body,
         headers: { Accept: "application/json" },
         signal: handle.signal,
       });
@@ -379,7 +384,14 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
             [...new FormData(form)].map(([k, v]) => [k, String(v)]),
           ).toString() === submitted
         ) {
+          // Adding to an existing theme does not consume a drafted new title.
+          let title = form.querySelector<HTMLInputElement>(
+            'input[name="title"]',
+          );
+          let retainedTitle =
+            kind === "theme" && body.has("theme") ? title?.value : undefined;
           form.reset();
+          if (title && retainedTitle !== undefined) title.value = retainedTitle;
           save(form);
           let disclosure = form.closest(
             "details[data-editor]",
@@ -621,7 +633,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                 form.dataset.draft === "note")
             ) {
               event.preventDefault();
-              void submit(form);
+              void submit(form, event.submitter);
             }
           }),
           on("change", (event) => {
@@ -869,7 +881,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                     class="group-selection primary"
                     href={`#${rootId}-group-themes`}
                   >
-                    {t("guided.makeTheme")}
+                    {t("guided.groupSelected")}
                   </a>
                 )}
                 <nav class="group-switcher" aria-label={t("guided.group")}>
@@ -916,6 +928,21 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                     {state.themes.map((theme) => (
                       <article key={theme.id} class="topic-card">
                         <h4 dir="auto">{theme.title}</h4>
+                        {facilitator && (
+                          <button
+                            type="submit"
+                            form={`${rootId}-theme`}
+                            name="theme"
+                            value={theme.id}
+                            formNoValidate
+                            disabled={pending}
+                            aria-label={t("guided.addToNamedTheme", {
+                              title: theme.title,
+                            })}
+                          >
+                            {t("guided.addToTheme")}
+                          </button>
+                        )}
                         {evidence(theme)}
                         {facilitator && (
                           <>

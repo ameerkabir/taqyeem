@@ -79,6 +79,7 @@ export class CommandError extends Error {
       | "conflict"
       | "forbidden"
       | "invalid"
+      | "duplicateTheme"
       | "locked"
       | "budget"
       | "rate"
@@ -193,6 +194,35 @@ function requireThat(
   status = 409,
 ): asserts ok {
   if (!ok) throw new CommandError(code, status);
+}
+function themeNameKey(title: string) {
+  return title
+    .normalize("NFKC")
+    .replace(/\p{Default_Ignorable_Code_Point}/gu, "")
+    .trim()
+    .replace(/\s+/gu, " ")
+    .toLowerCase();
+}
+function uniqueThemeTitle(
+  state: SharedSession,
+  value: unknown,
+  exceptId?: string,
+) {
+  const title = text(value, 160),
+    key = themeNameKey(title);
+  requireThat(
+    key.length > 0 && !/[\u0000-\u001f\u007f]/.test(title),
+    "invalid",
+    400,
+  );
+  requireThat(
+    !state.themes.some(
+      (theme) => theme.id !== exceptId && themeNameKey(theme.title) === key,
+    ),
+    "duplicateTheme",
+    400,
+  );
+  return title;
 }
 export function applyCommand(
   view: SessionView,
@@ -338,6 +368,12 @@ export function applyCommand(
     case "theme": {
       shared();
       requireThat(state.stage === "group");
+      let target = state.themes.find((theme) => theme.id === command.theme);
+      requireThat(
+        command.theme === undefined || command.theme === "" || target,
+        "invalid",
+        400,
+      );
       let ids = command.notes;
       requireThat(
         Array.isArray(ids) &&
@@ -354,11 +390,13 @@ export function applyCommand(
         "invalid",
         400,
       );
-      state.themes.push({
-        id: command.id,
-        title: text(command.title, 160),
-        notes: ids,
-      });
+      if (target) target.notes.push(...ids);
+      else
+        state.themes.push({
+          id: command.id,
+          title: uniqueThemeTitle(state, command.title),
+          notes: ids,
+        });
       break;
     }
     case "rename":
@@ -369,10 +407,8 @@ export function applyCommand(
         "invalid",
         400,
       );
-      state.themes.find((t) => t.id === command.theme)!.title = text(
-        command.title,
-        160,
-      );
+      state.themes.find((t) => t.id === command.theme)!.title =
+        uniqueThemeTitle(state, command.title, String(command.theme));
       break;
     case "ungroup":
       shared();

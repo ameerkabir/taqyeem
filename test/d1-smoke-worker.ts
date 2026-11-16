@@ -166,8 +166,16 @@ export default {
           ...fields,
         });
       }
-      await command("budget", { value: 1 });
       await command("advance");
+      let source = (await readSession(db, id))!.cards;
+      let grouped = await command("theme", {title: "Delivery", notes: [source[0].id]});
+      let theme = grouped.state.themes[0];
+      let append = {id: crypto.randomUUID(), revision: grouped.revision, kind: "theme", theme: theme.id, notes: [source[1].id]};
+      let appended = await commandSession(db, id, actor, append);
+      check(appended.state.themes.length === 1 && appended.state.themes[0].notes.length === 2, "D1 appends selected notes to the original theme");
+      check((await commandSession(db, id, actor, append)).revision === appended.revision, "D1 append retry must be idempotent");
+      await command("ungroup", {theme: theme.id});
+      await command("budget", { value: 1 });
       await command("advance");
       let v = (await readSession(db, id))!,
         eligible = topics(v);

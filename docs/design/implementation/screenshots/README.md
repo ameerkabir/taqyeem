@@ -11,5 +11,6 @@ These are renders of the implementation running in the local Worker, captured on
 - `custom-categories-phone-arabic.png`: custom labels retained through Arabic/dark preferences.
 - `empty-collect-desktop.png`: classic category lanes, count badges and one prominent note action.
 - `empty-collect-phone-arabic.png`: one active custom category and reachable note action.
+- `group-enhanced-desktop-ar-dark.png` and `group-native-phone-ar-dark.png`: existing-theme grouping actions and complete source evidence in Arabic/dark mode.
 
 The adjacent manifest records SHA-256 digests. Screenshots are inspection evidence, not proof of native-speaker, screen-reader or physical-device acceptance.

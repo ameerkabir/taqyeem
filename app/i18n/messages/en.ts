@@ -166,6 +166,8 @@ export const en = {
     "The session changed. Review the latest state and retry; your draft is kept.",
   "guided.error.forbidden": "You do not have permission for this command.",
   "guided.error.invalid": "Check the fields and try again.",
+  "guided.error.duplicateTheme":
+    "A theme with this name already exists. Use a different name or add the selected notes to that theme.",
   "guided.error.locked":
     "This command is unavailable at the current stage. Your draft is kept.",
   "guided.error.budget":
@@ -219,7 +221,10 @@ export const en = {
   "guided.ballotClosed": "Ballot closed",
   "guided.votes": "{count} votes",
   "guided.groupHint":
-    "Select original notes to create a theme. Grouping is optional.",
+    "Select notes, then create a theme or add them to an existing one. Grouping is optional.",
+  "guided.groupSelected": "Group selected notes",
+  "guided.addToTheme": "Add selected notes",
+  "guided.addToNamedTheme": "Add selected notes to {title}",
   "guided.themeTitle": "Theme title",
   "guided.makeTheme": "Create theme",
   "guided.themes": "Themes",

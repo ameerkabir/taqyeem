@@ -70,6 +70,155 @@ async function fixture(count = 6) {
   return { db, id, owner, participant, read, command, reject };
 }
 describe("guided session authority and atomic invariants", () => {
+  it("adds ungrouped notes to an existing theme without changing its identity or evidence and replays retries once", async () => {
+    let f = await fixture(),
+      original = await f.read(),
+      ids = original.cards.map((c) => c.id);
+    await f.command("advance");
+    await f.command("theme", { title: "Delivery", notes: [ids[0]] });
+    let before = await f.read(),
+      theme = before.state.themes[0];
+    let append = {
+      id: crypto.randomUUID(),
+      revision: before.revision,
+      kind: "theme",
+      theme: theme.id,
+      notes: [ids[1], ids[2]],
+    };
+    let after = await commandSession(f.db, f.id, f.owner, append);
+    assert.deepEqual(after.state.themes, [
+      { ...theme, notes: ids.slice(0, 3) },
+    ]);
+    assert.deepEqual(after.cards, original.cards);
+    assert.equal(
+      (await commandSession(f.db, f.id, f.owner, append)).revision,
+      after.revision,
+    );
+    await f.reject(
+      () =>
+        f.command("theme", { theme: theme.id, notes: [ids[3]] }, f.participant),
+      "forbidden",
+    );
+    for (const fields of [
+      { theme: theme.id, notes: [ids[0]] },
+      { theme: theme.id, notes: [] },
+      { theme: theme.id, notes: [ids[3], ids[3]] },
+      {
+        theme: crypto.randomUUID(),
+        title: "Cannot fall back to creating",
+        notes: [ids[3]],
+      },
+      { theme: theme.id, notes: [crypto.randomUUID()] },
+    ])
+      await f.reject(() => f.command("theme", fields), "invalid");
+    assert.deepEqual((await f.read()).state.themes, after.state.themes);
+    await f.command("advance");
+    await f.reject(
+      () => f.command("theme", { theme: theme.id, notes: [ids[3]] }),
+      "locked",
+    );
+  });
+  it("keeps theme names unique per board on create and rename using normalized names while preserving rejected commands", async () => {
+    let f = await fixture(),
+      ids = (await f.read()).cards.map((c) => c.id);
+    await f.command("advance");
+    await f.command("theme", { title: " Delivery  health ", notes: [ids[0]] });
+    let first = (await f.read()).state.themes[0];
+    for (const title of [
+      "Delivery  health",
+      "delivery health",
+      "  DELIVERY   HEALTH ",
+      "Ｄｅｌｉｖｅｒｙ health",
+      "Delivery\u200b health",
+    ])
+      await f.reject(
+        () => f.command("theme", { title, notes: [ids[1]] }),
+        "duplicateTheme",
+      );
+    await f.command("theme", { title: "Quality", notes: [ids[1]] });
+    let before = await f.read(),
+      second = before.state.themes[1];
+    await f.reject(
+      () => f.command("rename", { theme: second.id, title: "DELIVERY HEALTH" }),
+      "duplicateTheme",
+    );
+    assert.equal((await f.read()).revision, before.revision);
+    await f.command("rename", { theme: first.id, title: "delivery health" });
+    await f.command("rename", { theme: second.id, title: "Café" });
+    await f.reject(
+      () => f.command("theme", { title: "Cafe\u0301", notes: [ids[2]] }),
+      "duplicateTheme",
+    );
+    for (const title of ["", "\u200b", "Bad\nname", "x".repeat(161)])
+      await f.reject(
+        () => f.command("theme", { title, notes: [ids[2]] }),
+        "invalid",
+      );
+    let other = await fixture(1);
+    await other.command("advance");
+    await other.command("theme", {
+      title: "delivery health",
+      notes: [(await other.read()).cards[0].id],
+    });
+    let otherTheme = (await other.read()).state.themes[0].id;
+    await f.reject(
+      () => f.command("theme", { theme: otherTheme, notes: [ids[2]] }),
+      "invalid",
+    );
+  });
+  it("serializes competing grouping commands so a note and a normalized name cannot acquire multiple themes", async () => {
+    let f = await fixture(),
+      ids = (await f.read()).cards.map((c) => c.id);
+    await f.command("advance");
+    await f.command("theme", { title: "One", notes: [ids[0]] });
+    await f.command("theme", { title: "Two", notes: [ids[1]] });
+    let before = await f.read();
+    let results = await Promise.allSettled(
+      before.state.themes.map((theme) =>
+        commandSession(f.db, f.id, f.owner, {
+          id: crypto.randomUUID(),
+          revision: before.revision,
+          kind: "theme",
+          theme: theme.id,
+          notes: [ids[2]],
+        }),
+      ),
+    );
+    assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+    assert.equal(
+      (results.find((r) => r.status === "rejected") as PromiseRejectedResult)
+        .reason.code,
+      "conflict",
+    );
+    assert.equal(
+      (await f.read()).state.themes
+        .flatMap((t) => t.notes)
+        .filter((id) => id === ids[2]).length,
+      1,
+    );
+    before = await f.read();
+    let commands = ["New theme", " NEW  THEME "].map((title, i) => ({
+      id: crypto.randomUUID(),
+      revision: before.revision,
+      kind: "theme",
+      title,
+      notes: [ids[3 + i]],
+    }));
+    results = await Promise.allSettled(
+      commands.map((command) => commandSession(f.db, f.id, f.owner, command)),
+    );
+    assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+    let loser = results.findIndex((r) => r.status === "rejected");
+    await f.reject(
+      () =>
+        f.command("theme", {
+          title: commands[loser].title,
+          notes: commands[loser].notes,
+        }),
+      "duplicateTheme",
+    );
+    assert.equal((await f.read()).state.themes.length, 3);
+  });
   it("preserves categories and evidence through grouping, ballot, explicit outcomes and immutable closure", async () => {
     let f = await fixture();
     let original = await f.read();

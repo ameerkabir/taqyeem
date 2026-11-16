@@ -170,6 +170,8 @@ export const ar = {
     "تغيّرت الجلسة. راجع الحالة الحالية ثم أعد المحاولة؛ مسودتك محفوظة.",
   "guided.error.forbidden": "ليس لديك إذن لتنفيذ هذا الإجراء.",
   "guided.error.invalid": "تحقق من الحقول وأعد المحاولة.",
+  "guided.error.duplicateTheme":
+    "يوجد موضوع جامع بهذا الاسم. اختر اسمًا آخر أو أضف الملاحظات المحددة إلى ذلك الموضوع.",
   "guided.error.locked":
     "هذا الإجراء غير متاح في المرحلة الحالية. مسودتك محفوظة.",
   "guided.error.budget":
@@ -222,7 +224,10 @@ export const ar = {
   "guided.ballotClosed": "التصويت مغلق",
   "guided.votes": "عدد الأصوات: {count}",
   "guided.groupHint":
-    "حدد الملاحظات الأصلية لإنشاء موضوع جامع. التجميع اختياري.",
+    "حدد الملاحظات، ثم أنشئ موضوعًا جامعًا أو أضفها إلى موضوع موجود. التجميع اختياري.",
+  "guided.groupSelected": "تجميع الملاحظات المحددة",
+  "guided.addToTheme": "إضافة الملاحظات المحددة",
+  "guided.addToNamedTheme": "إضافة الملاحظات المحددة إلى {title}",
   "guided.themeTitle": "عنوان الموضوع الجامع",
   "guided.makeTheme": "إنشاء موضوع جامع",
   "guided.themes": "المواضيع الجامعة",
@@ -329,6 +334,13 @@ export const ar = {
   "setup.waitingHint": "يمكنك البدء بالكتابة فور تجهيز اللوحة.",
   "collect.intro": "مساحة لكل وجهة نظر. أضف فكرة واحدة في كل ملاحظة.",
   "collect.emptyHint": "استخدم «إضافة ملاحظة» لمشاركة فكرتك الأولى.",
-  "collect.total": { other: "عدد الملاحظات: {count}" },
+  "collect.total": {
+    zero: "عدد الملاحظات: {count}",
+    one: "عدد الملاحظات: {count}",
+    two: "عدد الملاحظات: {count}",
+    few: "عدد الملاحظات: {count}",
+    many: "عدد الملاحظات: {count}",
+    other: "عدد الملاحظات: {count}",
+  },
   "collect.settings": "إعدادات الجلسة",
 } as const satisfies CatalogueShape;
