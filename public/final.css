@@ -1970,3 +1970,149 @@
     }
   }
 }
+
+/* A compact meeting record; small action lists need no filtering controls. */
+@layer app {
+  .meeting-record-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 24px;
+  }
+  .meeting-record-heading h3 {
+    margin: 0;
+    font-size: 18px;
+  }
+  .record-date {
+    margin: 6px 0 0;
+    font-size: 11px;
+    color: var(--color-text-muted);
+  }
+  .record-tools {
+    margin: 0;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .record-tools button {
+    font-size: 11px;
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+  .record-overview {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 18px 0;
+  }
+  .summary-topics {
+    display: grid;
+    gap: 12px;
+  }
+  .summary-topics .topic-card {
+    margin: 0;
+    padding: 16px 18px;
+    min-width: 0;
+  }
+  .summary-topic-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 20px;
+  }
+  .summary-topic-heading h4 {
+    font: 600 15px/1.5 var(--font-body);
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .summary-topic-outcome {
+    flex: none;
+    font-size: 11px;
+    color: var(--color-text-muted);
+    padding-top: 3px;
+  }
+  .summary-decision {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 10px 0 0;
+    white-space: pre-wrap;
+  }
+  .summary-topics .evidence {
+    margin-top: 10px;
+  }
+  .summary-topics .evidence summary {
+    padding-block: 6px;
+    font-size: 11px;
+  }
+  .summary-agreement {
+    margin-top: 16px;
+  }
+  .summary-agreement > summary {
+    font-size: 12px;
+    text-underline-offset: 4px;
+  }
+  .record-unresolved {
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+  .workspace[data-stage="summary"] .meeting-record {
+    padding-bottom: 22px;
+    margin-bottom: 24px;
+    border-bottom-color: color-mix(
+      in srgb,
+      var(--color-border) 35%,
+      transparent
+    );
+  }
+  .current-progress-heading h3 {
+    font-size: 18px;
+    margin: 0;
+  }
+  .current-progress-heading p {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 8px 0 14px;
+  }
+  .actions-workspace .action-counts {
+    font-size: 12px;
+    margin: 14px 0;
+  }
+  .actions-workspace .actions-shown {
+    font-size: 11px;
+    color: var(--color-text-muted);
+  }
+  .actions-workspace .actions-toolbar > [data-view-form] {
+    max-width: 420px;
+  }
+  @media (max-width: 767px) {
+    .meeting-record-heading {
+      flex-direction: column;
+      gap: 14px;
+    }
+    .meeting-record-heading h3,
+    .current-progress-heading h3 {
+      font-size: 16px;
+    }
+    .record-overview {
+      font-size: 11px;
+      line-height: 1.8;
+    }
+    .summary-topic-heading {
+      flex-direction: column;
+      gap: 6px;
+    }
+    .summary-topic-outcome {
+      padding: 0;
+    }
+    .summary-topic-heading h4 {
+      font-size: 14px;
+    }
+    .summary-topics .topic-card {
+      padding: 16px;
+    }
+  }
+  @media print {
+    .summary-agreement::details-content {
+      display: block !important;
+      content-visibility: visible !important;
+    }
+  }
+}

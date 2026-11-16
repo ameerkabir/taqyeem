@@ -213,7 +213,10 @@ export const en = {
   "guided.select": "Vote",
   "guided.remove": "Voted — remove vote",
   "guided.evidence": "Inspect all source notes",
-  "guided.sources": "{count} source notes",
+  "guided.sources": {
+    one: "{count} source note",
+    other: "{count} source notes",
+  },
   "guided.noTopics": "No topics. You can continue without creating one.",
   "guided.hidden": "Results stay hidden until the ballot closes.",
   "guided.closeBallot": "Close ballot",
@@ -338,6 +341,11 @@ export const en = {
     other: "{count} notes shared",
   },
   "collect.settings": "Session settings",
+  "summary.overview":
+    "Topics: {topics} · Decisions: {decisions} · Agreed actions: {actions}",
+  "summary.recordedActions": "Actions and suggestions recorded at the meeting",
+  "summary.progressHint":
+    "Track follow-up here. The meeting record stays unchanged.",
   "discuss.now": "Now discussing",
   "discuss.viewing": "You’re viewing",
   "discuss.position": "Topic {current} of {total}",

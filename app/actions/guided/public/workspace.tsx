@@ -317,7 +317,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       () => {
         printDetails = [
           ...root().querySelectorAll<HTMLDetailsElement>(
-            "details.evidence:not([open])",
+            "details.evidence:not([open]),details.summary-agreement:not([open])",
           ),
         ];
         for (let detail of printDetails) detail.open = true;
@@ -578,6 +578,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         p.disposition === value
       );
     }
+    const canFilterActions = state.proposals.length > 3;
+    // A stale URL or saved choice must never hide items when the filter is absent.
+    if (!canFilterActions) filter = "all";
     let filtered = state.proposals.filter((p) => matches(p, filter));
     let invite = new URL(
       routes.joinBoard.index.href({ boardId: data.board.id }),
@@ -1447,25 +1450,25 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
               </section>
             )}
             {(state.stage === "actions" || state.stage === "summary") && (
-              <section>
+              <section class="actions-workspace">
                 {state.stage === "summary" && (
                   <section class="meeting-record">
-                    <h3>{t("guided.history")}</h3>
-                    {state.closure ? (
-                      <>
-                        <p>
-                          {t("guided.closedAt", {
-                            date: new Intl.DateTimeFormat(
-                              numberLocaleFor(handle.props.locale),
-                              {
-                                dateStyle: "long",
-                                timeStyle: "short",
-                              },
-                            ).format(new Date(state.closure.at)),
-                          })}
-                        </p>
-                        <p>{t("guided.unresolved")}</p>
-                        <div class="control-row">
+                    <header class="meeting-record-heading">
+                      <div>
+                        <h3>{t("guided.history")}</h3>
+                        {state.closure && (
+                          <p class="record-date">
+                            {t("guided.closedAt", {
+                              date: new Intl.DateTimeFormat(
+                                numberLocaleFor(handle.props.locale),
+                                { dateStyle: "long", timeStyle: "short" },
+                              ).format(new Date(state.closure.at)),
+                            })}
+                          </p>
+                        )}
+                      </div>
+                      {state.closure && (
+                        <div class="control-row record-tools">
                           <button
                             class="js-only"
                             type="button"
@@ -1481,26 +1484,56 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                             {t("guided.copySummary")}
                           </button>
                         </div>
-                        {state.closure.topics.map((topic) => (
-                          <article key={topic.id} class="topic-card">
-                            <h4 dir="auto">{topic.title}</h4>
-                            <p>
-                              {t(
-                                `guided.${state.closure!.outcomes[topic.id] ?? "unaddressed"}` as "guided.unaddressed",
-                              )}
-                            </p>
-                            <p dir="auto">
-                              {state.closure!.decisions[topic.id] ??
-                                t("guided.noDecision")}
-                            </p>
-                            {evidence(topic)}
-                          </article>
-                        ))}
-                        <div class="action-grid">
-                          {state.closure.proposals.map((p) =>
-                            actionCard(p, true),
-                          )}
+                      )}
+                    </header>
+                    {state.closure ? (
+                      <>
+                        <p class="record-overview">
+                          {t("summary.overview", {
+                            topics: state.closure.topics.length,
+                            decisions: Object.keys(state.closure.decisions)
+                              .length,
+                            actions: state.closure.proposals.filter(
+                              (p) => p.disposition === "agreed",
+                            ).length,
+                          })}
+                        </p>
+                        <div class="summary-topics">
+                          {state.closure.topics.map((topic) => (
+                            <article key={topic.id} class="topic-card">
+                              <header class="summary-topic-heading">
+                                <h4 dir="auto">{topic.title}</h4>
+                                <span class="summary-topic-outcome">
+                                  {t(
+                                    `guided.${state.closure!.outcomes[topic.id] ?? "unaddressed"}` as "guided.unaddressed",
+                                  )}
+                                </span>
+                              </header>
+                              <p dir="auto" class="summary-decision">
+                                {state.closure!.decisions[topic.id] ??
+                                  t("guided.noDecision")}
+                              </p>
+                              {evidence(topic)}
+                            </article>
+                          ))}
                         </div>
+                        {state.closure.proposals.length > 0 && (
+                          <details class="summary-agreement">
+                            <summary>{t("summary.recordedActions")}</summary>
+                            {state.closure.proposals.some(
+                              (p) => p.disposition === "suggested",
+                            ) && (
+                              <p class="record-unresolved">
+                                {t("guided.unresolved")}
+                              </p>
+                            )}
+                            <div class="action-grid historical-actions">
+                              {state.closure.proposals.map((p) =>
+                                actionCard(p, true),
+                              )}
+                            </div>
+                          </details>
+                        )}
                       </>
                     ) : (
                       <>
@@ -1513,76 +1546,88 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                   </section>
                 )}
                 {state.stage === "summary" && (
-                  <h3>{t("guided.currentProgress")}</h3>
+                  <div class="current-progress-heading">
+                    <h3>{t("guided.currentProgress")}</h3>
+                    <p>{t("summary.progressHint")}</p>
+                  </div>
                 )}
-                <p>
-                  {t("guided.actionCounts", {
-                    agreed: state.proposals.filter(
-                      (p) => p.disposition === "agreed",
-                    ).length,
-                    pending: state.proposals.filter(
-                      (p) => p.disposition === "suggested",
-                    ).length,
-                  })}
-                </p>
-                <div class="actions-toolbar">
-                  <form method="get" data-view-form>
-                    <label>
-                      {t("guided.filter")}
-                      <select
-                        name="filter"
-                        defaultValue={filter}
-                        data-view="filter"
+                {state.proposals.length > 0 && (
+                  <p class="action-counts">
+                    {t("guided.actionCounts", {
+                      agreed: state.proposals.filter(
+                        (p) => p.disposition === "agreed",
+                      ).length,
+                      pending: state.proposals.filter(
+                        (p) => p.disposition === "suggested",
+                      ).length,
+                    })}
+                  </p>
+                )}
+                {(canFilterActions || state.stage === "actions") && (
+                  <div class="actions-toolbar">
+                    {canFilterActions && (
+                      <form method="get" data-view-form>
+                        <label>
+                          {t("guided.filter")}
+                          <select name="filter" data-view="filter">
+                            {(
+                              [
+                                "all",
+                                "suggested",
+                                "agreed",
+                                "deferred",
+                                "declined",
+                                "open",
+                                "completed",
+                                "mine",
+                              ] as const
+                            ).map((value) => (
+                              <option
+                                key={value}
+                                value={value}
+                                selected={value === filter}
+                              >
+                                {t(`guided.${value}`)} (
+                                {formatNumber(
+                                  state.proposals.filter((p) =>
+                                    matches(p, value),
+                                  ).length,
+                                )}
+                                )
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button>{t("guided.refresh")}</button>
+                      </form>
+                    )}
+                    {state.stage === "actions" && (
+                      <a
+                        class="primary"
+                        href={`?capture=${active?.id ?? ""}#${rootId}-capture`}
+                        mix={on("click", (event) => {
+                          event.preventDefault();
+                          capture(undefined, active);
+                        })}
                       >
-                        {(
-                          [
-                            "all",
-                            "suggested",
-                            "agreed",
-                            "deferred",
-                            "declined",
-                            "open",
-                            "completed",
-                            "mine",
-                          ] as const
-                        ).map((value) => (
-                          <option key={value} value={value}>
-                            {t(`guided.${value}`)} (
-                            {formatNumber(
-                              state.proposals.filter((p) => matches(p, value))
-                                .length,
-                            )}
-                            )
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button>{t("guided.refresh")}</button>
-                  </form>
-                  {state.stage === "actions" && (
-                    <a
-                      class="primary"
-                      href={`?capture=${active?.id ?? ""}#${rootId}-capture`}
-                      mix={on("click", (event) => {
-                        event.preventDefault();
-                        capture(undefined, active);
-                      })}
-                    >
-                      {t(
-                        facilitator
-                          ? "guided.addAction"
-                          : "guided.suggestAction",
-                      )}
-                    </a>
-                  )}
-                </div>
-                <p>
-                  {t("guided.shown", {
-                    shown: filtered.length,
-                    total: state.proposals.length,
-                  })}
-                </p>
-                <div class="action-grid">
+                        {t(
+                          facilitator
+                            ? "guided.addAction"
+                            : "guided.suggestAction",
+                        )}
+                      </a>
+                    )}
+                  </div>
+                )}
+                {canFilterActions && (
+                  <p class="actions-shown">
+                    {t("guided.shown", {
+                      shown: filtered.length,
+                      total: state.proposals.length,
+                    })}
+                  </p>
+                )}
+                <div class="action-grid current-action-list">
                   {filtered.map((p) => actionCard(p))}
                 </div>
                 {!filtered.length && (
