@@ -1,3 +1,4 @@
+import { draftForm } from "../../../ui/public/draft-form.ts";
 import { clientEntry, on, type Handle } from "remix/component";
 import type { Card, Category } from "../../../data/board.ts";
 import { routes } from "../../../routes.ts";
@@ -46,10 +47,16 @@ export const EditCardForm = clientEntry(
       return (
         <form
           method="post"
-          action={routes.editCard.action.href({ boardId: card.boardId, cardId: card.id })}
+          action={routes.editCard.action.href({
+            boardId: card.boardId,
+            cardId: card.id,
+          })}
           aria-busy={pending}
           mix={[
             formStyle,
+            draftForm(
+              `edit:${card.boardId}:${card.memberId}:${card.id}:${card.body}:${card.categoryId}:${card.isAnonymous}`,
+            ),
             on("submit", async (event) => {
               event.preventDefault();
               if (pending) return;

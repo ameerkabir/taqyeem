@@ -1,3 +1,8 @@
+import {createBoard} from "../app/models/boards/create.ts";
+import {createCard} from "../app/models/cards/card.ts";
+import {readSession,commandSession,topics,CommandError} from "../app/models/guided/session.ts";
+import {createDatabaseSessionStorage} from "../app/session-storage.ts";
+import {createSession} from "remix/session";
 // Test-only Worker. Never mapped into the application or deployed.
 import { column as c, table, and, or, between, inList, notInList, ne, gt, gte, lt, lte, like, ilike, isNull, notNull } from "remix/data-table";
 import { createRouter } from "remix/router";
@@ -103,6 +108,117 @@ export default {
       } finally {
         await db.exec('DROP TABLE "__connection_probe"');
       }
+    });
+    router.post("/guided-smoke", async () => {
+      let exists = (
+        await db.exec(
+          "SELECT 1 FROM sqlite_master WHERE name='guided_sessions'",
+        )
+      ).rows?.length;
+      check(
+        exists,
+        "Local Wrangler migrations must be applied before guided smoke",
+      );
+      let created = await createBoard(db, {
+        title: "D1 guided session",
+        organiserDisplayName: "Facilitator",
+        categoryLabels: ["A", "B", "C", "D"],
+      });
+      let id = created.board.id,
+        actor = created.organiser.id;
+      await readSession(db, id);
+      for (let i = 0; i < 2; i++)
+        await createCard(
+          db,
+          {
+            id: crypto.randomUUID(),
+            boardId: id,
+            memberId: actor,
+            categoryId: created.categories[i].id,
+            body: `D1 note ${i}`,
+            isAnonymous: false,
+          },
+          crypto.randomUUID(),
+        );
+      async function command(
+        kind: string,
+        fields: Record<string, unknown> = {},
+      ) {
+        let v = (await readSession(db, id))!;
+        return commandSession(db, id, actor, {
+          id: crypto.randomUUID(),
+          revision: v.revision,
+          kind,
+          ...fields,
+        });
+      }
+      await command("budget", { value: 1 });
+      await command("advance");
+      await command("advance");
+      let v = (await readSession(db, id))!,
+        eligible = topics(v);
+      let competing = await Promise.allSettled(
+        eligible.map((t) =>
+          commandSession(db, id, actor, {
+            id: crypto.randomUUID(),
+            revision: v.revision,
+            kind: "vote",
+            topic: t.id,
+            ballot: v.state.ballot,
+            value: true,
+          }),
+        ),
+      );
+      check(
+        competing.filter((r) => r.status === "fulfilled").length === 1,
+        "D1 compare-and-swap must serialize competing votes",
+      );
+      check(
+        (await readSession(db, id))!.state.votes[actor].length === 1,
+        "D1 allowance remains one",
+      );
+      let beforeClose = (await readSession(db, id))!;
+      await command("ballot", {
+        ballot: beforeClose.state.ballot,
+        value: false,
+      });
+      let stale = false;
+      try {
+        await commandSession(db, id, actor, {
+          id: crypto.randomUUID(),
+          revision: beforeClose.revision,
+          kind: "vote",
+          topic: eligible[1].id,
+          ballot: beforeClose.state.ballot,
+          value: true,
+        });
+      } catch (e) {
+        stale = e instanceof CommandError;
+      }
+      check(stale, "D1 stale ballot rejection");
+      await command("advance");
+      await command("advance");
+      await command("advance");
+      let closed = (await readSession(db, id))!;
+      check(
+        closed.state.closure?.cards.length === 2,
+        "D1 immutable closure contains source evidence",
+      );
+      let session = createSession();
+      session.set(`board-member:${id}`, actor);
+      let token = await createDatabaseSessionStorage(db).save(session);
+      check(
+        (await createDatabaseSessionStorage(db).read(token)).get(
+          `board-member:${id}`,
+        ) === actor,
+        "D1 storage survives fresh instances",
+      );
+      return Response.json({
+        ok: true,
+        guided: true,
+        competingVotes: 1,
+        sourceNotes: 2,
+      });
     });
     return router.fetch(request);
   },

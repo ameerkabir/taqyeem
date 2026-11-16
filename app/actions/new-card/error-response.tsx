@@ -1,3 +1,4 @@
+import { boardMemberContext } from "../../middleware/board-member.ts";
 import type { RequestContext } from "remix/router";
 import { Renderer, type RenderFunction } from "remix/middleware/render";
 import type { Category } from "../../data/board.ts";
@@ -48,6 +49,7 @@ export async function newCardError(
   return render(
     <NewCardPage
       i18n={getI18n(context)}
+      memberId={context.get(boardMemberContext)?.id}
       board={board}
       categories={categories}
       activeCategoryId={resolveActiveSection(

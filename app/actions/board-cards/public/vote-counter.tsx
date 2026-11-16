@@ -10,7 +10,7 @@ import { createTranslator } from "../../../i18n/translator.ts";
 
 interface VoteCounterProps {
   locale: Locale;
-  card: Card;
+  card: Pick<Card,"id"|"boardId"|"voteCount">;
   voted: boolean;
   disabled: boolean;
 }

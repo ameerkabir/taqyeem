@@ -1,0 +1,328 @@
+import * as assert from "remix/assert";
+import { describe, it } from "remix/test";
+import { sql } from "remix/data-table";
+import { createAppRouter } from "../../router.ts";
+import { testDatabase } from "../../test/dependencies.ts";
+import { categories, cards } from "../../data/tables.ts";
+import type { ViewerPayload } from "./payload.ts";
+const options = {
+  sessionSecret: "guided-test-secret",
+  config: { appEnv: "test" },
+  waitUntil() {},
+};
+async function setup() {
+  let db = await testDatabase();
+  const request = (
+    path: string,
+    cookie?: string,
+    fields?: Record<string, string>,
+    json = true,
+  ) =>
+    createAppRouter({ ...options, db }).fetch("http://localhost" + path, {
+      method: fields ? "POST" : "GET",
+      headers: {
+        ...(cookie ? { Cookie: cookie } : {}),
+        ...(json
+          ? { Accept: "application/json", "Accept-Language": "en" }
+          : {}),
+      },
+      body: fields ? new URLSearchParams(fields) : undefined,
+    });
+  let created = await request("/boards/new", undefined, {
+    title: "Real session",
+    organiserDisplayName: "Owner",
+  });
+  assert.equal(created.status, 303);
+  const cookie = (r: Response) =>
+    r.headers
+      .getSetCookie()
+      .find((c) => c.startsWith("taqyeem_session="))!
+      .split(";")[0];
+  let owner = cookie(created),
+    path = created.headers.get("Location")!;
+  let joined = await request(path + "/join", undefined, {
+      displayName: "Reader",
+    }),
+    participant = cookie(joined);
+  const read = async (who = owner) =>
+    (await (await request(path + "/session", who)).json()) as ViewerPayload;
+  const command = async (
+    kind: string,
+    fields: Record<string, string> = {},
+    who = owner,
+    native = false,
+  ) => {
+    let view = await read(who);
+    return request(
+      path + "/commands",
+      who,
+      {
+        id: crypto.randomUUID(),
+        revision: String(view.revision),
+        kind,
+        ...fields,
+      },
+      !native,
+    );
+  };
+  return { db, path, owner, participant, request, read, command };
+}
+describe("guided route boundary", () => {
+  it("completes a real native/enhanced journey with isolated identities and hidden ballots", async () => {
+    let f = await setup(),
+      initial = await f.read(),
+      category = initial.categories[0].id;
+    let note = await f.request(f.path + "/new", f.participant, {
+      submissionId: crypto.randomUUID(),
+      text: "Anonymous source",
+      categoryId: category,
+      isAnonymous: "true",
+    });
+    assert.equal(note.status, 303);
+    let source = (await f.db.findMany(cards))[0];
+    let own = await f.read(f.participant),
+      other = await f.read();
+    assert.equal(own.cards[0].memberId, own.memberId);
+    assert.equal(other.cards[0].memberId, "");
+    assert.equal((await f.command("advance", {}, f.participant)).status, 403);
+    let native = await f.command("advance", {}, f.owner, true);
+    assert.equal(native.status, 303);
+    assert.equal(native.headers.get("Location"), f.path);
+    let late = await f.request(f.path + "/new", f.participant, {
+      submissionId: crypto.randomUUID(),
+      text: "Kept draft",
+      categoryId: category,
+    });
+    assert.equal(late.status, 403);
+    assert.equal(
+      (await f.command("theme", { title: "A theme", notes: source.id })).status,
+      200,
+    );
+    await f.command("advance");
+    let ballot = await f.read(),
+      topic = ballot.state.themes[0].id;
+    await f.command(
+      "vote",
+      { topic, ballot: String(ballot.state.ballot), value: "true" },
+      f.participant,
+    );
+    let hidden = await f.read();
+    assert.deepEqual(hidden.counts, {});
+    assert.deepEqual(hidden.state.votes[hidden.memberId], []);
+    assert.deepEqual(hidden.state.receipts, {});
+    await f.command("ballot", {
+      ballot: String(ballot.state.ballot),
+      value: "false",
+    });
+    assert.equal((await f.read()).counts[topic], 1);
+    await f.command("advance");
+    await f.command("decision", { topic, text: "No action needed" });
+    await f.command("outcome", { topic, value: "discussed" });
+    await f.command(
+      "propose",
+      { topic, text: "Suggestion remains unresolved" },
+      f.participant,
+    );
+    await f.command("advance");
+    await f.command("advance");
+    let summary = await f.read();
+    assert.equal(summary.state.stage, "summary");
+    assert.equal(summary.state.closure!.proposals[0].disposition, "suggested");
+    assert.equal(summary.state.closure!.cards[0].memberId, "");
+    let html = await (
+      await f.request(f.path, f.owner, undefined, false)
+    ).text();
+    assert.ok(html.includes("No action needed"));
+    assert.ok(html.includes("Suggestion remains unresolved"));
+  });
+  it("rejects visitor/cross-board commands, stale native forms, forged owner names and legacy endpoint bypasses", async () => {
+    let f = await setup(),
+      another = await setup();
+    assert.equal((await f.request(f.path + "/session", undefined)).status, 403);
+    assert.equal(
+      (
+        await f.request(f.path + "/commands", another.owner, {
+          kind: "advance",
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (await f.request(f.path + "/status", f.owner, { status: "closed" }))
+        .status,
+      409,
+    );
+    let view = await f.read(),
+      fields = {
+        kind: "ready",
+        value: "true",
+        id: crypto.randomUUID(),
+        revision: String(view.revision),
+      };
+    await f.command("ready", { value: "true" });
+    let conflict = await f.request(
+      f.path + "/commands",
+      f.owner,
+      fields,
+      false,
+    );
+    assert.equal(conflict.status, 409);
+    assert.ok((await conflict.text()).includes('name="value"'));
+    assert.equal(
+      (
+        await f.command("propose", {
+          text: "No",
+          ownerSearch: "Unknown member",
+        })
+      ).status,
+      400,
+    );
+  });
+  it("does not silently convert legacy stages, votes or category identity", async () => {
+    let f = await setup(),
+      id = f.path.split("/").pop()!;
+    await f.db.exec(sql`DELETE FROM guided_sessions WHERE board_id=${id}`);
+    assert.equal((await f.request(f.path + "/session", f.owner)).status, 404);
+    assert.equal(
+      (await f.request(f.path + "/status", f.owner, { status: "meeting" }))
+        .status,
+      303,
+    );
+    assert.equal(
+      (
+        await f.request(f.path + "/commands", f.participant, {
+          kind: "convert",
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (await f.request(f.path + "/commands", f.owner, { kind: "convert" }))
+        .status,
+      200,
+    );
+    let view = await f.read();
+    assert.equal(view.state.stage, "discuss");
+    assert.equal(view.state.legacy, true);
+    assert.deepEqual(view.counts, {});
+    assert.deepEqual(
+      view.categories.map((c) => c.tone),
+      [0, 1, 2],
+    );
+  });
+  it("edits proposals through an authorised native route, preserves invalid fields and denies agreed-action edits to participants", async () => {
+    let f = await setup();
+    await f.command("advance");
+    await f.command("advance");
+    let v = await f.read();
+    await f.command("ballot", {
+      ballot: String(v.state.ballot),
+      value: "false",
+    });
+    await f.command("advance");
+    await f.command(
+      "propose",
+      { text: "Participant suggestion" },
+      f.participant,
+    );
+    v = await f.read();
+    let proposal = v.state.proposals[0],
+      edit = f.path + "/actions/" + proposal.id + "/edit";
+    let page = await f.request(edit, f.participant, undefined, false);
+    assert.equal(page.status, 200);
+    await page.text();
+    let invalid = await f.request(
+      edit,
+      f.participant,
+      {
+        id: crypto.randomUUID(),
+        revision: String(v.revision),
+        text: "Preserve these fields",
+        ownerSearch: "Not a member",
+        due: "2026-12-01",
+        topic: "",
+      },
+      false,
+    );
+    assert.equal(invalid.status, 400);
+    assert.ok((await invalid.text()).includes("Preserve these fields"));
+    let saved = await f.request(
+      edit,
+      f.participant,
+      {
+        id: crypto.randomUUID(),
+        revision: String(v.revision),
+        text: "Updated suggestion",
+        ownerSearch: "Reader",
+        due: "2026-12-01",
+        topic: "",
+      },
+      false,
+    );
+    assert.equal(saved.status, 303);
+    assert.equal(
+      (await f.read()).state.proposals[0].text,
+      "Updated suggestion",
+    );
+    await f.command("disposition", { proposal: proposal.id, value: "agreed" });
+    let forbidden = await f.request(edit, f.participant, undefined, false);
+    assert.equal(forbidden.status, 403);
+  });
+
+  it("uses private revision validators without exposing other ballots or command receipts", async () => {
+    let f = await setup(),
+      url = "http://localhost" + f.path + "/session";
+    const request = (cookie: string, tag?: string) =>
+      createAppRouter({ ...options, db: f.db }).fetch(url, {
+        headers: {
+          Cookie: cookie,
+          Accept: "application/json",
+          ...(tag ? { "If-None-Match": tag } : {}),
+        },
+      });
+    let first = await request(f.owner),
+      tag = first.headers.get("ETag")!;
+    assert.ok(tag);
+    assert.ok(!(await first.text()).includes("fingerprint"));
+    assert.equal((await request(f.owner, tag)).status, 304);
+    assert.equal((await request(f.participant, tag)).status, 200);
+    await f.command("ready", { value: "true" }, f.participant);
+    let changed = await request(f.owner, tag);
+    assert.equal(changed.status, 200);
+    assert.ok(changed.headers.get("ETag") !== tag);
+    let payload = (await changed.json()) as ViewerPayload;
+    assert.equal(payload.doneCount, 1);
+    assert.equal(Object.keys(payload.state.ready).length, 1);
+    assert.equal(Object.keys(payload.state.receipts).length, 0);
+  });
+  it("uses viewer-scoped revision validation for polling without leaking receipts or other ballots", async () => {
+    let f = await setup(),
+      router = createAppRouter({ ...options, db: f.db });
+    let first = await router.fetch("http://localhost" + f.path + "/session", {
+      headers: { Cookie: f.owner },
+    });
+    assert.equal(first.status, 200);
+    let tag = first.headers.get("ETag")!;
+    assert.ok(tag);
+    let body = await first.text();
+    assert.ok(!body.includes("fingerprint"));
+    let unchanged = await router.fetch(
+      "http://localhost" + f.path + "/session",
+      { headers: { Cookie: f.owner, "If-None-Match": tag } },
+    );
+    assert.equal(unchanged.status, 304);
+    assert.equal(await unchanged.text(), "");
+    let other = await router.fetch("http://localhost" + f.path + "/session", {
+      headers: { Cookie: f.participant, "If-None-Match": tag },
+    });
+    assert.equal(other.status, 200);
+    await other.text();
+    await f.command("ready", { value: "true" });
+    let changed = await router.fetch("http://localhost" + f.path + "/session", {
+      headers: { Cookie: f.owner, "If-None-Match": tag },
+    });
+    assert.equal(changed.status, 200);
+    assert.ok(changed.headers.get("ETag") !== tag);
+    await changed.text();
+  });
+});

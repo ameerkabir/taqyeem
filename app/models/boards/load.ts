@@ -11,7 +11,10 @@ import { listMembers as listMemberRows } from "../members/member.ts";
  * A board is only "live" when it has an organiser. createBoard cannot guarantee that
  * (no transactions, cleanup is best effort), so a board without one is treated as missing.
  */
-export async function loadBoard(db: Database, id: string): Promise<Board | null> {
+export async function loadBoard(
+  db: Database,
+  id: string,
+): Promise<Board | null> {
   let row = await db.find(boards, id);
   if (!row) return null;
 
@@ -30,17 +33,24 @@ export async function loadBoard(db: Database, id: string): Promise<Board | null>
   };
 }
 
-export async function loadCategories(db: Database, boardId: string): Promise<Category[]> {
+export async function loadCategories(
+  db: Database,
+  boardId: string,
+): Promise<Category[]> {
   let rows = await listCategoryRows(db, boardId);
   return rows.map((row) => ({
     id: row.id,
     boardId: row.board_id,
     label: row.label,
     position: row.position,
+    tone: row.tone,
   }));
 }
 
-export async function loadMembers(db: Database, boardId: string): Promise<Member[]> {
+export async function loadMembers(
+  db: Database,
+  boardId: string,
+): Promise<Member[]> {
   let rows = await listMemberRows(db, boardId);
   return rows.map((row) => ({
     id: row.id,

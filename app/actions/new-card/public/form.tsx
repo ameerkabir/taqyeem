@@ -1,4 +1,8 @@
 import {
+  draftForm,
+  clearPersistentDraft,
+} from "../../../ui/public/draft-form.ts";
+import {
   formStyle,
   fieldsetStyle,
   labelStyle,
@@ -16,6 +20,8 @@ import { createTranslator } from "../../../i18n/translator.ts";
 
 export interface NewCardFormProps {
   locale: Locale;
+  memberId?: string;
+  blocked?: boolean;
   boardId: string;
   categories: Category[];
   activeCategoryId?: string;
@@ -27,12 +33,19 @@ export interface NewCardFormProps {
 export const NewCardForm = clientEntry(
   "/app/actions/new-card/public/form.tsx#NewCardForm",
   function NewCardForm(handle: Handle<NewCardFormProps>) {
+    const initialSubmissionId = handle.props.submissionId;
     let pending = false;
     let error = handle.props.error;
 
     return () => {
-      let { locale, boardId, categories, activeCategoryId, submissionId, values } =
-        handle.props;
+      let {
+        locale,
+        boardId,
+        categories,
+        activeCategoryId,
+        submissionId,
+        values,
+      } = handle.props;
       let { t } = createTranslator(locale);
       return (
         <form
@@ -41,6 +54,11 @@ export const NewCardForm = clientEntry(
           aria-busy={pending}
           mix={[
             formStyle,
+            draftForm(
+              handle.props.memberId
+                ? `new:${boardId}:${handle.props.memberId}`
+                : "",
+            ),
             on("submit", async (event) => {
               event.preventDefault();
               if (pending) return;
@@ -80,6 +98,7 @@ export const NewCardForm = clientEntry(
                   return;
                 }
 
+                clearPersistentDraft(form);
                 await navigate(response.url, { history: "replace" });
               } catch {
                 if (!signal.aborted) {
@@ -94,7 +113,11 @@ export const NewCardForm = clientEntry(
             }),
           ]}
         >
-          <input type="hidden" name="submissionId" value={submissionId} />
+          <input
+            type="hidden"
+            name="submissionId"
+            defaultValue={initialSubmissionId}
+          />
           <fieldset mix={fieldsetStyle}>
             <legend mix={labelStyle}>{t("form.category")}</legend>
             <div mix={choicesStyle}>
@@ -130,7 +153,11 @@ export const NewCardForm = clientEntry(
               {error}
             </p>
           )}
-          <button type="submit" disabled={pending} mix={submitStyle}>
+          <button
+            type="submit"
+            disabled={pending || handle.props.blocked}
+            mix={submitStyle}
+          >
             {pending ? t("newCard.submitting") : t("newCard.submit")}
           </button>
         </form>

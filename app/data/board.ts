@@ -8,6 +8,7 @@ export interface Board {
   title: string;
   organiserMemberId: string;
   status: BoardStatus;
+  guidedStage?: string;
   votingOpen: boolean;
   currentSectionId: string | null;
 }
@@ -17,6 +18,7 @@ export interface Category {
   boardId: string;
   label: string;
   position: number;
+  tone?: number;
 }
 
 export interface Member {

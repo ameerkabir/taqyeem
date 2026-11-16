@@ -1,5 +1,6 @@
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
+import { sql } from "remix/data-table";
 import type { Database } from "remix/data-table";
 import { ACCESS_REASON_HEADER, NOT_MEMBER_REASON } from "../data/access.ts";
 import { boards, cards, categories, members, votes } from "../data/tables.ts";
@@ -32,17 +33,19 @@ async function world() {
     latecomer: undefined, // joins after the board is closed, in the closed-board tests
   };
 
-  function request(caller: Caller, path: string, init: { method?: string; json?: boolean; fields?: Record<string, string> } = {}) {
+  async function request(caller: Caller, path: string, init: { method?: string; json?: boolean; fields?: Record<string, string> } = {}) {
     let headers = new Headers();
     if (cookies[caller]) headers.set("Cookie", cookies[caller]!);
     if (init.json) headers.set("Accept", "application/json");
-    return createAppRouter({ ...options, db }).fetch(
+    let response=await createAppRouter({ ...options, db }).fetch(
       new Request("http://localhost" + path, {
         method: init.method ?? "GET",
         headers,
         body: init.fields ? new URLSearchParams(init.fields) : undefined,
       }),
     );
+    await response.clone().text();
+    return response;
   }
 
   // The organiser creates the board; another person organises a different board; a third
@@ -65,6 +68,8 @@ async function world() {
 
   // A note by the organiser, to address by id.
   let boardId = path.split("/").pop()!;
+  // This matrix exercises the legacy routes; guided authority has separate tests.
+  await db.exec(sql`DELETE FROM guided_sessions WHERE board_id=${boardId}`);
   let [category] = await (db as Database).findMany(categories, { where: { board_id: boardId } });
   let note = await request("organiser", `${path}/new`, {
     method: "POST",

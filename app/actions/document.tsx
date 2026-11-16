@@ -16,26 +16,54 @@ const CLIENT_ENTRY_SRC = import.meta.env?.DEV
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let {
-      children,
-      head,
-      i18n,
-    } = handle.props;
+    let { children, head, i18n } = handle.props;
     let title = handle.props.title ?? i18n.t("app.name");
 
     return (
-      <html lang={i18n.locale} dir={i18n.dir}>
+      <html lang={i18n.locale} dir={i18n.dir} data-theme={i18n.appearance}>
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <link rel="stylesheet" href="/app.css" />
+          <link rel="stylesheet" href="/final.css" />
+          <script src="/preferences.js"></script>
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <title>{title}</title>
           {head}
           <script type="module" src={CLIENT_ENTRY_SRC}></script>
         </head>
         <body>
-          <LocaleSwitcher i18n={i18n} />
+          <header class="app-shell">
+            <a class="brand" href="/">
+              {i18n.t("app.name")}
+            </a>
+            <form
+              class="appearance"
+              method="post"
+              action="/appearance"
+              data-appearance-form
+              aria-label={i18n.t("guided.appearance")}
+            >
+              <input type="hidden" name="returnTo" value={i18n.returnTo} />
+              <button
+                type="submit"
+                name="appearance"
+                value="light"
+                data-appearance="light"
+              >
+                {i18n.t("guided.light")}
+              </button>
+              <button
+                type="submit"
+                name="appearance"
+                value="dark"
+                data-appearance="dark"
+              >
+                {i18n.t("guided.dark")}
+              </button>
+            </form>
+            <LocaleSwitcher i18n={i18n} />
+          </header>
           {children}
         </body>
       </html>

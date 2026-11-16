@@ -45,7 +45,7 @@ async function setup(overrides: Partial<BoardModels> = {}) {
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret", await testDatabase()), provideModels] });
   router.map(routes.deleteCard, controller);
   return {
     saved,

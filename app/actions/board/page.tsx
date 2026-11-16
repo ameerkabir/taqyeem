@@ -15,11 +15,7 @@ import {
 } from "./styles.ts";
 import { Frame, type Handle } from "remix/component";
 import { Document } from "../document.tsx";
-import type {
-  Board,
-  Card,
-  Category,
-} from "../../data/board.ts";
+import type { Board, Card, Category } from "../../data/board.ts";
 import { routes } from "../../routes.ts";
 import { OrganiserControls } from "./organiser-controles.tsx";
 import type { I18n } from "../../middleware/locale.ts";
@@ -52,6 +48,21 @@ export function BoardPage(
         })}
       >
         <main mix={mainStyle}>
+          {handle.props.isOrganiser && (
+            <details>
+              <summary>{t("guided.legacy")}</summary>
+              <p>{t("guided.convertHint")}</p>
+              <form
+                method="post"
+                action={routes.sessionCommand.href({
+                  boardId: handle.props.board.id,
+                })}
+              >
+                <input type="hidden" name="kind" value="convert" />
+                <button>{t("guided.convert")}</button>
+              </form>
+            </details>
+          )}
           <header mix={headerStyle}>
             <h1 dir="auto" mix={titleStyle}>
               {handle.props.board.title}

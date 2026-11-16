@@ -20,6 +20,9 @@ interface JoinPageProps {
   i18n: I18n;
   boardId: string;
   boardTitle: string;
+  facilitatorName?: string;
+  joinedCount?: number;
+  stage?: string;
   values?: { displayName: string };
   nameError?: string;
   /** Something went wrong saving; nothing was kept, so trying again is safe. */
@@ -35,24 +38,51 @@ interface JoinPageProps {
 
 export function JoinPage(handle: Handle<JoinPageProps>) {
   return () => {
-    let { i18n, boardId, boardTitle, values, nameError, submitError, closed, section } =
-      handle.props;
+    let {
+      i18n,
+      boardId,
+      boardTitle,
+      values,
+      nameError,
+      submitError,
+      closed,
+      section,
+    } = handle.props;
     let { t } = i18n;
     let heading = t("join.heading", { title: isolate(boardTitle) });
 
     return (
       <Document
         i18n={i18n}
-        title={t("page.title", { title: t("join.documentTitle"), suffix: t("app.name") })}
+        title={t("page.title", {
+          title: t("join.documentTitle"),
+          suffix: t("app.name"),
+        })}
       >
         <main mix={pageStyle}>
           <section mix={panelStyle} aria-labelledby="join-title">
             <a href={routes.home.href()}>{t("newBoard.back")}</a>
-            <h1 id="join-title" mix={titleStyle}>
-              {heading}
+            {handle.props.facilitatorName && (
+              <p>
+                {t("guided.joinFacilitator", {
+                  name: isolate(handle.props.facilitatorName),
+                })}
+              </p>
+            )}
+            <h1 id="join-title" dir="auto" mix={titleStyle}>
+              {boardTitle}
             </h1>
+            <p>{heading}</p>
+            {handle.props.joinedCount !== undefined && (
+              <p>
+                {t("guided.joined", { count: handle.props.joinedCount })}
+                {handle.props.stage && <> · {handle.props.stage}</>}
+              </p>
+            )}
 
-            <p mix={hintStyle}>{closed ? t("join.introClosed") : t("join.intro")}</p>
+            <p mix={hintStyle}>
+              {closed ? t("join.introClosed") : t("join.intro")}
+            </p>
             {closed && (
               // An explanation, not an error: nothing has gone wrong and joining works.
               <p id="join-closed-notice" role="note" mix={hintStyle}>
@@ -60,6 +90,7 @@ export function JoinPage(handle: Handle<JoinPageProps>) {
               </p>
             )}
 
+            <p>{t("guided.privacy")}</p>
             <form
               method="post"
               action={routes.joinBoard.action.href({ boardId })}
@@ -82,7 +113,11 @@ export function JoinPage(handle: Handle<JoinPageProps>) {
                   autoComplete="name"
                   dir="auto"
                   aria-invalid={nameError ? "true" : undefined}
-                  aria-describedby={nameError ? "join-name-hint join-name-error" : "join-name-hint"}
+                  aria-describedby={
+                    nameError
+                      ? "join-name-hint join-name-error"
+                      : "join-name-hint"
+                  }
                   mix={inputStyle}
                 />
               </label>
@@ -96,7 +131,9 @@ export function JoinPage(handle: Handle<JoinPageProps>) {
               )}
 
               {/* A native hidden field, so the category survives a submit without JavaScript. */}
-              {section && <input type="hidden" name="section" value={section} />}
+              {section && (
+                <input type="hidden" name="section" value={section} />
+              )}
 
               <button type="submit" mix={submitStyle}>
                 {closed ? t("join.submitClosed") : t("join.submit")}

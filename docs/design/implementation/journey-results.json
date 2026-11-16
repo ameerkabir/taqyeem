@@ -1,0 +1,16 @@
+{
+  "checks": [
+    "Created board, invited distinct member, posted original anonymous and mixed-script evidence through real UI",
+    "Draft text/category/anonymity, node identity and caret survive polling, dismissal, appearance and Arabic navigation",
+    "Lost-response retry retains fields and commits no duplicate note",
+    "Grouping preserves evidence, vote aggregates stay hidden, private browsing never changes live topic/outcomes",
+    "Explicit outcomes and no-action decision, agreed action and unresolved suggestion survive closure; later progress preserves history",
+    "Summary bounds checked at all five widths; Arabic/dark phone screenshot captured"
+  ],
+  "pageErrors": [],
+  "limitations": [
+    "Chromium emulation only; no physical keyboard, native Arabic review, screen-reader or production release claim"
+  ],
+  "runDate": "2026-11-16",
+  "runtime": "Local Cloudflare Worker / Miniflare; Chromium emulation"
+}

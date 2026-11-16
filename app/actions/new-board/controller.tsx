@@ -1,3 +1,6 @@
+import { DataTableDatabaseError } from "remix/data-table";
+import { boards } from "../../data/tables.ts";
+import { readSession } from "../../models/guided/session.ts";
 import { createController } from "remix/router";
 import { redirect } from "remix/response/redirect";
 import { routes } from "../../routes.ts";
@@ -25,7 +28,9 @@ export default createController(routes.newBoard, {
             values={readNewBoardValues(data)}
             titleError={issue.path?.[0] === "title" ? issue.message : undefined}
             organiserNameError={
-              issue.path?.[0] === "organiserDisplayName" ? issue.message : undefined
+              issue.path?.[0] === "organiserDisplayName"
+                ? issue.message
+                : undefined
             }
           />,
           { status: 400 },
@@ -38,12 +43,24 @@ export default createController(routes.newBoard, {
           ...parsed.value,
           categoryLabels: defaultCategoryLabels(context.i18n.t),
         });
+        await readSession(context.db, created.board.id);
       } catch (error) {
+        if (error instanceof DataTableDatabaseError && created) {
+          let orphanedBoardId;
+          try {
+            await context.db.delete(boards, created.board.id);
+          } catch {
+            orphanedBoardId = created.board.id;
+          }
+          error = new CreateBoardError({ cause: error, orphanedBoardId });
+        }
         // Only storage failures are turned into a retry page; anything else is a bug.
         if (!(error instanceof CreateBoardError)) throw error;
         if (error.cleanupFailed) {
           // The failed board could not be removed; surface its id so it can be cleaned up.
-          console.error("createBoard cleanup failed", { orphanedBoardId: error.orphanedBoardId });
+          console.error("createBoard cleanup failed", {
+            orphanedBoardId: error.orphanedBoardId,
+          });
         }
         console.error("createBoard failed", error.cause);
         return context.render(

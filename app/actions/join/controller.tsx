@@ -18,10 +18,25 @@ export default createController(routes.joinBoard, {
   actions: {
     async index(context) {
       let board = context.board;
-      let section = await validSection(context.models, board.id, context.url.searchParams.get("section"));
-      if (await isMember(context.models, board.id)) return toBoard(board.id, section);
+      let members = await context.models.listMembers(board.id);
+      let invitation = {
+        facilitatorName: members.find((m) => m.id === board.organiserMemberId)
+          ?.displayName,
+        joinedCount: members.length,
+        stage: board.guidedStage
+          ? context.i18n.t(`guided.${board.guidedStage}` as "guided.collect")
+          : context.i18n.t(`board.status.${board.status}`),
+      };
+      let section = await validSection(
+        context.models,
+        board.id,
+        context.url.searchParams.get("section"),
+      );
+      if (await isMember(context.models, board.id))
+        return toBoard(board.id, section);
       return context.render(
         <JoinPage
+          {...invitation}
           i18n={context.i18n}
           boardId={board.id}
           boardTitle={board.title}
@@ -33,17 +48,32 @@ export default createController(routes.joinBoard, {
 
     async action(context) {
       let board = context.board;
+      let members = await context.models.listMembers(board.id);
+      let invitation = {
+        facilitatorName: members.find((m) => m.id === board.organiserMemberId)
+          ?.displayName,
+        joinedCount: members.length,
+        stage: board.guidedStage
+          ? context.i18n.t(`guided.${board.guidedStage}` as "guided.collect")
+          : context.i18n.t(`board.status.${board.status}`),
+      };
       let data = await context.request.formData();
-      let section = await validSection(context.models, board.id, data.get("section"));
+      let section = await validSection(
+        context.models,
+        board.id,
+        data.get("section"),
+      );
       let closed = board.status === "closed";
 
       // A repeated submit (double click, back button) must not create a second member.
-      if (await isMember(context.models, board.id)) return toBoard(board.id, section);
+      if (await isMember(context.models, board.id))
+        return toBoard(board.id, section);
 
       let parsed = parseJoinForm(data, context.i18n.t);
       if (!parsed.success) {
         return context.render(
           <JoinPage
+            {...invitation}
             i18n={context.i18n}
             boardId={board.id}
             boardTitle={board.title}
@@ -58,11 +88,15 @@ export default createController(routes.joinBoard, {
 
       let result;
       try {
-        result = await context.models.joinBoard(board.id, parsed.value.displayName);
+        result = await context.models.joinBoard(
+          board.id,
+          parsed.value.displayName,
+        );
       } catch (error) {
         console.error("joinBoard failed", error);
         return context.render(
           <JoinPage
+            {...invitation}
             i18n={context.i18n}
             boardId={board.id}
             boardTitle={board.title}
@@ -76,12 +110,17 @@ export default createController(routes.joinBoard, {
       }
 
       if (!result) {
-        return boardNotFound(context, context.i18n.t("access.boardNotFound"), 404);
+        return boardNotFound(
+          context,
+          context.i18n.t("access.boardNotFound"),
+          404,
+        );
       }
       if (!result.ok) {
         // The only refusal is a taken name. Keep what they typed so they can adjust it.
         return context.render(
           <JoinPage
+            {...invitation}
             i18n={context.i18n}
             boardId={board.id}
             boardTitle={board.title}
@@ -104,19 +143,30 @@ export default createController(routes.joinBoard, {
 
 function toBoard(boardId: string, section?: string) {
   let href = routes.board.href({ boardId });
-  return redirect(section ? `${href}?${new URLSearchParams({ section })}` : href, 303);
+  return redirect(
+    section ? `${href}?${new URLSearchParams({ section })}` : href,
+    303,
+  );
 }
 
 /** Only a real category of this board is kept; anything else (forged, stale, empty) is dropped. */
-async function validSection(models: BoardModels, boardId: string, value: unknown) {
+async function validSection(
+  models: BoardModels,
+  boardId: string,
+  value: unknown,
+) {
   if (typeof value !== "string" || value === "") return undefined;
   let categories = await models.listCategories(boardId);
-  return categories.some((category) => category.id === value) ? value : undefined;
+  return categories.some((category) => category.id === value)
+    ? value
+    : undefined;
 }
 
 async function isMember(models: BoardModels, boardId: string) {
   let memberId = await models.getViewerMemberId(boardId);
   if (!memberId) return false;
   let members = await models.listMembers(boardId);
-  return members.some((member) => member.id === memberId && member.boardId === boardId);
+  return members.some(
+    (member) => member.id === memberId && member.boardId === boardId,
+  );
 }

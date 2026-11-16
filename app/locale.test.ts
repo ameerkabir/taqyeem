@@ -37,7 +37,9 @@ async function app(headers: Record<string, string>) {
 
 async function get(path: string, headers: Record<string, string> = {}) {
   let { router, headers: withViewer } = await app(headers);
-  return router.fetch(new Request(origin + path, { headers: withViewer }));
+  let response=await router.fetch(new Request(origin + path, { headers: withViewer }));
+  await response.clone().text();
+  return response;
 }
 
 async function post(path: string, fields: Record<string, string>, headers: Record<string, string> = {}) {
@@ -180,8 +182,8 @@ describe("POST /locale", () => {
     let cookies = `${sessionCookie}; ${await localeCookie("en")}`;
     let page = await (await get(boardPath, { Cookie: cookies })).text();
     // Still the organiser, and the page chrome is English.
-    assert.match(page, /You are the organiser/);
-    assert.match(page, /Manage board/);
+    assert.match(page, /Facilitator/);
+    assert.match(page, /Continue to Group/);
   });
 });
 

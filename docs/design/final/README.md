@@ -1,6 +1,6 @@
 # Final candidate implementation handoff
 
-This is the reviewable entry gate for [#38](https://github.com/ameerkabir/taqyeem/issues/38) and [#39](https://github.com/ameerkabir/taqyeem/issues/39). **Design signoff is pending. No application implementation or release acceptance is claimed.** The implementation branch and PR were explicitly requested; deployment and remote migrations were not.
+This is the reviewable entry gate for [#38](https://github.com/ameerkabir/taqyeem/issues/38) and [#39](https://github.com/ameerkabir/taqyeem/issues/39). **The user approved this candidate for implementation on 2026-11-16. Application implementation and verification now accompany this handoff; release acceptance remains separate.** The implementation branch and PR were explicitly requested; deployment and remote migrations were not.
 
 The original candidate lives on `design/final-candidate` in the local `taqyeem-final` worktree. Its six design documents are preserved verbatim in [reference](reference/), with selected existing screenshots in [screenshots](screenshots/). [manifest.json](manifest.json) records their source paths and SHA-256 digests. These are prototype evidence, not screenshots or test results of the Worker application. The prototype engine, presets, reviewer identities, local storage and simulation code are not shipped.
 
@@ -35,7 +35,7 @@ Revalidated against `origin/main` at `08f07585789ca38420abf51c07fe63f53896c466`.
 
 | Sequence | Ownership | Concrete completion evidence |
 | --- | --- | --- |
-| Entry gate | #39 | Reconciled handoff, bounded continuous-journey review and explicit signoff; this PR only prepares the handoff |
+| Entry gate | #39 | Reconciled handoff, bounded continuous-journey review and explicit signoff; candidate approved by the user on 2026-11-16; implementation evidence is linked below |
 | Data foundations | #54, #56 | Restart-safe membership/recovery; populated legacy migration and stable category identities |
 | Shared visual system | #40, #41 | Tokens/type/licensing; appearance persistence without viewer or draft loss |
 | Existing-capability adoption | #42–#45 | Responsive Collect, Home, real Create/Join and mounted editors backed by current commands |
@@ -48,7 +48,7 @@ Visual slices can adopt existing board/member/card data only after the entry gat
 
 ## Outstanding evidence
 
-The archived QA describes local prototype Chrome checks. No check in that report proves application accessibility, durability, real transport or production readiness. This handoff has not rerun those historical scripts or performed the bounded continuous-journey consistency review; #39 remains open.
+The archived QA describes local prototype Chrome checks. No check in that report proves application accessibility, durability, real transport or production readiness. The implementation has its own bounded journey/visual review and automated evidence; historical prototype scripts have not been rerun or presented as application checks. Outstanding human review remains tracked.
 
 | Required acceptance | Owner / evidence required |
 | --- | --- |
@@ -60,3 +60,7 @@ The archived QA describes local prototype Chrome checks. No check in that report
 | Export | #23/#50: actual copy/print/PDF output, full evidence and historical accuracy |
 
 Acceptance covers 375×812, 390×844, 768×1024, 1280×800 and 1440×900; both scripts/roles/themes; 50 notes, 500-character/mixed text, eight categories, 20 themes, 80 members and 30 actions. Missing evidence, data loss, inaccessible navigation and broken continuous journeys block release signoff. Named human reviewers and pilot participants still need assignment; ticket ownership here is not evidence that those reviews happened.
+
+## Implemented application
+
+See [verification and limitations](../implementation/VERIFICATION.md) and [the storage/compatibility decision](../../decisions/0005-guided-sessions.md). The archived source documents retain the historical approval restrictions that applied when they were written; the explicit user authorization above governs this implementation branch.

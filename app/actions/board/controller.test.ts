@@ -58,7 +58,7 @@ async function respond(
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret", await testDatabase()), provideModels] });
   router.map(routes.board, controller);
   router.map(routes.boardCards, boardCardsController);
   return router.fetch(`http://localhost/boards/demo?section=${encodeURIComponent(section)}`);

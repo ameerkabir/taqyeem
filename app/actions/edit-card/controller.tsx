@@ -1,3 +1,5 @@
+import { DataTableDatabaseError } from "remix/data-table";
+import { isCollectLock } from "../../models/guided/errors.ts";
 import { createController } from "remix/router";
 import { redirect } from "remix/response/redirect";
 import { routes } from "../../routes.ts";
@@ -26,7 +28,11 @@ export default createController(routes.editCard, {
       if (failure)
         return cardAccessError(context, failure.message, failure.status);
       if (!card)
-        return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
+        return cardAccessError(
+          context,
+          context.i18n.t("access.cardNotFound"),
+          404,
+        );
       let categories = await context.models.listCategories(board.id);
       return context.render(
         <EditCardPage
@@ -82,14 +88,31 @@ export default createController(routes.editCard, {
       let { text, categoryId, isAnonymous } = parsed.value;
       let categories = await context.models.listCategories(board.id);
       if (!categories.some((category) => category.id === categoryId))
-        return formError(context.i18n.t("card.error.invalidCategory"), 400, data);
-      let updated = await context.models.updateCard(board.id, card.id, {
-        body: text,
-        categoryId,
-        isAnonymous,
-      });
+        return formError(
+          context.i18n.t("card.error.invalidCategory"),
+          400,
+          data,
+        );
+      let updated;
+      try {
+        updated = await context.models.updateCard(board.id, card.id, {
+          body: text,
+          categoryId,
+          isAnonymous,
+        });
+      } catch (error) {
+        if (isCollectLock(error))
+          return formError(context.i18n.t("guided.collectOnly"), 409, data);
+        if (error instanceof DataTableDatabaseError)
+          return formError(context.i18n.t("editCard.failed"), 503, data);
+        throw error;
+      }
       if (!updated)
-        return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
+        return cardAccessError(
+          context,
+          context.i18n.t("access.cardNotFound"),
+          404,
+        );
       return redirect(
         `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(updated.categoryId)}`,
         303,

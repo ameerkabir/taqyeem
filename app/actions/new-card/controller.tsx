@@ -1,3 +1,5 @@
+import { DataTableDatabaseError } from "remix/data-table";
+import { isCollectLock } from "../../models/guided/errors.ts";
 import { createController, type Middleware } from "remix/router";
 import { redirect } from "remix/response/redirect";
 import { routes } from "../../routes.ts";
@@ -26,6 +28,7 @@ export default createController(routes.newCard, {
       );
       return context.render(
         <NewCardPage
+          memberId={context.member.id}
           board={board}
           categories={categories}
           activeCategoryId={activeCategoryId}
@@ -44,24 +47,46 @@ export default createController(routes.newCard, {
       let { text, categoryId, submissionId, isAnonymous } = parsed.value;
       let categories = await context.models.listCategories(board.id);
       if (!categories.some((category) => category.id === categoryId)) {
-        return newCardError(context, context.i18n.t("card.error.invalidCategory"), 400, {
-          data,
-          categories,
-        });
+        return newCardError(
+          context,
+          context.i18n.t("card.error.invalidCategory"),
+          400,
+          {
+            data,
+            categories,
+          },
+        );
       }
-      let result = await context.models.createCard(
-        {
-          categoryId,
-          boardId: board.id,
-          body: text,
-          createdAt: new Date().toISOString(),
-          voteCount: 0,
-          memberId: member.id,
-          isAnonymous,
-          id: crypto.randomUUID(),
-        },
-        submissionId,
-      );
+      let result;
+      try {
+        result = await context.models.createCard(
+          {
+            categoryId,
+            boardId: board.id,
+            body: text,
+            createdAt: new Date().toISOString(),
+            voteCount: 0,
+            memberId: member.id,
+            isAnonymous,
+            id: crypto.randomUUID(),
+          },
+          submissionId,
+        );
+      } catch (error) {
+        if (isCollectLock(error))
+          return newCardError(
+            context,
+            context.i18n.t("guided.collectOnly"),
+            409,
+            { data, categories },
+          );
+        if (error instanceof DataTableDatabaseError)
+          return newCardError(context, context.i18n.t("newCard.failed"), 503, {
+            data,
+            categories,
+          });
+        throw error;
+      }
       if (!result.ok) {
         return newCardError(
           context,
@@ -83,8 +108,18 @@ function requireCreationAllowed(): Middleware {
   return (context, next) => {
     let board = context.get(boardContext);
     if (!board) throw new Error("Creation policy requires loadBoard");
+    if (board.guidedStage && board.guidedStage !== "collect")
+      return newCardError(
+        context,
+        getI18n(context).t("guided.collectOnly"),
+        403,
+      );
     if (context.request.method === "POST" && board.status === "closed") {
-      return newCardError(context, getI18n(context).t("access.boardClosed"), 403);
+      return newCardError(
+        context,
+        getI18n(context).t("access.boardClosed"),
+        403,
+      );
     }
     return next();
   };
