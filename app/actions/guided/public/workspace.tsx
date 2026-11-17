@@ -16,7 +16,8 @@ import {
   topics as sourceTopics,
   type Topic,
 } from "../../../models/guided/topics.ts";
-import { isDraftField } from "../draft-fields.ts";
+import { createSessionStore } from "../../../ui/session-store.ts";
+import { createDraftStore } from "../client/draft-store.ts";
 import { formSignature } from "../client/form-signature.ts";
 import { laneLayout } from "../client/lanes.ts";
 import {
@@ -113,121 +114,47 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     dropCategory = "";
     handle.update();
   }
-  function get(key: string) {
-    try {
-      return sessionStorage.getItem(prefix + key);
-    } catch {
-      return null;
-    }
-  }
-  function set(key: string, value: string) {
-    try {
-      sessionStorage.setItem(prefix + key, value);
-    } catch {
-      /* Mounted inputs retain the draft if storage is unavailable. */
-    }
-  }
+  const storage = createSessionStore(prefix);
+  const drafts = createDraftStore(storage);
+  const get = storage.get;
   function save(form: HTMLFormElement) {
-    if (!form.dataset.draft) return;
-    if (form.dataset.draft === "note" && !noteOpened && !get("note")) return;
-    let fields: Record<string, string | boolean> = {};
-    for (let element of form.querySelectorAll("[name]")) {
-      let node = element as
-        | HTMLInputElement
-        | HTMLTextAreaElement
-        | HTMLSelectElement;
-      if (!isDraftField(node.name)) continue;
-      if (
-        node instanceof HTMLInputElement &&
-        node.type === "radio" &&
-        !node.checked
-      )
-        continue;
-      fields[node.name] =
-        node instanceof HTMLInputElement && node.type === "checkbox"
-          ? node.checked
-          : node.value;
+    let key = form.dataset.draft;
+    if (!key) {
+      return;
     }
-    let active = document.activeElement;
-    let text = form.querySelector("textarea");
-    let previous;
-    try {
-      previous = JSON.parse(get(form.dataset.draft) ?? "null");
-    } catch {}
-    let focus = form.contains(active) ? (active as HTMLInputElement).name : "";
-    set(
-      form.dataset.draft,
-      JSON.stringify({
-        fields,
-        notes: new FormData(form).getAll("notes"),
-        focus: focus || previous?.focus || "",
-        start: text?.selectionStart ?? null,
-        end: text?.selectionEnd ?? null,
-      }),
-    );
+    // The note editor only keeps a draft once it has been opened.
+    if (key === "note" && !noteOpened && !get("note")) {
+      return;
+    }
+    drafts.save(form, key);
   }
   function restore(form: HTMLFormElement) {
-    try {
-      let saved = JSON.parse(get(form.dataset.draft!) ?? "null");
-      if (!saved) return;
-      if (form.dataset.draft === "note") noteOpened = true;
-      for (let element of form.querySelectorAll("[name]")) {
-        let node = element as
-          | HTMLInputElement
-          | HTMLTextAreaElement
-          | HTMLSelectElement;
-        // Drafts saved before command ids were excluded may still carry one.
-        if (!isDraftField(node.name)) continue;
-        let value = saved.fields[node.name];
-        if (value === undefined) continue;
-        if (node instanceof HTMLInputElement && node.type === "radio") {
-          node.checked = node.value === String(value);
-          continue;
-        }
-        if (node instanceof HTMLInputElement && node.type === "checkbox")
-          node.checked = !!value;
-        else node.value = String(value);
-      }
-      if (Array.isArray(saved.notes))
-        for (let element of root().querySelectorAll<HTMLInputElement>(
-          "input[form][name=notes]",
-        ))
-          if (element.form === form)
-            element.checked = saved.notes.includes(element.value);
-      if (saved.focus) {
-        let field = form.elements.namedItem(saved.focus);
-        if (
-          field instanceof HTMLElement &&
-          form.closest("dialog[open],details[open]")
-        ) {
-          field.focus();
-          if (field instanceof HTMLTextAreaElement && saved.start !== null)
-            field.setSelectionRange(saved.start, saved.end);
-        }
-      }
-      if (form.dataset.draft === "note") {
-        let categoryField = form.elements.namedItem("categoryId");
-        if (
-          categoryField instanceof HTMLSelectElement &&
-          !data.categories.some((c) => c.id === categoryField.value)
-        )
-          categoryField.value = category;
-        let field = form.elements.namedItem("text") as HTMLTextAreaElement;
-        let count = root().querySelector("[data-note-count]");
-        if (count)
-          count.textContent = translator().t("form.counter", {
-            count: field.value.length,
-            max: 500,
-          });
-      }
-    } catch {
-      /* Ignore malformed local data; server records are unaffected. */
+    let key = form.dataset.draft!;
+    let saved = drafts.restore(form, key, root());
+    if (!saved || key !== "note") {
+      return;
+    }
+    noteOpened = true;
+    let categoryField = form.elements.namedItem("categoryId");
+    if (
+      categoryField instanceof HTMLSelectElement &&
+      !data.categories.some((c) => c.id === categoryField.value)
+    ) {
+      categoryField.value = category;
+    }
+    let field = form.elements.namedItem("text") as HTMLTextAreaElement;
+    let count = root().querySelector("[data-note-count]");
+    if (count) {
+      count.textContent = translator().t("form.counter", {
+        count: field.value.length,
+        max: 500,
+      });
     }
   }
   function persist() {
     for (let f of root().querySelectorAll<HTMLFormElement>("form[data-draft]"))
       save(f);
-    set(
+    storage.set(
       "viewer",
       JSON.stringify({
         privateTopic,
@@ -456,9 +383,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         if (unchanged) {
           closeNote();
           noteOpened = false;
-          try {
-            sessionStorage.removeItem(prefix + "note");
-          } catch {}
+          storage.remove("note");
         }
       }
       status = translator().t("guided.saved");
