@@ -1,7 +1,7 @@
 import { CategorySetup } from "./category-setup.tsx";
 import { CommandForm, type CommandProps } from "./command-form.tsx";
 import { NoteCard, Evidence, ActionCard } from "./cards.tsx";
-import { clientEntry, on, type Handle, type RemixNode } from "remix/component";
+import { clientEntry, on, type Handle } from "remix/component";
 import { routes } from "../../../routes.ts";
 import { createTranslator } from "../../../i18n/translator.ts";
 import { numberLocaleFor } from "../../../i18n/locales.ts";
