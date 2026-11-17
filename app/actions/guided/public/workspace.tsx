@@ -18,6 +18,8 @@ import {
 } from "../../../models/guided/topics.ts";
 import { createSessionStore } from "../../../ui/session-store.ts";
 import { createDraftStore } from "../client/draft-store.ts";
+import { createNoteDrag } from "../client/note-drag.ts";
+import { expandForPrint, startPolling } from "../client/page-lifecycle.ts";
 import { formSignature } from "../client/form-signature.ts";
 import { laneLayout } from "../client/lanes.ts";
 import {
@@ -28,7 +30,6 @@ import {
 import { buildSummaryText } from "../client/summary-text.ts";
 import { formatDate } from "../../../i18n/format-date.ts";
 import { stages, reviewStage } from "../../../models/guided/stages.ts";
-const noteDragType = "application/x-taqyeem-note";
 
 type WorkspaceProps = {
   origin: string;
@@ -82,8 +83,6 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     error = "",
     pending = false;
   let needsJoin = false;
-  let draggedNote: { id: string; fromCategory: string } | null = null;
-  let dropCategory = "";
   const rootId = handle.id,
     prefix = `taqyeem:${data.board.id}:${data.memberId}:`;
   let submission = crypto.randomUUID(),
@@ -109,11 +108,13 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       !viewing().readOnly
     );
   }
-  function clearDrag() {
-    draggedNote = null;
-    dropCategory = "";
-    handle.update();
-  }
+  const drag = createNoteDrag({
+    boardId: () => data.board.id,
+    cards: () => data.cards,
+    canMove: () => canMoveNotes() && !pending,
+    root,
+    update: () => handle.update(),
+  });
   const storage = createSessionStore(prefix);
   const drafts = createDraftStore(storage);
   const get = storage.get;
@@ -236,13 +237,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     } catch {}
     for (let f of root().querySelectorAll<HTMLFormElement>("form[data-draft]"))
       restore(f);
-    const interval = setInterval(() => {
-      if (!pending && !needsJoin && document.visibilityState === "visible")
-        void refresh();
-    }, 2500);
-    window.addEventListener("online", () => void refresh(true), {
-      signal: handle.signal,
-    });
+    startPolling(
+      handle.signal,
+      (afterReconnect) => void refresh(afterReconnect),
+      () => !pending && !needsJoin && document.visibilityState === "visible",
+    );
     document.addEventListener(
       "submit",
       (event) => {
@@ -257,30 +256,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     window.addEventListener("beforeunload", persist, {
       signal: handle.signal,
     });
-    let printDetails: HTMLDetailsElement[] = [];
-    window.addEventListener(
-      "beforeprint",
-      () => {
-        printDetails = [
-          ...root().querySelectorAll<HTMLDetailsElement>(
-            "details.evidence:not([open]),details.summary-agreement:not([open])",
-          ),
-        ];
-        for (let detail of printDetails) detail.open = true;
-      },
-      { signal: handle.signal },
+    expandForPrint(
+      root,
+      "details.evidence,details.summary-agreement",
+      handle.signal,
     );
-    window.addEventListener(
-      "afterprint",
-      () => {
-        for (let detail of printDetails) detail.open = false;
-        printDetails = [];
-      },
-      { signal: handle.signal },
-    );
-    handle.signal.addEventListener("abort", () => clearInterval(interval), {
-      once: true,
-    });
     handle.update();
   });
   function openNote() {
@@ -518,7 +498,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         readOnly={readOnly}
         canMove={canMoveNotes()}
         pending={pending}
-        dragging={draggedNote?.id === card.id}
+        dragging={drag.draggedId() === card.id}
         card={card}
         select={select}
         rootId={rootId}
@@ -595,104 +575,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         }
         aria-busy={pending}
         mix={[
-          on("dragstart", (event) => {
-            const target = event.target;
-            const cardElement =
-              target instanceof Element
-                ? target.closest<HTMLElement>(".feedback-card[data-card-id]")
-                : null;
-            const card = data.cards.find(
-              (card) => card.id === cardElement?.dataset.cardId,
-            );
-            if (
-              !canMoveNotes() ||
-              pending ||
-              !card ||
-              !event.dataTransfer ||
-              (target instanceof Element &&
-                target.closest("a,button,input,select,textarea,summary"))
-            ) {
-              event.preventDefault();
-              return;
-            }
-            draggedNote = { id: card.id, fromCategory: card.categoryId };
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData(
-              noteDragType,
-              `${data.board.id}/${card.id}`,
-            );
-            handle.update();
-          }),
-          on("dragover", (event) => {
-            const lane =
-              event.target instanceof Element
-                ? event.target.closest<HTMLElement>(".lane[data-category-id]")
-                : null;
-            const target = lane?.dataset.categoryId ?? "";
-            const allowed =
-              canMoveNotes() &&
-              !pending &&
-              draggedNote &&
-              target &&
-              target !== draggedNote.fromCategory &&
-              event.dataTransfer?.types.includes(noteDragType);
-            if (allowed) {
-              event.preventDefault();
-              event.dataTransfer!.dropEffect = "move";
-            }
-            if (dropCategory !== (allowed ? target : "")) {
-              dropCategory = allowed ? target : "";
-              handle.update();
-            }
-          }),
-          on("dragleave", (event) => {
-            if (
-              event.currentTarget.contains(event.relatedTarget as Node | null)
-            )
-              return;
-            dropCategory = "";
-            handle.update();
-          }),
-          on("dragend", () => clearDrag()),
-          on("drop", (event) => {
-            const lane =
-              event.target instanceof Element
-                ? event.target.closest<HTMLElement>(".lane[data-category-id]")
-                : null;
-            const categoryId = lane?.dataset.categoryId;
-            const move = draggedNote;
-            if (
-              !canMoveNotes() ||
-              pending ||
-              !move ||
-              !categoryId ||
-              categoryId === move.fromCategory ||
-              event.dataTransfer?.getData(noteDragType) !==
-                `${data.board.id}/${move.id}`
-            ) {
-              clearDrag();
-              return;
-            }
-            event.preventDefault();
-            const form = root().querySelector<HTMLFormElement>(
-              `[data-move-card="${move.id}"] form`,
-            );
-            if (form) {
-              const select = form.elements.namedItem("categoryId");
-              const from = form.elements.namedItem("fromCategory");
-              if (
-                !(select instanceof HTMLSelectElement) ||
-                !(from instanceof HTMLInputElement)
-              ) {
-                clearDrag();
-                return;
-              }
-              select.value = categoryId;
-              from.value = move.fromCategory;
-              clearDrag();
-              form.requestSubmit();
-            } else clearDrag();
-          }),
+          on("dragstart", (event) => drag.handlers.dragStart(event)),
+          on("dragover", (event) => drag.handlers.dragOver(event)),
+          on("dragleave", (event) => drag.handlers.dragLeave(event)),
+          on("dragend", () => drag.handlers.dragEnd()),
+          on("drop", (event) => drag.handlers.drop(event)),
           on("submit", (event) => {
             let form = event.target;
             if (
@@ -998,7 +885,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                       class="lane"
                       data-category-id={cat.id}
                       data-drop-target={
-                        canMoveNotes() && dropCategory === cat.id
+                        canMoveNotes() && drag.dropCategory() === cat.id
                           ? "true"
                           : undefined
                       }
