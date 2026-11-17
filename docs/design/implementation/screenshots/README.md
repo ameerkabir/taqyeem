@@ -21,4 +21,6 @@ These are renders of the implementation running in the local Worker, captured on
 - `meeting-version-two-desktop.png`: a second dated closure with the latest working agreement and access to saved records.
 - `saved-version-one-native-phone-ar-dark.png`: an older immutable meeting record in Arabic/dark mode, without live progress or reopening controls.
 
+- `action-editor-desktop-arabic.png`: Actions capture fields stay aligned inside the editor even when the topic options contain 500-character feedback.
+
 The adjacent manifest records SHA-256 digests. Screenshots are inspection evidence, not proof of native-speaker, screen-reader or physical-device acceptance.
