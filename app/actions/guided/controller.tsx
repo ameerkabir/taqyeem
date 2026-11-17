@@ -10,10 +10,10 @@ import {
   createSession,
   commandSession,
   CommandError,
-  type Command,
   type SessionView,
 } from "../../models/guided/session.ts";
 import { resolveOwner } from "../../models/guided/owner.ts";
+import { checkCommandForm, readCommandForm } from "./command-form.ts";
 import { viewerPayload } from "./payload.ts";
 import { CommandRetryPage } from "./retry-page.tsx";
 
@@ -48,77 +48,10 @@ export const commandController = createAction(routes.sessionCommand, {
   middleware,
   async handler(context) {
     let form = await context.request.formData();
-    let command: Command = {
-      id: String(form.get("id") ?? ""),
-      revision: Number(form.get("revision")),
-      kind: String(form.get("kind") ?? ""),
-    };
-    for (let key of [
-      "choice",
-      "card",
-      "fromCategory",
-      "categoryId",
-      "topic",
-      "theme",
-      "title",
-      "text",
-      "owner",
-      "due",
-      "proposal",
-    ])
-      if (form.has(key)) command[key] = form.get(key);
-    if (form.has("labels"))
-      command.labels = String(form.get("labels"))
-        .split(/\r?\n/)
-        .map((label) => label.trim())
-        .filter(Boolean);
-    if (form.has("notes")) command.notes = form.getAll("notes");
-    if (form.has("ballot")) command.ballot = Number(form.get("ballot"));
-    if (form.has("version")) command.version = Number(form.get("version"));
-    if (form.has("value")) {
-      let v = form.get("value");
-      command.value =
-        v === "true"
-          ? true
-          : v === "false"
-            ? false
-            : command.kind === "budget"
-              ? Number(v)
-              : v;
-    }
+    let command = readCommandForm(form);
     let view: SessionView | null;
     try {
-      if (command.kind !== "convert") {
-        for (let key of [
-          "id",
-          "revision",
-          "kind",
-          "topic",
-          "theme",
-          "title",
-          "text",
-          "owner",
-          "ownerSearch",
-          "choice",
-          "card",
-          "fromCategory",
-          "categoryId",
-          "labels",
-          "due",
-          "proposal",
-          "ballot",
-          "version",
-          "value",
-        ]) {
-          if (form.getAll(key).length > 1)
-            throw new CommandError("invalid", 400);
-        }
-        if (
-          !form.has("revision") ||
-          !/^\d+$/.test(String(form.get("revision")))
-        )
-          throw new CommandError("invalid", 400);
-      }
+      checkCommandForm(form, command.kind);
       if (form.has("ownerSearch"))
         command.owner = await resolveOwner(
           context.models,
