@@ -9,27 +9,17 @@ import type { Locale } from "../../../i18n/locales.ts";
 import type { ViewerPayload } from "../payload.ts";
 import type { Card } from "../../../data/board.ts";
 import type {
-  Topic,
   Proposal,
   MeetingRecord,
 } from "../../../models/guided/session.ts";
+import {
+  topics as sourceTopics,
+  type Topic,
+} from "../../../models/guided/topics.ts";
+import { isDraftField } from "../draft-fields.ts";
 import { stages, reviewStage } from "../../../models/guided/stages.ts";
 const noteDragType = "application/x-taqyeem-note";
 
-function sourceTopics(data: ViewerPayload): Topic[] {
-  let grouped = new Set(data.state.themes.flatMap((t) => t.notes)),
-    order = new Map(data.cards.map((c, i) => [c.id, i]));
-  return [
-    ...data.state.themes,
-    ...data.cards
-      .filter((c) => !grouped.has(c.id))
-      .map((c) => ({ id: c.id, title: c.body, notes: [c.id] })),
-  ].sort(
-    (a, b) =>
-      Math.min(...a.notes.map((id) => order.get(id) ?? Infinity)) -
-      Math.min(...b.notes.map((id) => order.get(id) ?? Infinity)),
-  );
-}
 type WorkspaceProps = {
   origin: string;
   initial: ViewerPayload;
@@ -148,7 +138,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         | HTMLInputElement
         | HTMLTextAreaElement
         | HTMLSelectElement;
-      if (["revision", "kind", "ballot"].includes(node.name)) continue;
+      if (!isDraftField(node.name)) continue;
       if (
         node instanceof HTMLInputElement &&
         node.type === "radio" &&
@@ -188,6 +178,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
           | HTMLInputElement
           | HTMLTextAreaElement
           | HTMLSelectElement;
+        // Drafts saved before command ids were excluded may still carry one.
+        if (!isDraftField(node.name)) continue;
         let value = saved.fields[node.name];
         if (value === undefined) continue;
         if (node instanceof HTMLInputElement && node.type === "radio") {
@@ -404,6 +396,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     error = "";
     status = translator().t("guided.saving");
     handle.update();
+    let applied = false;
     try {
       let response = await fetch(form.action, {
         method: "post",
@@ -424,6 +417,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       if (form.classList.contains("command-form")) {
         let next: ViewerPayload = await response.json();
         if (next.revision >= data.revision) data = next;
+        // The response is the committed session, so no follow-up poll is needed.
+        applied = true;
         let kind = (form.elements.namedItem("kind") as HTMLInputElement).value;
         if (kind === "move-note") {
           category = String(body.get("categoryId"));
@@ -482,7 +477,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       if (error) status = "";
       if (!handle.signal.aborted) {
         handle.update();
-        await refresh();
+        if (!applied) await refresh();
       }
     }
   }

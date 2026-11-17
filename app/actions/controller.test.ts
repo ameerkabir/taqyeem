@@ -14,4 +14,14 @@ describe('root controller', () => {
     assert.match(response.headers.get('Content-Type') ?? '', /text\/html/)
     assert.match(await response.text(), /<html[\s>]/)
   })
+
+  it('translates the example action on the home page', async () => {
+    let router = createAppRouter({ db: await testDatabase(), sessionSecret: 'test-only-session-secret', config: { appEnv: 'test' }, waitUntil() {} })
+    let page = async (language: string) =>
+      (await router.fetch(new URL(routes.home.href(), 'http://localhost'), { headers: { 'Accept-Language': language } })).text()
+    let arabic = await page('ar')
+    assert.ok(arabic.includes('الاتفاق على قائمة واضحة للإصدار'))
+    assert.ok(!arabic.includes('Agree on a clear release checklist'))
+    assert.ok((await page('en')).includes('Agree on a clear release checklist'))
+  })
 })

@@ -8,7 +8,7 @@ import { createBoard } from "../boards/create.ts";
 import { createCard } from "../cards/card.ts";
 import { setCardVote } from "../cards/vote.ts";
 import { setBoardStatus } from "../boards/state.ts";
-import { readSession, initialState } from "./session.ts";
+import { createSession, initialState } from "./session.ts";
 it("additive migrations preserve populated/closed legacy boards, IDs, timestamps, anonymity, votes and reordered category identity", async () => {
   const db = createSqliteDatabase({ filename: ":memory:", foreignKeys: true });
   try {
@@ -72,7 +72,7 @@ it("additive migrations preserve populated/closed legacy boards, IDs, timestamps
         .rows![0].tone,
       3,
     );
-    let converted = (await readSession(db, board, true))!;
+    let converted = (await createSession(db, board, { legacy: true }))!.view;
     assert.equal(converted.state.stage, "summary");
     assert.equal(converted.state.closure, null);
     assert.deepEqual(converted.state.decisions, {});

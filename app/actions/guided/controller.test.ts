@@ -500,6 +500,12 @@ describe("guided route boundary", () => {
         .status,
       200,
     );
+    // The board is now guided; converting it again is a conflict, not a reset.
+    assert.equal(
+      (await f.request(f.path + "/commands", f.owner, { kind: "convert" }))
+        .status,
+      409,
+    );
     let view = await f.read();
     assert.equal(view.state.stage, "discuss");
     assert.equal(view.state.legacy, true);
@@ -695,6 +701,10 @@ describe("guided route boundary", () => {
         .map((_, i) => String(i))
         .join("\n"),
       "\u200b",
+      // Names that only differ by spacing or invisible characters read as one category.
+      "Went well\nWent  well",
+      "Ideas\nIdeas\u200b",
+      "Ideas\nＩｄｅａｓ",
     ]) {
       assert.equal(
         (await f.command("configure", { choice: "custom", labels })).status,
@@ -753,5 +763,37 @@ describe("guided route boundary", () => {
     let final = await f.read();
     assert.equal(final.state.categorySetup?.confirmed, true);
     assert.ok(final.categories.length === 2 || final.categories.length === 3);
+  });
+  it("answers a JSON command with the committed session, matching what a later poll returns", async () => {
+    let f = await setup(),
+      before = await f.read();
+    let response = await f.command("ready", { value: "true" });
+    assert.equal(response.status, 200);
+    let committed = (await response.json()) as ViewerPayload;
+    assert.equal(committed.revision, before.revision + 1);
+    let polled = await f.read();
+    assert.equal(polled.revision, committed.revision);
+    assert.deepEqual(polled.state, committed.state);
+    assert.deepEqual(polled.cards, committed.cards);
+  });
+  it("gives a failed native command a retry form carrying the board's current revision", async () => {
+    let f = await setup(),
+      current = await f.read();
+    let response = await f.request(
+      f.path + "/commands",
+      f.owner,
+      {
+        id: crypto.randomUUID(),
+        revision: String(current.revision + 50),
+        kind: "advance",
+      },
+      false,
+    );
+    assert.equal(response.status, 409);
+    let html = await response.text();
+    assert.ok(
+      html.includes(`name="revision" value="${current.revision}"`),
+      "retry form uses the stored revision, not the stale submitted one",
+    );
   });
 });

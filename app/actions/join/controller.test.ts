@@ -425,3 +425,34 @@ describe("returning to the requested category after joining", () => {
     assert.equal((await call(db, path)).headers.get("Location"), `${path}/join`);
   });
 });
+
+describe("join invitation", () => {
+  it("names the facilitator, counts members and labels a guided stage in the viewer's language", async () => {
+    let { invitationFor } = await import("./controller.tsx");
+    let { createTranslator } = await import("../../i18n/translator.ts");
+    let board = {
+      id: "b",
+      title: "T",
+      organiserMemberId: "m1",
+      status: "meeting" as const,
+      guidedStage: "vote",
+      votingOpen: false,
+      currentSectionId: null,
+    };
+    let members = [
+      { id: "m1", boardId: "b", displayName: "سارة" },
+      { id: "m2", boardId: "b", displayName: "Lee" },
+    ];
+    let en = createTranslator("en").t;
+    assert.deepEqual(invitationFor(board, members, en), {
+      facilitatorName: "سارة",
+      joinedCount: 2,
+      stage: en("guided.vote"),
+    });
+    let legacy = { ...board, guidedStage: undefined };
+    assert.equal(
+      invitationFor(legacy, members, en).stage,
+      en("board.status.meeting"),
+    );
+  });
+});

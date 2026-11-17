@@ -68,6 +68,7 @@ export function createFakeBoardModels(
     },
 
     getBoard: async (id) => store.boards.get(id) ?? null,
+    getGuidedStatus: async (boardId) => store.guided.get(boardId) ?? null,
     setVotingOpen: async (boardId, votingOpen) => {
       let board = store.boards.get(boardId);
       if (!board) return null;

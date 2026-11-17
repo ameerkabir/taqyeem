@@ -79,6 +79,12 @@ export function runBoardModelsContract(name: string, make: MakeModels) {
       assert.equal(await models.setBoardStatus(crypto.randomUUID(), "closed"), null);
     });
 
+    it("reports no guided session for a board that has not started one", async () => {
+      let { models, board } = await start(make);
+      assert.equal(await models.getGuidedStatus(board.id), null);
+      assert.equal(await models.getGuidedStatus(crypto.randomUUID()), null);
+    });
+
     it("opens and closes voting and moves through the stages", async () => {
       let { models, board } = await start(make);
       assert.equal((await models.setVotingOpen(board.id, true))?.votingOpen, true);

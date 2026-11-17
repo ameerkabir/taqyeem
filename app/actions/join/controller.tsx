@@ -3,6 +3,8 @@ import { redirect } from "remix/response/redirect";
 import { loadBoard } from "../../middleware/board.ts";
 import { boardNotFound } from "../board-not-found.tsx";
 import type { BoardModels } from "../../models/board-models.ts";
+import type { Board, Member } from "../../data/board.ts";
+import type { Translator } from "../../i18n/translator.ts";
 import { routes } from "../../routes.ts";
 import { boardMemberSessionKey } from "../../sessions.ts";
 import { JoinPage } from "./page.tsx";
@@ -19,21 +21,14 @@ export default createController(routes.joinBoard, {
     async index(context) {
       let board = context.board;
       let members = await context.models.listMembers(board.id);
-      let invitation = {
-        facilitatorName: members.find((m) => m.id === board.organiserMemberId)
-          ?.displayName,
-        joinedCount: members.length,
-        stage: board.guidedStage
-          ? context.i18n.t(`guided.${board.guidedStage}` as "guided.collect")
-          : context.i18n.t(`board.status.${board.status}`),
-      };
       let section = await validSection(
         context.models,
         board.id,
         context.url.searchParams.get("section"),
       );
-      if (await isMember(context.models, board.id))
+      if (await isMember(context.models, board.id, members))
         return toBoard(board.id, section);
+      let invitation = invitationFor(board, members, context.i18n.t);
       return context.render(
         <JoinPage
           {...invitation}
@@ -49,14 +44,6 @@ export default createController(routes.joinBoard, {
     async action(context) {
       let board = context.board;
       let members = await context.models.listMembers(board.id);
-      let invitation = {
-        facilitatorName: members.find((m) => m.id === board.organiserMemberId)
-          ?.displayName,
-        joinedCount: members.length,
-        stage: board.guidedStage
-          ? context.i18n.t(`guided.${board.guidedStage}` as "guided.collect")
-          : context.i18n.t(`board.status.${board.status}`),
-      };
       let data = await context.request.formData();
       let section = await validSection(
         context.models,
@@ -66,8 +53,9 @@ export default createController(routes.joinBoard, {
       let closed = board.status === "closed";
 
       // A repeated submit (double click, back button) must not create a second member.
-      if (await isMember(context.models, board.id))
+      if (await isMember(context.models, board.id, members))
         return toBoard(board.id, section);
+      let invitation = invitationFor(board, members, context.i18n.t);
 
       let parsed = parseJoinForm(data, context.i18n.t);
       if (!parsed.success) {
@@ -162,10 +150,29 @@ async function validSection(
     : undefined;
 }
 
-async function isMember(models: BoardModels, boardId: string) {
+/** What the join form says about the board: who runs it, how many joined, where it is. */
+export function invitationFor(
+  board: Board,
+  members: readonly Member[],
+  t: Translator["t"],
+) {
+  return {
+    facilitatorName: members.find((m) => m.id === board.organiserMemberId)
+      ?.displayName,
+    joinedCount: members.length,
+    stage: board.guidedStage
+      ? t(`guided.${board.guidedStage}` as "guided.collect")
+      : t(`board.status.${board.status}`),
+  };
+}
+
+async function isMember(
+  models: BoardModels,
+  boardId: string,
+  members: readonly Member[],
+) {
   let memberId = await models.getViewerMemberId(boardId);
   if (!memberId) return false;
-  let members = await models.listMembers(boardId);
   return members.some(
     (member) => member.id === memberId && member.boardId === boardId,
   );

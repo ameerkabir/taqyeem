@@ -7,6 +7,7 @@ import { CardPage } from "../ui/card-page.tsx";
 import { errorStyle } from "../ui/public/card-form-styles.ts";
 import { getI18n } from "../middleware/locale.ts";
 import type { Translator } from "../i18n/translator.ts";
+import { guidedContributionsClosed } from "../models/guided/policy.ts";
 
 // Each operation has its own whole-sentence keys; no translated verb is spliced into a sentence.
 export function cardManagementError(
@@ -26,7 +27,7 @@ export function cardManagementError(
       status: 403,
     };
   }
-  if (board.guidedStage && board.guidedStage !== "collect")
+  if (guidedContributionsClosed(board))
     return { message: t("guided.collectOnly"), status: 403 };
   if (board.status === "closed")
     return { message: t("access.boardClosed"), status: 403 };

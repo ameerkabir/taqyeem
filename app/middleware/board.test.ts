@@ -67,6 +67,32 @@ describe("board access middleware", () => {
     assert.equal(loads, 1);
   });
 
+  it("projects a guided session from the models onto the board, with its revision", async () => {
+    let router = await setup({
+      getBoard: async () => ({ ...board, status: "collecting", votingOpen: true }),
+      getGuidedStatus: async (id) => {
+        assert.equal(id, "demo");
+        return { stage: "vote", revision: 12, categorySetupRequired: false };
+      },
+    });
+    let response = await router.fetch("http://localhost/protected");
+    assert.equal(response.status, 200);
+    let data = (await response.json()) as { board: Record<string, unknown> };
+    assert.equal(data.board.guidedStage, "vote");
+    assert.equal(data.board.guidedRevision, 12);
+    assert.equal(data.board.status, "meeting");
+    assert.equal(data.board.votingOpen, false);
+  });
+
+  it("leaves a board without a guided session untouched", async () => {
+    let router = await setup();
+    let data = (await (await router.fetch("http://localhost/protected")).json()) as {
+      board: Record<string, unknown>;
+    };
+    assert.equal(data.board.guidedStage, undefined);
+    assert.equal(data.board.guidedRevision, undefined);
+  });
+
   it("uses the configured board for identity and membership lookups", async () => {
     let router = await setup(
       {

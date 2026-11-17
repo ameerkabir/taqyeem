@@ -7,6 +7,8 @@ import { createCard } from "../cards/card.ts";
 import { joinBoard } from "../boards/join.ts";
 import {
   readSession,
+  createSession,
+  readGuidedStatus,
   applyCommand,
   commandSession,
   topics,
@@ -30,7 +32,7 @@ async function fixture(count = 6) {
   let joined = await joinBoard(db, id, "Participant");
   assert.ok(joined?.ok);
   let participant = joined.member.id;
-  await readSession(db, id);
+  await createSession(db, id);
   for (let i = 0; i < count; i++)
     await createCard(
       db,
@@ -903,5 +905,89 @@ describe("guided session authority and atomic invariants", () => {
     );
     await f.command("ready", { value: true }, f.participant);
     assert.equal((await f.read()).state.recent![f.participant].length, 1);
+  });
+});
+
+describe("guided session storage", () => {
+  async function board() {
+    let db = await testDatabase(),
+      created = await createBoard(db, {
+        title: "Storage",
+        organiserDisplayName: "Facilitator",
+        categoryLabels: ["A", "B"],
+      });
+    const rows = async () =>
+      Number(
+        (
+          await db.exec(
+            sql`SELECT count(*) AS n FROM guided_sessions WHERE board_id=${created.board.id}`,
+          )
+        ).rows![0].n,
+      );
+    return { db, id: created.board.id, rows };
+  }
+
+  it("reads without writing: a board with no guided session stays a legacy board", async () => {
+    let { db, id, rows } = await board();
+    assert.equal(await readSession(db, id), null);
+    assert.equal(await readGuidedStatus(db, id), null);
+    assert.equal(await rows(), 0);
+    assert.equal(await readSession(db, crypto.randomUUID()), null);
+  });
+
+  it("creates a session once and reports a repeated create without overwriting it", async () => {
+    let { db, id, rows } = await board();
+    let first = await createSession(db, id, { requireCategorySetup: true });
+    assert.equal(first?.created, true);
+    assert.equal(first?.view.state.categorySetup?.confirmed, false);
+    let configured = await commandSession(db, id, first!.view.board.organiserMemberId, {
+      id: crypto.randomUUID(),
+      revision: first!.view.revision,
+      kind: "configure",
+      choice: "classic",
+    });
+    let again = await createSession(db, id, { legacy: true });
+    assert.equal(again?.created, false);
+    assert.equal(again?.view.revision, configured!.revision);
+    assert.equal(again?.view.state.legacy, false);
+    assert.equal(again?.view.state.categorySetup?.confirmed, true);
+    assert.equal(await rows(), 1);
+    assert.equal(await createSession(db, crypto.randomUUID()), null);
+  });
+
+  it("reports stage, revision and pending category setup in one light read", async () => {
+    let { db, id } = await board();
+    let { view } = (await createSession(db, id, { requireCategorySetup: true }))!;
+    assert.deepEqual(await readGuidedStatus(db, id), {
+      stage: "collect",
+      revision: view.revision,
+      categorySetupRequired: true,
+    });
+    let next = await commandSession(db, id, view.board.organiserMemberId, {
+      id: crypto.randomUUID(),
+      revision: view.revision,
+      kind: "configure",
+      choice: "classic",
+    });
+    assert.deepEqual(await readGuidedStatus(db, id), {
+      stage: "collect",
+      revision: next!.revision,
+      categorySetupRequired: false,
+    });
+  });
+
+  it("returns the committed view from a command so callers need not read it again", async () => {
+    let { db, id } = await board();
+    let { view } = (await createSession(db, id))!;
+    let result = await commandSession(db, id, view.board.organiserMemberId, {
+      id: crypto.randomUUID(),
+      revision: view.revision,
+      kind: "ready",
+      value: true,
+    });
+    let reread = (await readSession(db, id))!;
+    assert.equal(result!.revision, reread.revision);
+    assert.deepEqual(result!.state.ready, reread.state.ready);
+    assert.deepEqual(result!.cards, reread.cards);
   });
 });

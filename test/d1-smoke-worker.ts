@@ -1,6 +1,6 @@
 import {createBoard} from "../app/models/boards/create.ts";
 import {createCard} from "../app/models/cards/card.ts";
-import {readSession,commandSession,topics,CommandError,readMeetingRecord} from "../app/models/guided/session.ts";
+import {readSession,createSession as createGuidedSession,commandSession,topics,CommandError,readMeetingRecord} from "../app/models/guided/session.ts";
 import {createDatabaseSessionStorage} from "../app/session-storage.ts";
 import {createSession} from "remix/session";
 // Test-only Worker. Never mapped into the application or deployed.
@@ -126,7 +126,7 @@ export default {
       });
       let id = created.board.id,
         actor = created.organiser.id;
-      await readSession(db, id, false, true);
+      await createGuidedSession(db, id, { requireCategorySetup: true });
       let beforeSetup = (await readSession(db, id))!;
       let blocked = false;
       try {

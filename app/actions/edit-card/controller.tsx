@@ -8,6 +8,7 @@ import { requireBoardMember } from "../../middleware/board-member.ts";
 import { cardAccessError, cardManagementError } from "../card-access.tsx";
 import { EditCardPage } from "./page.tsx";
 import { parseEditCardForm, readEditValues } from "./schema.ts";
+import { canChangeCardCategory } from "../../models/guided/policy.ts";
 
 export default createController(routes.editCard, {
   middleware: [
@@ -41,7 +42,7 @@ export default createController(routes.editCard, {
           card={card}
           categories={categories}
           canMoveCategory={
-            !board.guidedStage || member.id === board.organiserMemberId
+            canChangeCardCategory(board, member.id)
           }
         />,
       );
@@ -78,7 +79,7 @@ export default createController(routes.editCard, {
             card={card}
             categories={categories}
             canMoveCategory={
-              !board.guidedStage || member.id === board.organiserMemberId
+              canChangeCardCategory(board, member.id)
             }
             values={readEditValues(data)}
             error={message}
@@ -101,7 +102,7 @@ export default createController(routes.editCard, {
         );
       let updated;
       const preserveCategory =
-        !!board.guidedStage && member.id !== board.organiserMemberId;
+        !canChangeCardCategory(board, member.id);
       if (preserveCategory && categoryId !== card.categoryId)
         return formError(context.i18n.t("collect.moveRestricted"), 403, data);
       try {

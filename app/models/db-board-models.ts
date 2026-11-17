@@ -13,6 +13,7 @@ import {
 import { createBoard } from "./boards/create.ts";
 import { joinBoard } from "./boards/join.ts";
 import { listViewerVotes, setCardVote } from "./cards/vote.ts";
+import { readGuidedStatus } from "./guided/session.ts";
 
 /**
  * The BoardModels the controllers use, backed by a Database. Each method delegates to the
@@ -40,6 +41,7 @@ export function createDbBoardModels(
     },
 
     getBoard: (id) => loadBoard(db, id),
+    getGuidedStatus: (boardId) => readGuidedStatus(db, boardId),
     setVotingOpen: (boardId, votingOpen) => setVotingOpen(db, boardId, votingOpen),
     setBoardStatus: (boardId, status) => setBoardStatus(db, boardId, status),
 

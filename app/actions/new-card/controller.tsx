@@ -10,6 +10,7 @@ import { NewCardPage } from "./page.tsx";
 import { parseNewCardForm } from "./schema.ts";
 import { newCardError } from "./error-response.tsx";
 import { getI18n } from "../../middleware/locale.ts";
+import { guidedContributionsClosed } from "../../models/guided/policy.ts";
 
 export default createController(routes.newCard, {
   middleware: [
@@ -110,7 +111,7 @@ function requireCreationAllowed(): Middleware {
     if (!board) throw new Error("Creation policy requires loadBoard");
     if (board.categorySetupRequired)
       return newCardError(context, getI18n(context).t("setup.required"), 403);
-    if (board.guidedStage && board.guidedStage !== "collect")
+    if (guidedContributionsClosed(board))
       return newCardError(
         context,
         getI18n(context).t("guided.collectOnly"),

@@ -1,7 +1,7 @@
 import { createAction } from "remix/router";
 import { redirect } from "remix/response/redirect";
 import { routes } from "../../routes.ts";
-import { loadBoard } from "../../middleware/board.ts";
+import { loadBoard, requireLegacyBoard } from "../../middleware/board.ts";
 import { requireBoardMember } from "../../middleware/board-member.ts";
 import { cardAccessError } from "../card-access.tsx";
 
@@ -9,15 +9,10 @@ export default createAction(routes.vote, {
   middleware: [
     loadBoard({ onError: cardAccessError }),
     requireBoardMember({ onError: cardAccessError }),
+    requireLegacyBoard({ onError: cardAccessError }),
   ],
 
   async handler(context) {
-    if (context.board.guidedStage)
-      return cardAccessError(
-        context,
-        context.i18n.t("guided.commandRequired"),
-        409,
-      );
     let { board, member } = context;
     if (board.status === "closed") {
       return cardAccessError(

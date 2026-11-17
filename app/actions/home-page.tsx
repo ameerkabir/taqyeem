@@ -38,7 +38,7 @@ export function HomePage(handle: Handle<{ i18n: I18n }>) {
               ))}
             </div>
             <article class="action-card">
-              <p>Agree on a clear release checklist</p>
+              <p dir="auto">{t("guided.exampleAction")}</p>
               <span class="metadata">{t("guided.agreed")}</span>
             </article>
           </section>

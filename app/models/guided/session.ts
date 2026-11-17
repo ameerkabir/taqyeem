@@ -4,18 +4,10 @@ import { loadBoard, loadCategories, loadMembers } from "../boards/load.ts";
 import { listCards } from "../cards/card.ts";
 
 import { stages, type Stage } from "./stages.ts";
+import { topics, type Theme, type Topic } from "./topics.ts";
 export { stages, type Stage } from "./stages.ts";
+export { topics, type Theme, type Topic } from "./topics.ts";
 export type Disposition = "suggested" | "agreed" | "deferred" | "declined";
-export interface Theme {
-  id: string;
-  title: string;
-  notes: string[];
-}
-export interface Topic {
-  id: string;
-  title: string;
-  notes: string[];
-}
 export interface Proposal {
   id: string;
   text: string;
@@ -119,32 +111,60 @@ export function initialState(board: Board): SharedSession {
     legacy: board.status !== "collecting",
   };
 }
-export async function hasGuidedSession(db: Database, boardId: string) {
-  return Boolean(
-    (
-      await db.exec(
-        sql`SELECT board_id FROM guided_sessions WHERE board_id=${boardId}`,
-      )
-    ).rows?.length,
-  );
+export interface GuidedStatus {
+  stage: Stage;
+  revision: number;
+  categorySetupRequired: boolean;
 }
+/** The guided facts every board request needs, in one read; null for legacy boards. */
+export async function readGuidedStatus(
+  db: Database,
+  boardId: string,
+): Promise<GuidedStatus | null> {
+  let row = (
+    await db.exec(
+      sql`SELECT revision,json_extract(data,'$.categorySetup.confirmed') AS configured,json_extract(data,'$.stage') AS stage FROM guided_sessions WHERE board_id=${boardId}`,
+    )
+  ).rows?.[0];
+  return row
+    ? {
+        stage: String(row.stage) as Stage,
+        revision: Number(row.revision),
+        categorySetupRequired: row.configured === 0,
+      }
+    : null;
+}
+/**
+ * Starts a guided session for a board. `created` is false when one already existed
+ * (a competing create or a retried conversion), so callers can report the conflict.
+ */
+export async function createSession(
+  db: Database,
+  boardId: string,
+  { legacy = false, requireCategorySetup = false } = {},
+): Promise<{ created: boolean; view: SessionView } | null> {
+  let board = await loadBoard(db, boardId);
+  if (!board) return null;
+  let result = await db.exec(
+    sql`INSERT OR IGNORE INTO guided_sessions(board_id,data) VALUES (${boardId},${JSON.stringify({ ...initialState(board), legacy: legacy || board.status !== "collecting", ...(requireCategorySetup ? { categorySetup: { confirmed: false, categories: [] } } : {}) })})`,
+  );
+  let view = await readSession(db, boardId);
+  return view ? { created: result.affectedRows === 1, view } : null;
+}
+/** Read-only: null when the board does not exist or has no guided session. */
 export async function readSession(
   db: Database,
   boardId: string,
-  legacy = false,
-  requireCategorySetup = false,
 ): Promise<SessionView | null> {
   let board = await loadBoard(db, boardId);
   if (!board) return null;
-  await db.exec(
-    sql`INSERT OR IGNORE INTO guided_sessions(board_id,data) VALUES (${boardId},${JSON.stringify({ ...initialState(board), legacy: legacy || board.status !== "collecting", ...(requireCategorySetup ? { categorySetup: { confirmed: false, categories: [] } } : {}) })})`,
-  );
   // Read revision first: any evidence mutation during subsequent reads makes command CAS fail.
   let row = (
     await db.exec(
       sql`SELECT revision,data FROM guided_sessions WHERE board_id=${boardId}`,
     )
-  ).rows![0];
+  ).rows?.[0];
+  if (!row) return null;
   let [cards, categories, members, records] = await Promise.all([
     listCards(db, boardId),
     loadCategories(db, boardId),
@@ -184,21 +204,6 @@ export async function readMeetingRecord(
         closure: JSON.parse(String(row.snapshot)),
       }
     : null;
-}
-export function topics(view: Pick<SessionView, "cards" | "state">): Topic[] {
-  let grouped = new Set(view.state.themes.flatMap((t) => t.notes));
-  // Source order, not theme name, locale, vote time or display shelf, breaks ties.
-  let rank = new Map(view.cards.map((c, i) => [c.id, i]));
-  return [
-    ...view.state.themes.map((t) => ({ ...t })),
-    ...view.cards
-      .filter((c) => !grouped.has(c.id))
-      .map((c) => ({ id: c.id, title: c.body, notes: [c.id] })),
-  ].sort(
-    (a, b) =>
-      Math.min(...a.notes.map((id) => rank.get(id) ?? Infinity)) -
-      Math.min(...b.notes.map((id) => rank.get(id) ?? Infinity)),
-  );
 }
 export function rankedTopics(view: SessionView): Topic[] {
   let counts = tally(view.state);
@@ -365,7 +370,7 @@ export function applyCommand(
       );
       requireThat(
         new Set(
-          clean.map((label) => label.normalize("NFKC").toLocaleLowerCase()),
+          clean.map(themeNameKey),
         ).size === clean.length,
         "invalid",
         400,
