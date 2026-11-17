@@ -166,6 +166,31 @@ export default {
           ...fields,
         });
       }
+      const moveView = (await readSession(db, id))!;
+      const moveNote = moveView.cards[0];
+      const moveCommand = {
+        id: crypto.randomUUID(),
+        revision: moveView.revision,
+        kind: "move-note",
+        card: moveNote.id,
+        fromCategory: moveNote.categoryId,
+        categoryId: configured.categories[3].id,
+      };
+      const moved = await commandSession(db, id, actor, moveCommand);
+      check(
+        moved.cards[0].categoryId === moveCommand.categoryId,
+        "D1 atomically moves the note category",
+      );
+      check(
+        moved.cards[0].body === moveNote.body &&
+          moved.cards[0].memberId === moveNote.memberId,
+        "D1 preserves note evidence and authorship",
+      );
+      check(
+        (await commandSession(db, id, actor, moveCommand)).revision ===
+          moved.revision,
+        "D1 category move retry is idempotent",
+      );
       await command("advance");
       let source = (await readSession(db, id))!.cards;
       let grouped = await command("theme", {title: "Delivery", notes: [source[0].id]});

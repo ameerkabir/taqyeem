@@ -58,7 +58,13 @@ export interface SharedSession {
   decisions: Record<string, string>;
   proposals: Proposal[];
   receipts: Record<string, string>;
-  receipt?: { id: string; member: string; fingerprint: string; kind?: string };
+  receipt?: {
+    id: string;
+    member: string;
+    fingerprint: string;
+    kind?: string;
+    move?: { card: string; fromCategory: string; categoryId: string };
+  };
   closure: Closure | null;
   closureVersion?: number;
   legacy: boolean;
@@ -295,6 +301,19 @@ export function applyCommand(
     state.categorySetup?.confirmed !== false || command.kind === "configure",
   );
   switch (command.kind) {
+    case "move-note": {
+      shared();
+      requireThat(state.stage === "collect", "forbidden", 403);
+      const card = cards.find((card) => card.id === command.card);
+      requireThat(!!card, "invalid", 400);
+      requireThat(card.categoryId === command.fromCategory, "conflict");
+      requireThat(
+        view.categories.some((category) => category.id === command.categoryId),
+        "invalid",
+        400,
+      );
+      break;
+    }
     case "reopen": {
       shared();
       requireThat(state.stage === "summary" && state.closure !== null);
@@ -633,9 +652,19 @@ export async function commandSession(
     member: memberId,
     fingerprint,
     kind: command.kind,
+    ...(command.kind === "move-note"
+      ? {
+          move: {
+            card: String(command.card),
+            fromCategory: String(command.fromCategory),
+            categoryId: String(command.categoryId),
+          },
+        }
+      : {}),
   };
   let requiresFacilitator = [
     "configure",
+    "move-note",
     "reopen",
     "advance",
     "budget",
@@ -658,6 +687,7 @@ export async function commandSession(
   }
   if (
     command.kind === "configure" ||
+    command.kind === "move-note" ||
     command.kind === "reopen" ||
     state.stage === "summary"
   )

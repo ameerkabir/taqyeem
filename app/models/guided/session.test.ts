@@ -71,6 +71,206 @@ async function fixture(count = 6) {
   return { db, id, owner, participant, read, command, reject };
 }
 describe("guided session authority and atomic invariants", () => {
+  it("lets the organiser move another member's anonymous note with an atomic receipt, preserving every other stored field", async () => {
+    const f = await fixture(1),
+      initial = await f.read();
+    const created = await createCard(
+      f.db,
+      {
+        id: crypto.randomUUID(),
+        boardId: f.id,
+        memberId: f.participant,
+        categoryId: initial.categories[0].id,
+        body: "Anonymous participant evidence",
+        isAnonymous: true,
+      },
+      crypto.randomUUID(),
+    );
+    assert.ok(created.ok);
+    const before = (
+      await f.db.exec("SELECT * FROM cards WHERE id=?", [created.card.id])
+    ).rows![0];
+    const view = await f.read();
+    const command = {
+      id: crypto.randomUUID(),
+      revision: view.revision,
+      kind: "move-note",
+      card: created.card.id,
+      fromCategory: created.card.categoryId,
+      categoryId: view.categories[2].id,
+    };
+    const moved = await commandSession(f.db, f.id, f.owner, command);
+    assert.equal(moved.revision, (await f.read()).revision);
+    assert.deepEqual(
+      (await f.db.exec("SELECT * FROM cards WHERE id=?", [created.card.id]))
+        .rows![0],
+      {
+        ...before,
+        category_id: command.categoryId,
+      },
+    );
+    assert.equal(moved.cards.length, 2);
+    assert.deepEqual(moved.categories, view.categories);
+    assert.equal(
+      viewerPayload(moved, f.owner).cards.find((c) => c.id === command.card)!
+        .memberId,
+      "",
+    );
+    assert.equal(
+      (
+        await f.db.exec(
+          "SELECT count(*) AS n FROM guided_command_receipts WHERE command_id=?",
+          [command.id],
+        )
+      ).rows![0].n,
+      1,
+    );
+    await f.command("move-note", {
+      card: command.card,
+      fromCategory: command.categoryId,
+      categoryId: command.fromCategory,
+    });
+    const changedAgain = await f.read();
+    await commandSession(f.db, f.id, f.owner, command);
+    assert.deepEqual(await f.read(), changedAgain);
+    await f.reject(
+      () =>
+        commandSession(f.db, f.id, f.owner, {
+          ...command,
+          categoryId: view.categories[1].id,
+        }),
+      "invalid",
+    );
+  });
+  it("rejects participant, foreign-board, stale-source and post-Collect moves, including raw forged move receipts", async () => {
+    const f = await fixture(1),
+      v = await f.read(),
+      card = v.cards[0];
+    const fields = {
+      card: card.id,
+      fromCategory: card.categoryId,
+      categoryId: v.categories[1].id,
+    };
+    await f.reject(
+      () => f.command("move-note", fields, f.participant),
+      "forbidden",
+    );
+    const other = await fixture(1),
+      foreign = await other.read();
+    await f.reject(
+      () =>
+        f.command("move-note", {
+          ...fields,
+          categoryId: foreign.categories[0].id,
+        }),
+      "invalid",
+    );
+    await f.reject(
+      () => f.command("move-note", { ...fields, card: foreign.cards[0].id }),
+      "invalid",
+    );
+    await f.reject(
+      () =>
+        f.command("move-note", { ...fields, fromCategory: v.categories[2].id }),
+      "conflict",
+    );
+    let blocked = false;
+    try {
+      await f.db.exec(
+        "UPDATE guided_sessions SET data=?, revision=revision+1 WHERE board_id=?",
+        [
+          JSON.stringify({
+            ...v.state,
+            receipt: {
+              id: crypto.randomUUID(),
+              member: f.participant,
+              fingerprint: "forged",
+              kind: "move-note",
+              move: fields,
+            },
+          }),
+          f.id,
+        ],
+      );
+    } catch {
+      blocked = true;
+    }
+    assert.ok(blocked);
+    assert.deepEqual(await f.read(), v);
+    await f.command("advance");
+    await f.reject(() => f.command("move-note", fields), "forbidden");
+    assert.equal((await f.read()).cards[0].categoryId, card.categoryId);
+  });
+  it("serializes category moves against other moves and progression, and rolls back receipts and revision when a card update fails", async () => {
+    const f = await fixture(1),
+      initial = await f.read(),
+      card = initial.cards[0];
+    const command = {
+      id: crypto.randomUUID(),
+      revision: initial.revision,
+      kind: "move-note",
+      card: card.id,
+      fromCategory: card.categoryId,
+      categoryId: initial.categories[1].id,
+    };
+    await f.db.exec(
+      "CREATE TRIGGER fail_note_move BEFORE UPDATE OF category_id ON cards BEGIN SELECT RAISE(ABORT,'test_move_failure'); END",
+    );
+    let failed = false;
+    try {
+      await commandSession(f.db, f.id, f.owner, command);
+    } catch {
+      failed = true;
+    }
+    assert.ok(failed);
+    assert.deepEqual(await f.read(), initial);
+    assert.equal(
+      (
+        await f.db.exec(
+          "SELECT count(*) AS n FROM guided_command_receipts WHERE command_id=?",
+          [command.id],
+        )
+      ).rows![0].n,
+      0,
+    );
+    await f.db.exec("DROP TRIGGER fail_note_move");
+    const races = await Promise.allSettled([
+      commandSession(f.db, f.id, f.owner, command),
+      commandSession(f.db, f.id, f.owner, {
+        ...command,
+        id: crypto.randomUUID(),
+        categoryId: initial.categories[2].id,
+      }),
+    ]);
+    assert.equal(races.filter((r) => r.status === "fulfilled").length, 1);
+    for (const result of races)
+      if (result.status === "rejected") {
+        assert.ok(result.reason instanceof CommandError);
+        assert.equal(result.reason.code, "conflict");
+      }
+    const now = await f.read();
+    const moveOrAdvance = await Promise.allSettled([
+      commandSession(f.db, f.id, f.owner, {
+        ...command,
+        id: crypto.randomUUID(),
+        revision: now.revision,
+        fromCategory: now.cards[0].categoryId,
+        categoryId: initial.categories[3].id,
+      }),
+      commandSession(f.db, f.id, f.owner, {
+        id: crypto.randomUUID(),
+        revision: now.revision,
+        kind: "advance",
+      }),
+    ]);
+    assert.equal(
+      moveOrAdvance.filter((r) => r.status === "fulfilled").length,
+      1,
+    );
+    const end = await f.read();
+    if (end.state.stage === "group") assert.deepEqual(end.cards, now.cards);
+    else assert.equal(end.cards[0].categoryId, initial.categories[3].id);
+  });
   async function closedFixture() {
     const f = await fixture(2);
     await f.command("advance");

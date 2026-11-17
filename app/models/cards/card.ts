@@ -138,12 +138,13 @@ export async function updateCard(
   boardId: string,
   cardId: string,
   changes: Pick<Card, "body" | "categoryId" | "isAnonymous">,
+  preserveCategory = false,
 ): Promise<Card | null> {
   let result = await db.updateMany(
     cards,
     {
       body: changes.body.trim(),
-      category_id: changes.categoryId,
+      ...(preserveCategory ? {} : { category_id: changes.categoryId }),
       is_anonymous: changes.isAnonymous ? 1 : 0,
     },
     { where: { board_id: boardId, id: cardId } },

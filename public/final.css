@@ -2237,3 +2237,51 @@
     }
   }
 }
+
+/* Category moves retain the original card and use the destination's tone. */
+@layer app {
+  .feedback-card[draggable="true"] {
+    cursor: grab;
+  }
+  .feedback-card[data-dragging="true"] {
+    opacity: 0.55;
+    cursor: grabbing;
+  }
+  .lane[data-drop-target="true"] {
+    outline: 2px dashed var(--color-text);
+    outline-offset: 5px;
+    border-radius: 12px;
+  }
+  .note-move-hint {
+    color: var(--color-text-muted);
+    font-size: 12px;
+    margin-block: 0 20px;
+  }
+  .note-move {
+    margin-top: 12px;
+  }
+  .note-move > summary {
+    font-size: 12px;
+    padding-block: 6px;
+  }
+  .note-move select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .note-move label,
+  .note-move button,
+  .note-move select {
+    font-size: 12px;
+  }
+  .note-move button,
+  .note-move select {
+    min-height: 44px;
+  }
+  @media print {
+    .note-move,
+    .note-move-hint {
+      display: none !important;
+    }
+  }
+}

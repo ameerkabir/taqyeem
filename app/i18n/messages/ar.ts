@@ -340,6 +340,10 @@ export const ar = {
   "setup.waiting": "الميسّر يختار فئات الجلسة.",
   "setup.waitingHint": "يمكنك البدء بالكتابة فور تجهيز اللوحة.",
   "collect.intro": "مساحة لكل وجهة نظر. أضف فكرة واحدة في كل ملاحظة.",
+  "collect.moveNote": "نقل الملاحظة",
+  "collect.moveTo": "نقل إلى فئة",
+  "collect.moveHint": "اسحب الملاحظات إلى فئة أخرى، أو استخدم نقل الملاحظة.",
+  "collect.moveRestricted": "الميسّر وحده يستطيع نقل الملاحظة المنشورة إلى فئة أخرى.",
   "collect.emptyHint": "استخدم «إضافة ملاحظة» لمشاركة فكرتك الأولى.",
   "collect.total": {
     zero: "عدد الملاحظات: {count}",

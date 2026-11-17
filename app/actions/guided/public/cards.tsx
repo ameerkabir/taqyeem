@@ -15,6 +15,9 @@ export function NoteCard(
     rootId?: string;
     onCapture?: (card: Card) => void;
     readOnly?: boolean;
+    canMove?: boolean;
+    pending?: boolean;
+    dragging?: boolean;
   }>,
 ) {
   return () => {
@@ -25,6 +28,9 @@ export function NoteCard(
       <article
         key={card.id}
         class="feedback-card"
+        data-card-id={card.id}
+        draggable={!!handle.props.canMove && !handle.props.pending}
+        data-dragging={handle.props.dragging ? "true" : undefined}
         data-tone={
           data.categories.find((c) => c.id === card.categoryId)?.tone ?? 0
         }
@@ -84,6 +90,38 @@ export function NoteCard(
               </a>
             </nav>
           )}
+        {handle.props.canMove && (
+          <details class="note-move" data-move-card={card.id}>
+            <summary>{t("collect.moveNote")}</summary>
+            <CommandForm
+              data={data}
+              kind="move-note"
+              fields={{ card: card.id, fromCategory: card.categoryId }}
+            >
+              <label>
+                {t("collect.moveTo")}
+                <select
+                  name="categoryId"
+                  required
+                  disabled={handle.props.pending}
+                >
+                  {data.categories.map((category) => (
+                    <option
+                      key={category.id}
+                      value={category.id}
+                      selected={category.id === card.categoryId}
+                    >
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button disabled={handle.props.pending}>
+                {t("collect.moveNote")}
+              </button>
+            </CommandForm>
+          </details>
+        )}
         {!handle.props.readOnly &&
           ["discuss", "actions"].includes(state.stage) && (
             <a

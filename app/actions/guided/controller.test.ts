@@ -75,6 +75,118 @@ async function setup(autoConfigure = true) {
   return { db, path, owner, participant, request, read, command };
 }
 describe("guided route boundary", () => {
+  it("prevents participants bypassing move permissions through Edit while preserving their text/anonymity edits", async () => {
+    const f = await setup(),
+      initial = await f.read();
+    await f.request(f.path + "/new", f.participant, {
+      submissionId: crypto.randomUUID(),
+      text: "Participant note",
+      categoryId: initial.categories[0].id,
+      isAnonymous: "true",
+    });
+    const card = (await f.read(f.participant)).cards[0],
+      edit = f.path + "/cards/" + card.id + "/edit";
+    let html = await (
+      await f.request(edit, f.participant, undefined, false)
+    ).text();
+    assert.ok(
+      html.includes('name="categoryId" value="' + card.categoryId + '"'),
+    );
+    assert.ok(!html.includes('type="radio"'));
+    assert.equal(
+      (
+        await f.request(edit, f.participant, {
+          text: "Forged move",
+          categoryId: initial.categories[1].id,
+          isAnonymous: "true",
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (await f.read(f.participant)).cards[0].body,
+      "Participant note",
+    );
+    assert.equal(
+      (
+        await f.request(edit, f.participant, {
+          text: "Edited original note",
+          categoryId: card.categoryId,
+          isAnonymous: "false",
+        })
+      ).status,
+      303,
+    );
+    const saved = (await f.read(f.participant)).cards[0];
+    assert.equal(saved.categoryId, card.categoryId);
+    assert.equal(saved.body, "Edited original note");
+    assert.equal(saved.isAnonymous, false);
+  });
+  it("moves another member's note only as organiser, with native recovery, private payloads and no post-Collect controls", async () => {
+    const f = await setup(),
+      initial = await f.read();
+    await f.request(f.path + "/new", f.participant, {
+      submissionId: crypto.randomUUID(),
+      text: "Participant anonymous note",
+      categoryId: initial.categories[0].id,
+      isAnonymous: "true",
+    });
+    const view = await f.read(),
+      note = view.cards[0];
+    const fields = {
+      card: note.id,
+      fromCategory: note.categoryId,
+      categoryId: view.categories[1].id,
+    };
+    assert.equal(
+      (await f.command("move-note", fields, f.participant)).status,
+      403,
+    );
+    let html = await (
+      await f.request(f.path, f.participant, undefined, false)
+    ).text();
+    assert.ok(!html.includes('class="note-move"'));
+    html = await (await f.request(f.path, f.owner, undefined, false)).text();
+    assert.ok(html.includes('class="note-move"'));
+    assert.ok(html.includes('draggable="true"'));
+    const invalid = await f.command(
+      "move-note",
+      { ...fields, categoryId: "invalid" },
+      f.owner,
+      true,
+    );
+    assert.equal(invalid.status, 400);
+    html = await invalid.text();
+    assert.ok(html.includes('name="categoryId" value="invalid"'));
+    const native = await f.command("move-note", fields, f.owner, true);
+    assert.equal(native.status, 303);
+    assert.equal(
+      native.headers.get("Location"),
+      f.path + "?category=" + fields.categoryId,
+    );
+    const moved = await f.read();
+    assert.equal(moved.cards[0].categoryId, fields.categoryId);
+    assert.equal(moved.cards[0].memberId, "");
+    assert.equal(moved.cards[0].body, note.body);
+    assert.equal(moved.cards[0].isAnonymous, true);
+    assert.equal((await f.command("move-note", fields)).status, 409);
+    await f.command("advance");
+    assert.equal(
+      (
+        await f.command("move-note", {
+          ...fields,
+          fromCategory: fields.categoryId,
+          categoryId: fields.fromCategory,
+        })
+      ).status,
+      403,
+    );
+    html = await (
+      await f.request(f.path + "?step=collect", f.owner, undefined, false)
+    ).text();
+    assert.ok(!html.includes('class="note-move"'));
+    assert.ok(!html.includes('draggable="true"'));
+  });
   it("reviews completed steps without writes, blocks future steps, and serves board-scoped anonymous-safe versioned records", async () => {
     const f = await setup(),
       initial = await f.read();

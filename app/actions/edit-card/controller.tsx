@@ -40,6 +40,9 @@ export default createController(routes.editCard, {
           board={board}
           card={card}
           categories={categories}
+          canMoveCategory={
+            !board.guidedStage || member.id === board.organiserMemberId
+          }
         />,
       );
     },
@@ -74,6 +77,9 @@ export default createController(routes.editCard, {
             board={board}
             card={card}
             categories={categories}
+            canMoveCategory={
+              !board.guidedStage || member.id === board.organiserMemberId
+            }
             values={readEditValues(data)}
             error={message}
           />,
@@ -94,12 +100,21 @@ export default createController(routes.editCard, {
           data,
         );
       let updated;
+      const preserveCategory =
+        !!board.guidedStage && member.id !== board.organiserMemberId;
+      if (preserveCategory && categoryId !== card.categoryId)
+        return formError(context.i18n.t("collect.moveRestricted"), 403, data);
       try {
-        updated = await context.models.updateCard(board.id, card.id, {
-          body: text,
-          categoryId,
-          isAnonymous,
-        });
+        updated = await context.models.updateCard(
+          board.id,
+          card.id,
+          {
+            body: text,
+            categoryId,
+            isAnonymous,
+          },
+          preserveCategory,
+        );
       } catch (error) {
         if (isCollectLock(error))
           return formError(context.i18n.t("guided.collectOnly"), 409, data);

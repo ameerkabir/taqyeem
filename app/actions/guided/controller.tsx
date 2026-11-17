@@ -56,6 +56,9 @@ export const commandController = createAction(routes.sessionCommand, {
     };
     for (let key of [
       "choice",
+      "card",
+      "fromCategory",
+      "categoryId",
       "topic",
       "theme",
       "title",
@@ -97,6 +100,9 @@ export const commandController = createAction(routes.sessionCommand, {
           "owner",
           "ownerSearch",
           "choice",
+          "card",
+          "fromCategory",
+          "categoryId",
           "labels",
           "due",
           "proposal",
@@ -170,6 +176,12 @@ export const commandController = createAction(routes.sessionCommand, {
         headers: { "Cache-Control": "private, no-store" },
       });
     }
-    return redirect(routes.board.href({ boardId: context.board.id }), 303);
+    const destination = routes.board.href({ boardId: context.board.id });
+    return redirect(
+      command.kind === "move-note"
+        ? `${destination}?category=${encodeURIComponent(String(command.categoryId))}`
+        : destination,
+      303,
+    );
   },
 });

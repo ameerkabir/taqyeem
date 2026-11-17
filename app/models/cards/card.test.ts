@@ -257,6 +257,30 @@ describe("getCard, listCards, updateCard, deleteCard", () => {
       assert.equal(await getCard(db, a.board.id, crypto.randomUUID()), null);
     });
   });
+  it("keeps the stored category when saving a participant edit based on an older category", async () => {
+    await withDb(async (db) => {
+      const { a, card } = await setup(db);
+      await updateCard(db, a.board.id, card.id, {
+        body: card.body,
+        categoryId: a.categories[1].id,
+        isAnonymous: card.isAnonymous,
+      });
+      const updated = await updateCard(
+        db,
+        a.board.id,
+        card.id,
+        {
+          body: "Participant edited the wording",
+          categoryId: card.categoryId,
+          isAnonymous: true,
+        },
+        true,
+      );
+      assert.equal(updated!.categoryId, a.categories[1].id);
+      assert.equal(updated!.body, "Participant edited the wording");
+      assert.equal(updated!.isAnonymous, true);
+    });
+  });
 
   it("lists only the board's cards, oldest first, with vote counts", async () => {
     await withDb(async (db) => {

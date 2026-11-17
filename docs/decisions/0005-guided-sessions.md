@@ -40,6 +40,14 @@ Summary presents the closed date, real topic/decision/agreement counts and conci
 
 Actions and Summary show filters and shown/total counts only when there are more than three action/proposal records. With zero to three records, the view resets an old URL or saved filter to All and displays every item. The threshold counts suggested, agreed, deferred and declined records, rather than just agreed actions. Larger lists retain their existing filters, native GET navigation and empty-result recovery. This is presentation state only and does not alter the meeting record or action status.
 
+## Moving posted feedback between categories
+
+During Collect, only the creator/organiser may move posted notes, including another member’s anonymous note. The current creator and facilitator are the same `organiserMemberId`. Participants still choose a category when posting and can edit their own wording/anonymity; guided-board Edit forms no longer allow recategorisation. Those saves omit the category column so an organiser’s concurrent move is preserved. Legacy Edit behaviour remains compatible.
+
+`move-note` uses the existing revision-checked command boundary and durable command ID/fingerprint. It validates the actor, board-scoped note/category, expected source category and actual Collect stage. Migration 0012 adds guards and a trigger that updates only `cards.category_id` within the same conditional session update as the receipt. A failure rolls back the move, working state, revision and receipt together. The existing card trigger invalidates polling revisions, and the command returns a fresh view. Competing moves/stage changes conflict explicitly; identical retries remain safe even after a subsequent move. No note, category or archive data is rewritten by the additive migration.
+
+The hydrated board supports native HTML dragging with a local board/note payload and an explicit drop outline. The card moves and adopts the saved destination tone after the server accepts the command. Cancelled/failed moves do not change stored category or colour. The per-note **Move note** disclosure uses the same command through a native select/form for keyboard, touch and JavaScript-disabled use. Success opens the destination category on phones. Explicit category URLs take precedence over an older private saved category. Read-only reviews, later stages and participant views expose no move controls. Mounted note/action/decision drafts remain separate from card movement.
+
 ## Reopening and reviewing earlier work
 
 The user approved facilitator-only reopening and a linked review stepper on 2026-11-17. Migration 0011 adds `guided_closures`, keyed by board/version. It backfills actual existing closures as version 1 with their original timestamps and evidence; legacy boards without a closure get no invented historical record. Archive update/delete guards protect saved versions, with board deletion retaining its existing cascade behaviour.

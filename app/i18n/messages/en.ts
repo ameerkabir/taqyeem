@@ -335,6 +335,10 @@ export const en = {
   "setup.waitingHint": "You can start writing as soon as the board is ready.",
   "collect.intro":
     "Make space for every perspective. Add one thought per note.",
+  "collect.moveNote": "Move note",
+  "collect.moveTo": "Move to category",
+  "collect.moveHint": "Drag notes to another category, or use Move note.",
+  "collect.moveRestricted": "Only the facilitator can move a posted note to another category.",
   "collect.emptyHint": "Use Add note to share your first thought.",
   "collect.total": {
     one: "{count} note shared",

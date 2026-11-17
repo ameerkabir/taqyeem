@@ -23,4 +23,7 @@ These are renders of the implementation running in the local Worker, captured on
 
 - `action-editor-desktop-arabic.png`: Actions capture fields stay aligned inside the editor even when the topic options contain 500-character feedback.
 
+- `move-note-desktop.png`: an anonymous participant note moved from the green category to the peach category by the organiser.
+- `move-note-native-phone-ar-dark.png`: the organiser’s category-move picker in Arabic/dark mode without JavaScript.
+
 The adjacent manifest records SHA-256 digests. Screenshots are inspection evidence, not proof of native-speaker, screen-reader or physical-device acceptance.

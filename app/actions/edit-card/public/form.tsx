@@ -28,6 +28,7 @@ export interface EditCardFormProps {
   categories: Category[];
   values?: EditCardValues;
   error?: string;
+  canMoveCategory?: boolean;
 }
 
 export const EditCardForm = clientEntry(
@@ -79,23 +80,37 @@ export const EditCardForm = clientEntry(
             }),
           ]}
         >
-          <fieldset mix={fieldsetStyle}>
-            <legend mix={labelStyle}>{t("form.category")}</legend>
-            <div mix={choicesStyle}>
-              {categories.map((category) => (
-                <label mix={choiceStyle}>
-                  <input
-                    type="radio"
-                    name="categoryId"
-                    value={category.id}
-                    defaultChecked={category.id === values.categoryId}
-                    required
-                  />
-                  <span dir="auto">{category.label}</span>
-                </label>
-              ))}
+          {handle.props.canMoveCategory === false ? (
+            <div>
+              <input type="hidden" name="categoryId" value={card.categoryId} />
+              <p dir="auto">
+                {t("form.category")}:{" "}
+                {
+                  categories.find((category) => category.id === card.categoryId)
+                    ?.label
+                }
+              </p>
+              <p>{t("collect.moveRestricted")}</p>
             </div>
-          </fieldset>
+          ) : (
+            <fieldset mix={fieldsetStyle}>
+              <legend mix={labelStyle}>{t("form.category")}</legend>
+              <div mix={choicesStyle}>
+                {categories.map((category) => (
+                  <label mix={choiceStyle}>
+                    <input
+                      type="radio"
+                      name="categoryId"
+                      value={category.id}
+                      defaultChecked={category.id === values.categoryId}
+                      required
+                    />
+                    <span dir="auto">{category.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
           <NoteField locale={locale} initialValue={values.text} />
           <label mix={choiceStyle}>
             <input

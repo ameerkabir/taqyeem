@@ -14,6 +14,7 @@ import type {
   MeetingRecord,
 } from "../../../models/guided/session.ts";
 import { stages, reviewStage } from "../../../models/guided/stages.ts";
+const noteDragType = "application/x-taqyeem-note";
 
 function sourceTopics(data: ViewerPayload): Topic[] {
   let grouped = new Set(data.state.themes.flatMap((t) => t.notes)),
@@ -92,6 +93,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     error = "",
     pending = false;
   let needsJoin = false;
+  let draggedNote: { id: string; fromCategory: string } | null = null;
+  let dropCategory = "";
   const rootId = handle.id,
     prefix = `taqyeem:${data.board.id}:${data.memberId}:`;
   let submission = crypto.randomUUID(),
@@ -107,6 +110,20 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       stage,
       readOnly: !!handle.props.record || stage !== data.state.stage,
     };
+  }
+  function canMoveNotes() {
+    return (
+      data.memberId === data.board.organiserMemberId &&
+      data.state.stage === "collect" &&
+      data.state.categorySetup?.confirmed !== false &&
+      data.categories.length > 1 &&
+      !viewing().readOnly
+    );
+  }
+  function clearDrag() {
+    draggedNote = null;
+    dropCategory = "";
+    handle.update();
   }
   function get(key: string) {
     try {
@@ -285,7 +302,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       let v = JSON.parse(get("viewer") ?? "null");
       if (v) {
         privateTopic = v.privateTopic ?? "";
-        category = v.category ?? category;
+        category = handle.props.initialView?.category || v.category || category;
         filter = v.filter ?? "all";
         expanded = !!v.expanded;
         if (
@@ -408,6 +425,10 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         let next: ViewerPayload = await response.json();
         if (next.revision >= data.revision) data = next;
         let kind = (form.elements.namedItem("kind") as HTMLInputElement).value;
+        if (kind === "move-note") {
+          category = String(body.get("categoryId"));
+          persist();
+        }
         if (kind === "live" || kind === "reopen") {
           privateTopic = "";
           expanded = false;
@@ -458,6 +479,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       if (!handle.signal.aborted) error = translator().t("guided.failed");
     } finally {
       pending = false;
+      if (error) status = "";
       if (!handle.signal.aborted) {
         handle.update();
         await refresh();
@@ -585,6 +607,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         data={displayData}
         locale={handle.props.locale}
         readOnly={readOnly}
+        canMove={canMoveNotes()}
+        pending={pending}
+        dragging={draggedNote?.id === card.id}
         card={card}
         select={select}
         rootId={rootId}
@@ -703,6 +728,104 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         }
         aria-busy={pending}
         mix={[
+          on("dragstart", (event) => {
+            const target = event.target;
+            const cardElement =
+              target instanceof Element
+                ? target.closest<HTMLElement>(".feedback-card[data-card-id]")
+                : null;
+            const card = data.cards.find(
+              (card) => card.id === cardElement?.dataset.cardId,
+            );
+            if (
+              !canMoveNotes() ||
+              pending ||
+              !card ||
+              !event.dataTransfer ||
+              (target instanceof Element &&
+                target.closest("a,button,input,select,textarea,summary"))
+            ) {
+              event.preventDefault();
+              return;
+            }
+            draggedNote = { id: card.id, fromCategory: card.categoryId };
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData(
+              noteDragType,
+              `${data.board.id}/${card.id}`,
+            );
+            handle.update();
+          }),
+          on("dragover", (event) => {
+            const lane =
+              event.target instanceof Element
+                ? event.target.closest<HTMLElement>(".lane[data-category-id]")
+                : null;
+            const target = lane?.dataset.categoryId ?? "";
+            const allowed =
+              canMoveNotes() &&
+              !pending &&
+              draggedNote &&
+              target &&
+              target !== draggedNote.fromCategory &&
+              event.dataTransfer?.types.includes(noteDragType);
+            if (allowed) {
+              event.preventDefault();
+              event.dataTransfer!.dropEffect = "move";
+            }
+            if (dropCategory !== (allowed ? target : "")) {
+              dropCategory = allowed ? target : "";
+              handle.update();
+            }
+          }),
+          on("dragleave", (event) => {
+            if (
+              event.currentTarget.contains(event.relatedTarget as Node | null)
+            )
+              return;
+            dropCategory = "";
+            handle.update();
+          }),
+          on("dragend", () => clearDrag()),
+          on("drop", (event) => {
+            const lane =
+              event.target instanceof Element
+                ? event.target.closest<HTMLElement>(".lane[data-category-id]")
+                : null;
+            const categoryId = lane?.dataset.categoryId;
+            const move = draggedNote;
+            if (
+              !canMoveNotes() ||
+              pending ||
+              !move ||
+              !categoryId ||
+              categoryId === move.fromCategory ||
+              event.dataTransfer?.getData(noteDragType) !==
+                `${data.board.id}/${move.id}`
+            ) {
+              clearDrag();
+              return;
+            }
+            event.preventDefault();
+            const form = root().querySelector<HTMLFormElement>(
+              `[data-move-card="${move.id}"] form`,
+            );
+            if (form) {
+              const select = form.elements.namedItem("categoryId");
+              const from = form.elements.namedItem("fromCategory");
+              if (
+                !(select instanceof HTMLSelectElement) ||
+                !(from instanceof HTMLInputElement)
+              ) {
+                clearDrag();
+                return;
+              }
+              select.value = categoryId;
+              from.value = move.fromCategory;
+              clearDrag();
+              form.requestSubmit();
+            } else clearDrag();
+          }),
           on("submit", (event) => {
             let form = event.target;
             if (
@@ -949,12 +1072,13 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                     )}
                     <label>
                       {t("guided.category")}
-                      <select
-                        name="category"
-                        data-view="category"
-                      >
+                      <select name="category" data-view="category">
                         {data.categories.map((c) => (
-                          <option key={c.id} value={c.id} selected={c.id===category}>
+                          <option
+                            key={c.id}
+                            value={c.id}
+                            selected={c.id === category}
+                          >
                             {c.label} (
                             {formatNumber(
                               data.cards.filter((n) => n.categoryId === c.id)
@@ -996,11 +1120,20 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                     {t("collect.total", { count: data.cards.length })}
                   </span>
                 </div>
+                {canMoveNotes() && data.cards.length > 0 && (
+                  <p class="note-move-hint">{t("collect.moveHint")}</p>
+                )}
                 <div class="lanes" data-lanes={lanes.length}>
                   {lanes.map((cat) => (
                     <section
                       key={cat.id}
                       class="lane"
+                      data-category-id={cat.id}
+                      data-drop-target={
+                        canMoveNotes() && dropCategory === cat.id
+                          ? "true"
+                          : undefined
+                      }
                       data-tone={cat.tone ?? 0}
                       data-active={
                         cat.id === currentCategory.id ? "true" : "false"

@@ -49,7 +49,7 @@ export function createDbBoardModels(
 
     listCards: (boardId) => listCards(db, boardId),
     getCard: (boardId, cardId) => getCard(db, boardId, cardId),
-    updateCard: (boardId, cardId, changes) => updateCard(db, boardId, cardId, changes),
+    updateCard: (boardId, cardId, changes, preserveCategory) => updateCard(db, boardId, cardId, changes, preserveCategory),
     deleteCard: (boardId, cardId) => deleteCard(db, boardId, cardId),
 
     // The interface passes a full Card; createdAt and voteCount are not inputs because
