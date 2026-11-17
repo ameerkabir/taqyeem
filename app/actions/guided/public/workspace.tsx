@@ -16,6 +16,10 @@ import { createDraftStore } from "../client/draft-store.ts";
 import { createNoteDrag } from "../client/note-drag.ts";
 import { expandForPrint, startPolling } from "../client/page-lifecycle.ts";
 import { formSignature } from "../client/form-signature.ts";
+import {
+  commandOutcome,
+  isNotMemberResponse,
+} from "../client/command-outcome.ts";
 import { laneLayout } from "../client/lanes.ts";
 import {
   canFilterActions,
@@ -97,6 +101,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
   const root = () => document.getElementById(rootId)!;
   const noteDialog = () => root().querySelector<HTMLDialogElement>("dialog")!;
   const translator = () => createTranslator(handle.props.locale);
+  /** The stage on screen and whether it is read-only (a past record or a reviewed earlier step). */
   function viewing() {
     const stage = handle.props.record
       ? "summary"
@@ -106,6 +111,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       readOnly: !!handle.props.record || stage !== data.state.stage,
     };
   }
+  /** Only the organiser can move notes between categories, while collecting on the live stage. */
   function canMoveNotes() {
     return (
       data.memberId === data.board.organiserMemberId &&
@@ -125,6 +131,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
   const storage = createSessionStore(prefix);
   const drafts = createDraftStore(storage);
   const get = storage.get;
+  /** Stores a form's draft fields in session storage, keyed by its `data-draft`. */
   function save(form: HTMLFormElement) {
     let key = form.dataset.draft;
     if (!key) {
@@ -136,6 +143,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     }
     drafts.save(form, key);
   }
+  /** Refills a form from its stored draft; a restored note draft also re-opens the note editor state. */
   function restore(form: HTMLFormElement) {
     let key = form.dataset.draft!;
     let saved = drafts.restore(form, key, root());
@@ -153,6 +161,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     let field = form.elements.namedItem("text") as HTMLTextAreaElement;
     updateNoteCounter(translator(), root(), field.value.length);
   }
+  /** Saves every draft plus the viewer's private view state so a reload resumes where they were. */
   function persist() {
     for (let f of root().querySelectorAll<HTMLFormElement>("form[data-draft]"))
       save(f);
@@ -174,6 +183,10 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       }),
     );
   }
+  /**
+   * Polls the session with an ETag of the current revision and adopts a newer one.
+   * @param announce Show "updated" even when nothing changed (after reconnecting).
+   */
   async function refresh(announce = false) {
     try {
       let response = await fetch(
@@ -188,10 +201,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         },
       );
       if (response.status === 304) return;
-      if (
-        response.status === 403 &&
-        response.headers.get("X-Access-Reason") === "not_member"
-      ) {
+      if (isNotMemberResponse(response)) {
         needsJoin = true;
         error = translator().t("access.joinBoard");
         status = "";
@@ -264,6 +274,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     );
     handle.update();
   });
+  /** Opens the note dialog, defaulting its category to the lane being viewed. */
   function openNote() {
     if (viewing().readOnly || data.state.categorySetup?.confirmed === false)
       return;
@@ -277,16 +288,93 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     restore(form);
     persist();
   }
+  /** Closes the note dialog, keeping its draft. */
   function closeNote() {
     save(noteDialog().querySelector("form")!);
     noteDialog().close();
     persist();
   }
+  /** Records a failed post: the join prompt for non-members, otherwise the server's message. */
+  async function failed(response: Response) {
+    if (isNotMemberResponse(response)) {
+      needsJoin = true;
+    }
+    let result = (await response.json()) as { error?: string };
+    error = result.error ?? translator().t("guided.failed");
+  }
+  /**
+   * Adopts the committed session from a command response and applies its local
+   * follow-up (lane, private topic, draft reset). `submitted` is the form's
+   * signature at send time, so edits made while saving are kept.
+   */
+  async function afterCommand(
+    form: HTMLFormElement,
+    body: FormData,
+    submitted: string,
+    response: Response,
+  ) {
+    let next: ViewerPayload = await response.json();
+    if (next.revision >= data.revision) {
+      data = next;
+    }
+    let kind = (form.elements.namedItem("kind") as HTMLInputElement).value;
+    let outcome = commandOutcome(kind, body.has("theme"));
+    if (outcome.followCategory) {
+      category = String(body.get("categoryId"));
+      persist();
+    }
+    if (outcome.clearPrivateTopic) {
+      privateTopic = "";
+      expanded = false;
+      persist();
+    }
+    if (outcome.clearsDraft && formSignature(form) === submitted) {
+      clearDraft(form, outcome.keepsTitle);
+    }
+    (form.elements.namedItem("id") as HTMLInputElement).value =
+      crypto.randomUUID();
+  }
+  /** Resets a drafted form and closes its editor, optionally keeping the drafted title. */
+  function clearDraft(form: HTMLFormElement, keepTitle: boolean) {
+    let title = form.querySelector<HTMLInputElement>('input[name="title"]');
+    let retainedTitle = keepTitle ? title?.value : undefined;
+    form.reset();
+    if (title && retainedTitle !== undefined) {
+      title.value = retainedTitle;
+    }
+    save(form);
+    let disclosure = form.closest<HTMLDetailsElement>("details[data-editor]");
+    if (disclosure) {
+      disclosure.open = false;
+    }
+  }
+  /** After a note is saved: new submission id, and close the editor unless it was edited meanwhile. */
+  function afterNote(form: HTMLFormElement, submitted: string) {
+    let unchanged = formSignature(form) === submitted;
+    if (unchanged) {
+      form.reset();
+    }
+    submission = crypto.randomUUID();
+    (form.elements.namedItem("submissionId") as HTMLInputElement).value =
+      submission;
+    save(form);
+    if (unchanged) {
+      closeNote();
+      noteOpened = false;
+      storage.remove("note");
+    }
+  }
+  /**
+   * Posts a command or note form with fetch. Command responses carry the
+   * committed session; anything else (notes, failures) is followed by a refresh.
+   */
   async function submit(
     form: HTMLFormElement,
     submitter: HTMLElement | null = null,
   ) {
-    if (pending) return;
+    if (pending) {
+      return;
+    }
     if (viewing().readOnly) {
       error = translator().t("review.readOnly");
       handle.update();
@@ -309,73 +397,30 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         signal: handle.signal,
       });
       if (!response.ok) {
-        if (
-          response.status === 403 &&
-          response.headers.get("X-Access-Reason") === "not_member"
-        )
-          needsJoin = true;
-        let result = (await response.json()) as { error?: string };
-        error = result.error ?? translator().t("guided.failed");
+        await failed(response);
         return;
       }
       if (form.classList.contains("command-form")) {
-        let next: ViewerPayload = await response.json();
-        if (next.revision >= data.revision) data = next;
-        // The response is the committed session, so no follow-up poll is needed.
+        await afterCommand(form, body, submitted, response);
         applied = true;
-        let kind = (form.elements.namedItem("kind") as HTMLInputElement).value;
-        if (kind === "move-note") {
-          category = String(body.get("categoryId"));
-          persist();
-        }
-        if (kind === "live" || kind === "reopen") {
-          privateTopic = "";
-          expanded = false;
-          persist();
-        }
-        if (
-          ["theme", "propose", "decision"].includes(kind) &&
-          formSignature(form) === submitted
-        ) {
-          // Adding to an existing theme does not consume a drafted new title.
-          let title = form.querySelector<HTMLInputElement>(
-            'input[name="title"]',
-          );
-          let retainedTitle =
-            kind === "theme" && body.has("theme") ? title?.value : undefined;
-          form.reset();
-          if (title && retainedTitle !== undefined) title.value = retainedTitle;
-          save(form);
-          let disclosure = form.closest(
-            "details[data-editor]",
-          ) as HTMLDetailsElement | null;
-          if (disclosure) disclosure.open = false;
-        }
-        (form.elements.namedItem("id") as HTMLInputElement).value =
-          crypto.randomUUID();
       } else {
-        let unchanged =
-          formSignature(form) === submitted;
-        if (unchanged) form.reset();
-        submission = crypto.randomUUID();
-        (form.elements.namedItem("submissionId") as HTMLInputElement).value =
-          submission;
-        save(form);
-        if (unchanged) {
-          closeNote();
-          noteOpened = false;
-          storage.remove("note");
-        }
+        afterNote(form, submitted);
       }
       status = translator().t("guided.saved");
     } catch {
-      if (!handle.signal.aborted) error = translator().t("guided.failed");
+      if (!handle.signal.aborted) {
+        error = translator().t("guided.failed");
+      }
     } finally {
       pending = false;
-      if (error) status = "";
+      if (error) {
+        status = "";
+      }
       if (!handle.signal.aborted) {
         handle.update();
-        if (!applied) await refresh();
+        if (!applied) {
+          await refresh();
+        }
       }
     }
   }

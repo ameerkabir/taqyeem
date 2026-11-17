@@ -120,6 +120,7 @@ export async function readSession(
     })),
   };
 }
+/** A closed meeting's frozen snapshot by version; null for unknown or invalid versions. */
 export async function readMeetingRecord(
   db: Database,
   boardId: string,
