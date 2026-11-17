@@ -5,6 +5,8 @@ import { createAppRouter } from "../../router.ts";
 import { testDatabase } from "../../test/dependencies.ts";
 import { categories, cards } from "../../data/tables.ts";
 import type { ViewerPayload } from "./payload.ts";
+import { redactMeetingRecord } from "./payload.ts";
+import { readMeetingRecord } from "../../models/guided/session.ts";
 const options = {
   sessionSecret: "guided-test-secret",
   config: { appEnv: "test" },
@@ -73,6 +75,111 @@ async function setup(autoConfigure = true) {
   return { db, path, owner, participant, request, read, command };
 }
 describe("guided route boundary", () => {
+  it("reviews completed steps without writes, blocks future steps, and serves board-scoped anonymous-safe versioned records", async () => {
+    const f = await setup(),
+      initial = await f.read();
+    await f.request(f.path + "/new", f.owner, {
+      submissionId: crypto.randomUUID(),
+      text: "Anonymous original evidence",
+      categoryId: initial.categories[0].id,
+      isAnonymous: "true",
+    });
+    await f.command("advance");
+    let before = await f.read();
+    const future = await f.request(
+      f.path + "?step=vote",
+      f.owner,
+      undefined,
+      false,
+    );
+    assert.equal(future.status, 303);
+    assert.equal(future.headers.get("Location"), f.path);
+    assert.equal((await f.read()).revision, before.revision);
+    await f.command("advance");
+    let v = await f.read();
+    await f.command("ballot", {
+      ballot: String(v.state.ballot),
+      value: "false",
+    });
+    await f.command("advance");
+    const topic = (await f.read()).cards[0].id;
+    await f.command("decision", { topic, text: "Original recorded decision" });
+    await f.command("advance");
+    await f.command("advance");
+    before = await f.read();
+    for (const step of ["collect", "group", "vote", "discuss", "actions"]) {
+      let r = await f.request(
+        f.path + "?step=" + step,
+        f.owner,
+        undefined,
+        false,
+      );
+      assert.equal(r.status, 200);
+      let html = await r.text();
+      assert.ok(html.includes('data-review="true"'));
+      assert.ok(!html.includes('class="primary add-note"'));
+      assert.ok(!html.includes('class="reopen-meeting"'));
+      assert.equal((await f.read()).revision, before.revision);
+    }
+    assert.equal((await f.request(f.path + "?record=99", f.owner)).status, 404);
+    assert.equal(
+      (await f.request(f.path + "?record=abc", f.owner)).status,
+      404,
+    );
+    let html = await (
+      await f.request(f.path + "?record=1", f.participant, undefined, false)
+    ).text();
+    assert.ok(html.includes("Original recorded decision"));
+    assert.ok(html.includes('data-review="true"'));
+    assert.ok(!html.includes('class="current-progress-heading"'));
+    assert.ok(!html.includes('class="reopen-meeting"'));
+    const archive = (await readMeetingRecord(f.db, before.board.id, 1))!;
+    assert.equal(
+      redactMeetingRecord(
+        archive.closure,
+        (await f.read(f.participant)).memberId,
+      ).cards[0].memberId,
+      "",
+    );
+    assert.equal(
+      redactMeetingRecord(archive.closure, before.memberId).cards[0].memberId,
+      before.memberId,
+    );
+    assert.equal(
+      (await f.command("reopen", { version: "1" }, f.participant)).status,
+      403,
+    );
+    assert.equal((await f.command("reopen", { version: "2" })).status, 409);
+    assert.equal(
+      (await f.command("reopen", { version: "1" }, f.owner, true)).status,
+      303,
+    );
+    assert.equal((await f.read()).state.stage, "discuss");
+    assert.equal(
+      (
+        await f.request(f.path + "/new", f.owner, {
+          submissionId: crypto.randomUUID(),
+          text: "Cannot alter old feedback",
+          categoryId: initial.categories[0].id,
+        })
+      ).status,
+      403,
+    );
+    html = await (
+      await f.request(f.path + "?record=1", f.owner, undefined, false)
+    ).text();
+    assert.ok(html.includes("Original recorded decision"));
+    assert.ok(!html.includes('class="reopen-meeting"'));
+    assert.equal(
+      (await f.request(f.path + "?step=summary", f.owner, undefined, false))
+        .status,
+      303,
+    );
+    assert.equal(
+      (await f.request(f.path + "?record=1", undefined)).status,
+      403,
+    );
+  });
   it("reports duplicate theme names and supports adding selected notes to an existing theme through native and enhanced commands", async () => {
     let f = await setup(),
       initial = await f.read();

@@ -1,6 +1,6 @@
 import {createBoard} from "../app/models/boards/create.ts";
 import {createCard} from "../app/models/cards/card.ts";
-import {readSession,commandSession,topics,CommandError} from "../app/models/guided/session.ts";
+import {readSession,commandSession,topics,CommandError,readMeetingRecord} from "../app/models/guided/session.ts";
 import {createDatabaseSessionStorage} from "../app/session-storage.ts";
 import {createSession} from "remix/session";
 // Test-only Worker. Never mapped into the application or deployed.
@@ -225,6 +225,29 @@ export default {
       check(
         closed.state.closure?.cards.length === 2,
         "D1 immutable closure contains source evidence",
+      );
+      const firstRecord = JSON.stringify(
+        (await readMeetingRecord(db, id, 1))!.closure,
+      );
+      await command("reopen", { version: 1 });
+      check(
+        (await readSession(db, id))!.state.stage === "discuss",
+        "D1 reopens at Discuss",
+      );
+      await command("decision", {
+        topic: eligible[0].id,
+        text: "Revised agreement",
+      });
+      await command("advance");
+      await command("advance");
+      check(
+        (await readSession(db, id))!.history?.length === 2,
+        "D1 preserves two closure versions",
+      );
+      check(
+        JSON.stringify((await readMeetingRecord(db, id, 1))!.closure) ===
+          firstRecord,
+        "D1 first record remains unchanged after reopening/reclosing",
       );
       let session = createSession();
       session.set(`board-member:${id}`, actor);

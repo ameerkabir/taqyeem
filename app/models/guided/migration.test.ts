@@ -1,3 +1,4 @@
+import { loadBoard } from "../boards/load.ts";
 import * as assert from "remix/assert";
 import { it } from "remix/test";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
@@ -7,7 +8,7 @@ import { createBoard } from "../boards/create.ts";
 import { createCard } from "../cards/card.ts";
 import { setCardVote } from "../cards/vote.ts";
 import { setBoardStatus } from "../boards/state.ts";
-import { readSession } from "./session.ts";
+import { readSession, initialState } from "./session.ts";
 it("additive migrations preserve populated/closed legacy boards, IDs, timestamps, anonymity, votes and reordered category identity", async () => {
   const db = createSqliteDatabase({ filename: ":memory:", foreignKeys: true });
   try {
@@ -114,7 +115,10 @@ it("category setup migration gates only empty collecting guided boards and prese
       categoryLabels: ["Existing"],
     });
     for (const board of [empty, populated, later])
-      await readSession(db, board.board.id);
+      await db.exec("INSERT INTO guided_sessions(board_id,data) VALUES (?,?)", [
+        board.board.id,
+        JSON.stringify(initialState((await loadBoard(db, board.board.id))!)),
+      ]);
     await createCard(
       db,
       {
@@ -176,8 +180,13 @@ it("category setup migration gates only empty collecting guided boards and prese
       beforeLater,
     );
     assert.equal(
-      (await readSession(db, empty.board.id))!.state.categorySetup?.confirmed,
-      false,
+      (
+        await db.exec(
+          "SELECT json_extract(data,'$.categorySetup.confirmed') AS confirmed FROM guided_sessions WHERE board_id=?",
+          [empty.board.id],
+        )
+      ).rows![0].confirmed,
+      0,
     );
     assert.equal(
       (
@@ -186,6 +195,106 @@ it("category setup migration gates only empty collecting guided boards and prese
         ])
       ).rows!.length,
       0,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+it("versioned-record migration preserves real closures and evidence, invents no legacy records, and prevents raw archive replacement or reopening", async () => {
+  const db = createSqliteDatabase({ filename: ":memory:", foreignKeys: true });
+  try {
+    const files = (await readdir(migrationsDirectory))
+      .filter((f) => /^\d+.*\.sql$/.test(f))
+      .sort();
+    for (const file of files.filter((f) => f < "0011"))
+      await db.executeScript(
+        await readFile(new URL(file, migrationsDirectory), "utf8"),
+      );
+    const closed = await createBoard(db, {
+        title: "Existing closed meeting",
+        organiserDisplayName: "Owner",
+        categoryLabels: ["Original"],
+      }),
+      open = await createBoard(db, {
+        title: "Still open",
+        organiserDisplayName: "Owner",
+        categoryLabels: ["Original"],
+      });
+    const note = await createCard(
+      db,
+      {
+        id: crypto.randomUUID(),
+        boardId: closed.board.id,
+        memberId: closed.organiser.id,
+        categoryId: closed.categories[0].id,
+        body: "Keep the original evidence",
+        isAnonymous: true,
+      },
+      crypto.randomUUID(),
+    );
+    assert.ok(note.ok);
+    const closure = {
+      at: "2026-11-16T10:15:00.000Z",
+      topics: [
+        { id: note.card.id, title: note.card.body, notes: [note.card.id] },
+      ],
+      outcomes: {},
+      decisions: {},
+      proposals: [],
+      cards: [note.card],
+      categories: closed.categories,
+    };
+    await db.exec("INSERT INTO guided_sessions(board_id,data) VALUES (?,?)", [
+      closed.board.id,
+      JSON.stringify({
+        ...initialState((await loadBoard(db, closed.board.id))!),
+        stage: "summary",
+        closure,
+      }),
+    ]);
+    await db.exec("INSERT INTO guided_sessions(board_id,data) VALUES (?,?)", [
+      open.board.id,
+      JSON.stringify(initialState((await loadBoard(db, open.board.id))!)),
+    ]);
+    const cardsBefore = (await db.exec("SELECT * FROM cards")).rows,
+      categoriesBefore = (await db.exec("SELECT * FROM categories ORDER BY id"))
+        .rows;
+    await db.executeScript(
+      await readFile(
+        new URL("0011_versioned_meeting_records.sql", migrationsDirectory),
+        "utf8",
+      ),
+    );
+    const archive = (await db.exec("SELECT * FROM guided_closures")).rows!;
+    assert.equal(archive.length, 1);
+    assert.equal(archive[0].version, 1);
+    assert.equal(archive[0].closed_at, closure.at);
+    assert.deepEqual(JSON.parse(String(archive[0].snapshot)), closure);
+    assert.deepEqual((await db.exec("SELECT * FROM cards")).rows, cardsBefore);
+    assert.deepEqual(
+      (await db.exec("SELECT * FROM categories ORDER BY id")).rows,
+      categoriesBefore,
+    );
+    for (const statement of [
+      "UPDATE guided_closures SET snapshot='{}'",
+      "DELETE FROM guided_closures",
+      "UPDATE guided_sessions SET data=json_set(data,'$.closure',NULL,'$.stage','discuss') WHERE board_id=?",
+    ]) {
+      let blocked = false;
+      try {
+        await db.exec(
+          statement,
+          statement.includes("?") ? [closed.board.id] : [],
+        );
+      } catch {
+        blocked = true;
+      }
+      assert.ok(blocked);
+    }
+    assert.equal(
+      (await db.exec("SELECT count(*) AS n FROM guided_closures")).rows![0].n,
+      1,
     );
   } finally {
     await db.close();

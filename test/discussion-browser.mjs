@@ -90,8 +90,9 @@ try {
         .waitFor({ state: "visible" });
     }
     async function browse(page, id) {
-      if (await page.locator(`.agenda a[href="?topic=${id}"]`).isVisible())
-        await click(page, page.locator(`.agenda a[href="?topic=${id}"]`));
+      const link = page.locator(`.agenda a[href*="?topic=${id}"]`);
+      if (await link.isVisible())
+        await click(page, link);
       else {
         await page.locator(".agenda select").selectOption(id);
         if (!enhanced)

@@ -3,15 +3,8 @@ import type { Board, Card, Category, Member } from "../../data/board.ts";
 import { loadBoard, loadCategories, loadMembers } from "../boards/load.ts";
 import { listCards } from "../cards/card.ts";
 
-export const stages = [
-  "collect",
-  "group",
-  "vote",
-  "discuss",
-  "actions",
-  "summary",
-] as const;
-export type Stage = (typeof stages)[number];
+import { stages, type Stage } from "./stages.ts";
+export { stages, type Stage } from "./stages.ts";
 export type Disposition = "suggested" | "agreed" | "deferred" | "declined";
 export interface Theme {
   id: string;
@@ -43,6 +36,11 @@ export interface Closure {
   cards: Card[];
   categories: Category[];
 }
+export interface MeetingRecord {
+  version: number;
+  closedAt: string;
+  closure: Closure;
+}
 export interface SharedSession {
   stage: Stage;
   categorySetup?: {
@@ -60,8 +58,9 @@ export interface SharedSession {
   decisions: Record<string, string>;
   proposals: Proposal[];
   receipts: Record<string, string>;
-  receipt?: { id: string; member: string; fingerprint: string };
+  receipt?: { id: string; member: string; fingerprint: string; kind?: string };
   closure: Closure | null;
+  closureVersion?: number;
   legacy: boolean;
   recent?: Record<string, number[]>;
 }
@@ -72,6 +71,7 @@ export interface SessionView {
   cards: Card[];
   categories: Category[];
   members: Member[];
+  history?: { version: number; closedAt: string }[];
 }
 export class CommandError extends Error {
   constructor(
@@ -109,6 +109,7 @@ export function initialState(board: Board): SharedSession {
     proposals: [],
     receipts: {},
     closure: null,
+    closureVersion: 0,
     legacy: board.status !== "collecting",
   };
 }
@@ -138,10 +139,13 @@ export async function readSession(
       sql`SELECT revision,data FROM guided_sessions WHERE board_id=${boardId}`,
     )
   ).rows![0];
-  let [cards, categories, members] = await Promise.all([
+  let [cards, categories, members, records] = await Promise.all([
     listCards(db, boardId),
     loadCategories(db, boardId),
     loadMembers(db, boardId),
+    db.exec(
+      sql`SELECT version,closed_at FROM guided_closures WHERE board_id=${boardId} ORDER BY version DESC`,
+    ),
   ]);
   return {
     board,
@@ -150,7 +154,30 @@ export async function readSession(
     cards,
     categories,
     members,
+    history: records.rows!.map((row) => ({
+      version: Number(row.version),
+      closedAt: String(row.closed_at),
+    })),
   };
+}
+export async function readMeetingRecord(
+  db: Database,
+  boardId: string,
+  version: number,
+): Promise<MeetingRecord | null> {
+  if (!Number.isSafeInteger(version) || version < 1) return null;
+  const row = (
+    await db.exec(
+      sql`SELECT closed_at,snapshot FROM guided_closures WHERE board_id=${boardId} AND version=${version}`,
+    )
+  ).rows?.[0];
+  return row
+    ? {
+        version,
+        closedAt: String(row.closed_at),
+        closure: JSON.parse(String(row.snapshot)),
+      }
+    : null;
 }
 export function topics(view: Pick<SessionView, "cards" | "state">): Topic[] {
   let grouped = new Set(view.state.themes.flatMap((t) => t.notes));
@@ -268,6 +295,23 @@ export function applyCommand(
     state.categorySetup?.confirmed !== false || command.kind === "configure",
   );
   switch (command.kind) {
+    case "reopen": {
+      shared();
+      requireThat(state.stage === "summary" && state.closure !== null);
+      const version = state.closureVersion ?? 1;
+      requireThat(
+        Number.isSafeInteger(command.version) && command.version === version,
+        "conflict",
+      );
+      state.closureVersion = version;
+      state.closure = null;
+      state.stage = "discuss";
+      state.ready = {};
+      state.ballotOpen = false;
+      if (!topics(view).some((topic) => topic.id === state.liveTopic))
+        state.liveTopic = rankedTopics(view)[0]?.id ?? "";
+      break;
+    }
     case "configure": {
       shared();
       requireThat(
@@ -333,7 +377,8 @@ export function applyCommand(
         state.votes = {};
       }
       if (next === "discuss") state.liveTopic = rankedTopics(view)[0]?.id ?? "";
-      if (next === "summary")
+      if (next === "summary") {
+        state.closureVersion = (state.closureVersion ?? 0) + 1;
         state.closure = {
           at: new Date().toISOString(),
           topics: rankedTopics(view),
@@ -343,6 +388,7 @@ export function applyCommand(
           cards: structuredClone(cards),
           categories: structuredClone(view.categories),
         };
+      }
       break;
     }
     case "ready":
@@ -582,9 +628,15 @@ export async function commandSession(
   const prior = await replay();
   if (prior) return prior;
   let state = applyCommand(view, memberId, command);
-  state.receipt = { id: command.id, member: memberId, fingerprint };
+  state.receipt = {
+    id: command.id,
+    member: memberId,
+    fingerprint,
+    kind: command.kind,
+  };
   let requiresFacilitator = [
     "configure",
+    "reopen",
     "advance",
     "budget",
     "theme",
@@ -604,6 +656,11 @@ export async function commandSession(
     if (winner) return winner;
     throw new CommandError("conflict");
   }
-  if (command.kind === "configure") return (await readSession(db, boardId))!;
+  if (
+    command.kind === "configure" ||
+    command.kind === "reopen" ||
+    state.stage === "summary"
+  )
+    return (await readSession(db, boardId))!;
   return { ...view, state, revision: view.revision + 1 };
 }

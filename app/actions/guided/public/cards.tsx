@@ -14,6 +14,7 @@ export function NoteCard(
     select?: boolean;
     rootId?: string;
     onCapture?: (card: Card) => void;
+    readOnly?: boolean;
   }>,
 ) {
   return () => {
@@ -28,7 +29,7 @@ export function NoteCard(
           data.categories.find((c) => c.id === card.categoryId)?.tone ?? 0
         }
       >
-        {select && (
+        {select && !handle.props.readOnly && (
           <label class="checkbox">
             <input
               form={`${rootId}-theme`}
@@ -61,43 +62,46 @@ export function NoteCard(
             {card.memberId === data.memberId && <> · {t("guided.yours")}</>}
           </span>
         </footer>
-        {state.stage === "collect" && card.memberId === data.memberId && (
-          <nav class="note-controls">
+        {!handle.props.readOnly &&
+          state.stage === "collect" &&
+          card.memberId === data.memberId && (
+            <nav class="note-controls">
+              <a
+                href={routes.editCard.index.href({
+                  boardId: data.board.id,
+                  cardId: card.id,
+                })}
+              >
+                {t("cards.edit")}
+              </a>
+              <a
+                href={routes.deleteCard.index.href({
+                  boardId: data.board.id,
+                  cardId: card.id,
+                })}
+              >
+                {t("cards.delete")}
+              </a>
+            </nav>
+          )}
+        {!handle.props.readOnly &&
+          ["discuss", "actions"].includes(state.stage) && (
             <a
-              href={routes.editCard.index.href({
-                boardId: data.board.id,
-                cardId: card.id,
+              href={`?capture=${data.state.themes.find((theme) => theme.notes.includes(card.id))?.id ?? card.id}&captureNote=${card.id}#${rootId}-capture`}
+              mix={on("click", (event) => {
+                if (handle.props.onCapture) {
+                  event.preventDefault();
+                  handle.props.onCapture(card);
+                }
               })}
             >
-              {t("cards.edit")}
+              {t(
+                data.memberId === data.board.organiserMemberId
+                  ? "guided.addAction"
+                  : "guided.suggestAction",
+              )}
             </a>
-            <a
-              href={routes.deleteCard.index.href({
-                boardId: data.board.id,
-                cardId: card.id,
-              })}
-            >
-              {t("cards.delete")}
-            </a>
-          </nav>
-        )}
-        {["discuss", "actions"].includes(state.stage) && (
-          <a
-            href={`?capture=${data.state.themes.find((theme) => theme.notes.includes(card.id))?.id ?? card.id}&captureNote=${card.id}#${rootId}-capture`}
-            mix={on("click", (event) => {
-              if (handle.props.onCapture) {
-                event.preventDefault();
-                handle.props.onCapture(card);
-              }
-            })}
-          >
-            {t(
-              data.memberId === data.board.organiserMemberId
-                ? "guided.addAction"
-                : "guided.suggestAction",
-            )}
-          </a>
-        )}
+          )}
       </article>
     );
   };
@@ -134,6 +138,7 @@ export function ActionCard(
     proposal: Proposal;
     historical?: boolean;
     pending: boolean;
+    readOnly?: boolean;
   }>,
 ) {
   return () => {
@@ -160,6 +165,7 @@ export function ActionCard(
       <article key={p.id} class="action-card">
         <p dir="auto">{p.text}</p>
         {!historical &&
+          !handle.props.readOnly &&
           ["discuss", "actions"].includes(state.stage) &&
           (facilitator ||
             (p.author === data.memberId && p.disposition === "suggested")) && (
@@ -196,14 +202,17 @@ export function ActionCard(
                 <span>
                   {t(p.completed ? "guided.completed" : "guided.open")}
                 </span>
-                {(facilitator || p.owner === data.memberId) &&
+                {!handle.props.readOnly &&
+                  (facilitator || p.owner === data.memberId) &&
                   command(
                     "complete",
                     { proposal: p.id, value: !p.completed },
                     t(p.completed ? "guided.undoComplete" : "guided.complete"),
                   )}
               </>
-            ) : facilitator && state.stage !== "summary" ? (
+            ) : !handle.props.readOnly &&
+              facilitator &&
+              state.stage !== "summary" ? (
               <div class="control-row">
                 {command(
                   "disposition",

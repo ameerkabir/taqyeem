@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "Enhanced: past-step GET reviews do not mutate or expose editing; future steps stay disabled; only the facilitator reopens; current progress and evidence survive; two closures remain distinct/read-only after another reopen and a fresh browser context; anonymous authors stay redacted; dated history fits five widths",
+    "Native: past-step GET reviews do not mutate or expose editing; future steps stay disabled; only the facilitator reopens; current progress and evidence survive; two closures remain distinct/read-only after another reopen and a fresh browser context; anonymous authors stay redacted; dated history fits five widths"
+  ],
+  "pageErrors": [],
+  "runDate": "2026-11-17",
+  "runtime": "Local Cloudflare Worker / Miniflare; Chromium emulation"
+}

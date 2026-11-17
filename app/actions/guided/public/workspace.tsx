@@ -8,16 +8,13 @@ import { numberLocaleFor } from "../../../i18n/locales.ts";
 import type { Locale } from "../../../i18n/locales.ts";
 import type { ViewerPayload } from "../payload.ts";
 import type { Card } from "../../../data/board.ts";
-import type { Topic, Stage, Proposal } from "../../../models/guided/session.ts";
+import type {
+  Topic,
+  Proposal,
+  MeetingRecord,
+} from "../../../models/guided/session.ts";
+import { stages, reviewStage } from "../../../models/guided/stages.ts";
 
-const stages: Stage[] = [
-  "collect",
-  "group",
-  "vote",
-  "discuss",
-  "actions",
-  "summary",
-];
 function sourceTopics(data: ViewerPayload): Topic[] {
   let grouped = new Set(data.state.themes.flatMap((t) => t.notes)),
     order = new Map(data.cards.map((c, i) => [c.id, i]));
@@ -36,6 +33,7 @@ type WorkspaceProps = {
   origin: string;
   initial: ViewerPayload;
   locale: Locale;
+  record?: MeetingRecord | null;
   initialView?: {
     category: string;
     topic: string;
@@ -43,6 +41,7 @@ type WorkspaceProps = {
     capture?: string;
     captureNote?: string;
     decision?: string;
+    step?: string;
   };
 };
 export const Workspace = clientEntry(
@@ -100,6 +99,15 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
   const root = () => document.getElementById(rootId)!;
   const noteDialog = () => root().querySelector<HTMLDialogElement>("dialog")!;
   const translator = () => createTranslator(handle.props.locale);
+  function viewing() {
+    const stage = handle.props.record
+      ? "summary"
+      : reviewStage(data.state.stage, handle.props.initialView?.step);
+    return {
+      stage,
+      readOnly: !!handle.props.record || stage !== data.state.stage,
+    };
+  }
   function get(key: string) {
     try {
       return sessionStorage.getItem(prefix + key);
@@ -280,7 +288,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         category = v.category ?? category;
         filter = v.filter ?? "all";
         expanded = !!v.expanded;
-        if (v.open && data.state.categorySetup?.confirmed !== false)
+        if (
+          v.open &&
+          !viewing().readOnly &&
+          data.state.categorySetup?.confirmed !== false
+        )
           noteDialog().showModal();
         for (let d of root().querySelectorAll<HTMLDetailsElement>(
           "details[data-editor]",
@@ -338,7 +350,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     handle.update();
   });
   function openNote() {
-    if (data.state.categorySetup?.confirmed === false) return;
+    if (viewing().readOnly || data.state.categorySetup?.confirmed === false)
+      return;
     let form = noteDialog().querySelector<HTMLFormElement>("form")!;
     if (!noteOpened && !get("note")) {
       let select = form.elements.namedItem("categoryId");
@@ -359,6 +372,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     submitter: HTMLElement | null = null,
   ) {
     if (pending) return;
+    if (viewing().readOnly) {
+      error = translator().t("review.readOnly");
+      handle.update();
+      return;
+    }
     save(form);
     let submitted = new URLSearchParams(
       [...new FormData(form)].map(([k, v]) => [k, String(v)]),
@@ -390,7 +408,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         let next: ViewerPayload = await response.json();
         if (next.revision >= data.revision) data = next;
         let kind = (form.elements.namedItem("kind") as HTMLInputElement).value;
-        if (kind === "live") {
+        if (kind === "live" || kind === "reopen") {
           privateTopic = "";
           expanded = false;
           persist();
@@ -463,9 +481,29 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     if (!data.categories.some((c) => c.id === category))
       category = data.categories[0]?.id ?? "";
     const { t, formatNumber } = translator();
-    let state = data.state,
-      facilitator = data.memberId === data.board.organiserMemberId;
-    let topics = sourceTopics(data),
+    const mode = viewing(),
+      readOnly = mode.readOnly,
+      archived = handle.props.record;
+    let state = {
+      ...data.state,
+      stage: mode.stage,
+      ...(archived
+        ? {
+            closure: archived.closure,
+            closureVersion: archived.version,
+            proposals: archived.closure.proposals,
+          }
+        : {}),
+    };
+    const displayData = {
+      ...data,
+      state,
+      cards: archived?.closure.cards ?? data.cards,
+      categories: archived?.closure.categories ?? data.categories,
+    };
+    const facilitator = data.memberId === data.board.organiserMemberId,
+      canManage = facilitator && !readOnly;
+    let topics = archived?.closure.topics ?? sourceTopics(data),
       ranked = [...topics].sort(
         (a, b) => (data.counts[b.id] ?? 0) - (data.counts[a.id] ?? 0),
       );
@@ -491,6 +529,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         <button
           disabled={
             pending ||
+            readOnly ||
             (kind === "advance" && state.stage === "vote" && state.ballotOpen)
           }
         >
@@ -543,8 +582,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     const note = (card: Card, select = false) => (
       <NoteCard
         key={card.id}
-        data={data}
+        data={displayData}
         locale={handle.props.locale}
+        readOnly={readOnly}
         card={card}
         select={select}
         rootId={rootId}
@@ -557,13 +597,14 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       />
     );
     const evidence = (topic: Topic) => (
-      <Evidence data={data} locale={handle.props.locale} topic={topic} />
+      <Evidence data={displayData} locale={handle.props.locale} topic={topic} />
     );
     const actionCard = (proposal: Proposal, historical = false) => (
       <ActionCard
         key={proposal.id}
-        data={data}
+        data={displayData}
         locale={handle.props.locale}
+        readOnly={readOnly}
         proposal={proposal}
         historical={historical}
         pending={pending}
@@ -580,8 +621,16 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     }
     const canFilterActions = state.proposals.length > 3;
     // A stale URL or saved choice must never hide items when the filter is absent.
-    if (!canFilterActions) filter = "all";
+    if (!archived && !canFilterActions) filter = "all";
     let filtered = state.proposals.filter((p) => matches(p, filter));
+    function viewHref(values: Record<string, string> = {}) {
+      const query = new URLSearchParams(values);
+      if (readOnly && !archived) query.set("step", state.stage);
+      return (
+        routes.board.href({ boardId: data.board.id }) +
+        (query.size ? `?${query}` : "")
+      );
+    }
     let invite = new URL(
       routes.joinBoard.index.href({ boardId: data.board.id }),
       handle.props.origin,
@@ -609,6 +658,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       return [
         data.board.title,
         t("guided.history"),
+        ...(record
+          ? [t("history.version", { version: state.closureVersion ?? 1 })]
+          : []),
         record
           ? t("guided.closedAt", {
               date: new Intl.DateTimeFormat(handle.props.locale, {
@@ -644,6 +696,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         id={rootId}
         class="workspace"
         data-stage={state.stage}
+        data-shared-stage={data.state.stage}
+        data-review={readOnly ? "true" : "false"}
         data-setup={
           state.categorySetup?.confirmed === false ? "pending" : "ready"
         }
@@ -679,6 +733,14 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
           }),
           on("change", (event) => {
             let el = event.target;
+            if (
+              el instanceof HTMLSelectElement &&
+              el.hasAttribute("data-record-picker")
+            ) {
+              persist();
+              el.form?.requestSubmit();
+              return;
+            }
             if (el instanceof HTMLSelectElement && el.dataset.view) {
               if (el.dataset.view === "category") category = el.value;
               if (el.dataset.view === "topic") {
@@ -722,6 +784,39 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
             <p>{t("guided.identityNotice")}</p>
           </details>
         </header>
+        <div class="history-tools">
+          {!!data.history?.length && (
+            <form
+              method="get"
+              action={routes.board.href({ boardId: data.board.id })}
+              class="history-navigation"
+              mix={on("submit", () => persist())}
+            >
+              <label>
+                {t("history.saved")}
+                <select name="record" required data-record-picker>
+                  <option value="" disabled selected={!handle.props.record}>
+                    {t("history.choose")}
+                  </option>
+                  {data.history.map((record) => (
+                    <option
+                      key={record.version}
+                      value={String(record.version)}
+                      selected={record.version === handle.props.record?.version}
+                    >
+                      {t("history.version", { version: record.version })} ·{" "}
+                      {new Intl.DateTimeFormat(
+                        numberLocaleFor(handle.props.locale),
+                        { dateStyle: "medium", timeStyle: "short" },
+                      ).format(new Date(record.closedAt))}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button>{t("history.view")}</button>
+            </form>
+          )}
+        </div>
         {state.legacy && (
           <details class="legacy-evidence">
             <summary>{t("guided.legacy")}</summary>
@@ -751,12 +846,62 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
               {stages.map((stage, i) => (
                 <li
                   key={stage}
-                  aria-current={stage === state.stage ? "step" : undefined}
+                  aria-current={stage === data.state.stage ? "step" : undefined}
+                  data-viewed={stage === state.stage ? "true" : "false"}
+                  data-state={
+                    i < stages.indexOf(data.state.stage)
+                      ? "completed"
+                      : i === stages.indexOf(data.state.stage)
+                        ? "current"
+                        : "upcoming"
+                  }
                 >
-                  {formatNumber(i + 1)} {t(`guided.${stage}`)}
+                  {i <= stages.indexOf(data.state.stage) ? (
+                    <a
+                      href={
+                        stage === data.state.stage
+                          ? routes.board.href({ boardId: data.board.id })
+                          : `?step=${stage}`
+                      }
+                      mix={on("click", () => persist())}
+                    >
+                      {formatNumber(i + 1)} {t(`guided.${stage}`)}
+                    </a>
+                  ) : (
+                    <span aria-disabled="true">
+                      {formatNumber(i + 1)} {t(`guided.${stage}`)}
+                    </span>
+                  )}
                 </li>
               ))}
             </ol>
+            {readOnly && (
+              <div class="review-banner" role="status">
+                <div>
+                  <strong>
+                    {handle.props.record
+                      ? t("history.recordTitle", {
+                          version: handle.props.record.version,
+                        })
+                      : t("review.title", {
+                          stage: t(`guided.${state.stage}`),
+                        })}
+                  </strong>
+                  <p>
+                    {t("review.teamStage", {
+                      stage: t(`guided.${data.state.stage}`),
+                    })}{" "}
+                    {t("review.readOnly")}
+                  </p>
+                </div>
+                <a
+                  href={routes.board.href({ boardId: data.board.id })}
+                  mix={on("click", () => persist())}
+                >
+                  {t("review.back")}
+                </a>
+              </div>
+            )}
             <div class="session-status" role="status" aria-live="polite">
               {status}
             </div>
@@ -774,11 +919,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
             <div class="stage-heading">
               <div>
                 <h2>{t(`guided.${state.stage}`)}</h2>
-                {state.stage === "collect" && (
+                {state.stage === "collect" && !readOnly && (
                   <p class="stage-description">{t("collect.intro")}</p>
                 )}
               </div>
-              {facilitator &&
+              {canManage &&
                 state.stage !== "summary" &&
                 command(
                   "advance",
@@ -799,15 +944,17 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                   data-categories={data.categories.length}
                 >
                   <form method="get" data-view-form>
+                    {readOnly && !archived && (
+                      <input type="hidden" name="step" value={state.stage} />
+                    )}
                     <label>
                       {t("guided.category")}
                       <select
                         name="category"
-                        defaultValue={category}
                         data-view="category"
                       >
                         {data.categories.map((c) => (
-                          <option key={c.id} value={c.id}>
+                          <option key={c.id} value={c.id} selected={c.id===category}>
                             {c.label} (
                             {formatNumber(
                               data.cards.filter((n) => n.categoryId === c.id)
@@ -820,26 +967,31 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                     </label>
                     <button>{t("guided.refresh")}</button>
                   </form>
-                  <a
-                    class="primary add-note"
-                    href={`${routes.newCard.index.href({ boardId: data.board.id })}?category=${category}`}
-                    mix={on("click", (e) => {
-                      e.preventDefault();
-                      openNote();
-                    })}
-                  >
-                    {t("guided.add")}
-                  </a>
-                  {command(
-                    "ready",
-                    { value: !state.ready[data.memberId] },
-                    state.ready[data.memberId]
-                      ? `✓ ${t("guided.notReady")}`
-                      : t("guided.done"),
+                  {!readOnly && (
+                    <a
+                      class="primary add-note"
+                      href={`${routes.newCard.index.href({ boardId: data.board.id })}?category=${category}`}
+                      mix={on("click", (e) => {
+                        e.preventDefault();
+                        openNote();
+                      })}
+                    >
+                      {t("guided.add")}
+                    </a>
                   )}
-                  <span class="readiness-count">
-                    {t("guided.doneCount", { count: data.doneCount })}
-                  </span>
+                  {!readOnly &&
+                    command(
+                      "ready",
+                      { value: !state.ready[data.memberId] },
+                      state.ready[data.memberId]
+                        ? `✓ ${t("guided.notReady")}`
+                        : t("guided.done"),
+                    )}
+                  {!readOnly && (
+                    <span class="readiness-count">
+                      {t("guided.doneCount", { count: data.doneCount })}
+                    </span>
+                  )}
                   <span class="note-total">
                     {t("collect.total", { count: data.cards.length })}
                   </span>
@@ -882,7 +1034,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                               </svg>
                             </span>
                             <strong>{t("guided.emptyNotes")}</strong>
-                            <p>{t("collect.emptyHint")}</p>
+                            {!readOnly && <p>{t("collect.emptyHint")}</p>}
                           </div>
                         )}
                       </div>
@@ -892,7 +1044,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
               </section>
             )}
             {(state.stage === "collect" || state.stage === "group") &&
-              facilitator && (
+              canManage && (
                 <details class="settings">
                   <summary>
                     {t("collect.settings")} · {t("guided.budget")}:{" "}
@@ -916,8 +1068,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
               )}
             {state.stage === "group" && (
               <section>
-                <p>{t("guided.groupHint")}</p>
-                {facilitator && (
+                <p>{t(readOnly ? "review.groupHint" : "guided.groupHint")}</p>
+                {canManage && (
                   <a
                     class="group-selection primary"
                     href={`#${rootId}-group-themes`}
@@ -940,12 +1092,12 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                               theme.notes.includes(c.id),
                             ),
                         )
-                        .map((c) => note(c, facilitator))}
+                        .map((c) => note(c, canManage))}
                     </div>
                   </section>
                   <section id={`${rootId}-group-themes`}>
                     <h3>{t("guided.themes")}</h3>
-                    {facilitator && (
+                    {canManage && (
                       <CommandForm
                         data={data}
                         kind="theme"
@@ -969,7 +1121,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                     {state.themes.map((theme) => (
                       <article key={theme.id} class="topic-card">
                         <h4 dir="auto">{theme.title}</h4>
-                        {facilitator && (
+                        {canManage && (
                           <button
                             type="submit"
                             form={`${rootId}-theme`}
@@ -985,7 +1137,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                           </button>
                         )}
                         {evidence(theme)}
-                        {facilitator && (
+                        {canManage && (
                           <>
                             <CommandForm
                               data={data}
@@ -1034,6 +1186,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                       : t("guided.ballotClosed")}
                   </span>
                   {state.ballotOpen &&
+                    !readOnly &&
                     command(
                       "ready",
                       { value: !state.ready[data.memberId] },
@@ -1041,10 +1194,12 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                         ? `✓ ${t("guided.notReady")}`
                         : t("guided.ready"),
                     )}
-                  <span>
-                    {t("guided.readyCount", { count: data.doneCount })}
-                  </span>
-                  {facilitator &&
+                  {!readOnly && (
+                    <span>
+                      {t("guided.readyCount", { count: data.doneCount })}
+                    </span>
+                  )}
+                  {canManage &&
                     command(
                       "ballot",
                       { ballot: state.ballot, value: !state.ballotOpen },
@@ -1075,7 +1230,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                     >
                       <h3 dir="auto">{topic.title}</h3>
                       {evidence(topic)}
-                      {state.ballotOpen ? (
+                      {state.ballotOpen && !readOnly ? (
                         <CommandForm
                           data={data}
                           kind="vote"
@@ -1100,9 +1255,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                         </CommandForm>
                       ) : (
                         <p>
-                          {t("guided.votes", {
-                            count: data.counts[topic.id] ?? 0,
-                          })}
+                          {state.ballot > 0
+                            ? t("guided.votes", {
+                                count: data.counts[topic.id] ?? 0,
+                              })
+                            : t("review.noBallot")}
                         </p>
                       )}
                     </article>
@@ -1125,7 +1282,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                       <span class="eyebrow">
                         {t(
                           sharedTopic
-                            ? "discuss.teamTopic"
+                            ? readOnly
+                              ? "review.sharedTopic"
+                              : "discuss.teamTopic"
                             : "discuss.noShared",
                         )}
                       </span>
@@ -1136,7 +1295,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                     </div>
                     {privateTopic && sharedTopic && (
                       <a
-                        href={routes.board.href({ boardId: data.board.id })}
+                        href={viewHref()}
                         mix={on("click", (event) => {
                           event.preventDefault();
                           privateTopic = "";
@@ -1157,6 +1316,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                   >
                     <h3>{t("guided.agenda")}</h3>
                     <form method="get" data-view-form>
+                      {readOnly && !archived && (
+                        <input type="hidden" name="step" value={state.stage} />
+                      )}
                       <label>
                         {t("discuss.browse")}
                         <select name="topic" data-view="topic">
@@ -1182,7 +1344,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                           }
                         >
                           <a
-                            href={`?topic=${topic.id}`}
+                            href={viewHref({ topic: topic.id })}
                             aria-current={
                               topic.id === active?.id ? "true" : undefined
                             }
@@ -1201,7 +1363,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                               <bdi>{topic.title}</bdi>
                               {topic.id === sharedTopic?.id && (
                                 <span class="agenda-live">
-                                  {t("discuss.current")}
+                                  {t(
+                                    readOnly
+                                      ? "review.sharedTopicShort"
+                                      : "discuss.current",
+                                  )}
                                 </span>
                               )}
                             </span>
@@ -1229,9 +1395,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                           <div class="discussion-topic-label">
                             <span class="discussion-mode">
                               {t(
-                                privateTopic || !sharedTopic
-                                  ? "discuss.viewing"
-                                  : "discuss.now",
+                                readOnly
+                                  ? "review.topic"
+                                  : privateTopic || !sharedTopic
+                                    ? "discuss.viewing"
+                                    : "discuss.now",
                               )}
                             </span>
                             <span class="discussion-position">
@@ -1264,7 +1432,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                             )}
                           </div>
                           {(privateTopic || !sharedTopic) &&
-                            facilitator &&
+                            canManage &&
                             active.id !== sharedTopic?.id &&
                             command(
                               "live",
@@ -1317,7 +1485,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                                 ? t(`guided.${state.outcomes[active.id]}`)
                                 : t("discuss.noOutcome")}
                             </span>
-                            {facilitator && (
+                            {canManage && (
                               <div class="control-row">
                                 {command(
                                   "outcome",
@@ -1338,7 +1506,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                               {state.decisions[active.id] ??
                                 t("guided.noDecision")}
                             </p>
-                            {facilitator && (
+                            {canManage && (
                               <a
                                 class="discussion-record-link"
                                 href={`?topic=${active.id}&decision=${active.id}#${rootId}-decision`}
@@ -1359,7 +1527,10 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                             }
                             href={
                               ranked.indexOf(active) > 0
-                                ? `?topic=${ranked[ranked.indexOf(active) - 1].id}`
+                                ? viewHref({
+                                    topic:
+                                      ranked[ranked.indexOf(active) - 1].id,
+                                  })
                                 : undefined
                             }
                             mix={on("click", (event) => {
@@ -1383,7 +1554,10 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                             }
                             href={
                               ranked.indexOf(active) < ranked.length - 1
-                                ? `?topic=${ranked[ranked.indexOf(active) + 1].id}`
+                                ? viewHref({
+                                    topic:
+                                      ranked[ranked.indexOf(active) + 1].id,
+                                  })
                                 : undefined
                             }
                             mix={on("click", (event) => {
@@ -1413,19 +1587,21 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                   >
                     <div class="discussion-actions-heading">
                       <h3>{t("discuss.actions")}</h3>
-                      <a
-                        href={`?topic=${active?.id ?? ""}&capture=${active?.id ?? ""}#${rootId}-capture`}
-                        mix={on("click", (event) => {
-                          event.preventDefault();
-                          capture(undefined, active);
-                        })}
-                      >
-                        {t(
-                          facilitator
-                            ? "guided.addAction"
-                            : "guided.suggestAction",
-                        )}
-                      </a>
+                      {!readOnly && (
+                        <a
+                          href={`?topic=${active?.id ?? ""}&capture=${active?.id ?? ""}#${rootId}-capture`}
+                          mix={on("click", (event) => {
+                            event.preventDefault();
+                            capture(undefined, active);
+                          })}
+                        >
+                          {t(
+                            facilitator
+                              ? "guided.addAction"
+                              : "guided.suggestAction",
+                          )}
+                        </a>
+                      )}
                     </div>
                     {!state.proposals.some((p) => p.topic === active?.id) && (
                       <p class="discussion-empty-actions">
@@ -1458,6 +1634,10 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                         <h3>{t("guided.history")}</h3>
                         {state.closure && (
                           <p class="record-date">
+                            {t("history.version", {
+                              version: state.closureVersion ?? 1,
+                            })}{" "}
+                            ·{" "}
                             {t("guided.closedAt", {
                               date: new Intl.DateTimeFormat(
                                 numberLocaleFor(handle.props.locale),
@@ -1543,115 +1723,149 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                         </div>
                       </>
                     )}
+                    {canManage &&
+                      state.stage === "summary" &&
+                      state.closure && (
+                        <section class="reopen-meeting">
+                          <div>
+                            <h3>{t("history.reopen")}</h3>
+                            <p>
+                              {t("history.reopenHint", {
+                                version: state.closureVersion ?? 1,
+                              })}
+                            </p>
+                          </div>
+                          <CommandForm
+                            data={data}
+                            kind="reopen"
+                            fields={{ version: state.closureVersion ?? 1 }}
+                          >
+                            <button disabled={pending}>
+                              {t("history.reopen")}
+                            </button>
+                          </CommandForm>
+                        </section>
+                      )}
                   </section>
                 )}
-                {state.stage === "summary" && (
-                  <div class="current-progress-heading">
-                    <h3>{t("guided.currentProgress")}</h3>
-                    <p>{t("summary.progressHint")}</p>
-                  </div>
-                )}
-                {state.proposals.length > 0 && (
-                  <p class="action-counts">
-                    {t("guided.actionCounts", {
-                      agreed: state.proposals.filter(
-                        (p) => p.disposition === "agreed",
-                      ).length,
-                      pending: state.proposals.filter(
-                        (p) => p.disposition === "suggested",
-                      ).length,
-                    })}
-                  </p>
-                )}
-                {(canFilterActions || state.stage === "actions") && (
-                  <div class="actions-toolbar">
-                    {canFilterActions && (
-                      <form method="get" data-view-form>
-                        <label>
-                          {t("guided.filter")}
-                          <select name="filter" data-view="filter">
-                            {(
-                              [
-                                "all",
-                                "suggested",
-                                "agreed",
-                                "deferred",
-                                "declined",
-                                "open",
-                                "completed",
-                                "mine",
-                              ] as const
-                            ).map((value) => (
-                              <option
-                                key={value}
-                                value={value}
-                                selected={value === filter}
-                              >
-                                {t(`guided.${value}`)} (
-                                {formatNumber(
-                                  state.proposals.filter((p) =>
-                                    matches(p, value),
-                                  ).length,
-                                )}
-                                )
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <button>{t("guided.refresh")}</button>
-                      </form>
+                {!archived && (
+                  <>
+                    {state.stage === "summary" && (
+                      <div class="current-progress-heading">
+                        <h3>{t("guided.currentProgress")}</h3>
+                        <p>{t("summary.progressHint")}</p>
+                      </div>
                     )}
-                    {state.stage === "actions" && (
-                      <a
-                        class="primary"
-                        href={`?capture=${active?.id ?? ""}#${rootId}-capture`}
-                        mix={on("click", (event) => {
-                          event.preventDefault();
-                          capture(undefined, active);
+                    {state.proposals.length > 0 && (
+                      <p class="action-counts">
+                        {t("guided.actionCounts", {
+                          agreed: state.proposals.filter(
+                            (p) => p.disposition === "agreed",
+                          ).length,
+                          pending: state.proposals.filter(
+                            (p) => p.disposition === "suggested",
+                          ).length,
                         })}
-                      >
-                        {t(
-                          facilitator
-                            ? "guided.addAction"
-                            : "guided.suggestAction",
+                      </p>
+                    )}
+                    {(canFilterActions || state.stage === "actions") && (
+                      <div class="actions-toolbar">
+                        {canFilterActions && (
+                          <form method="get" data-view-form>
+                            {readOnly && !archived && (
+                              <input
+                                type="hidden"
+                                name="step"
+                                value={state.stage}
+                              />
+                            )}
+                            <label>
+                              {t("guided.filter")}
+                              <select name="filter" data-view="filter">
+                                {(
+                                  [
+                                    "all",
+                                    "suggested",
+                                    "agreed",
+                                    "deferred",
+                                    "declined",
+                                    "open",
+                                    "completed",
+                                    "mine",
+                                  ] as const
+                                ).map((value) => (
+                                  <option
+                                    key={value}
+                                    value={value}
+                                    selected={value === filter}
+                                  >
+                                    {t(`guided.${value}`)} (
+                                    {formatNumber(
+                                      state.proposals.filter((p) =>
+                                        matches(p, value),
+                                      ).length,
+                                    )}
+                                    )
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <button>{t("guided.refresh")}</button>
+                          </form>
                         )}
-                      </a>
+                        {state.stage === "actions" && !readOnly && (
+                          <a
+                            class="primary"
+                            href={`?capture=${active?.id ?? ""}#${rootId}-capture`}
+                            mix={on("click", (event) => {
+                              event.preventDefault();
+                              capture(undefined, active);
+                            })}
+                          >
+                            {t(
+                              facilitator
+                                ? "guided.addAction"
+                                : "guided.suggestAction",
+                            )}
+                          </a>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
-                {canFilterActions && (
-                  <p class="actions-shown">
-                    {t("guided.shown", {
-                      shown: filtered.length,
-                      total: state.proposals.length,
-                    })}
-                  </p>
-                )}
-                <div class="action-grid current-action-list">
-                  {filtered.map((p) => actionCard(p))}
-                </div>
-                {!filtered.length && (
-                  <div class="empty-state">
-                    <p>
-                      {t(
-                        state.proposals.length
-                          ? "guided.noMatch"
-                          : "guided.noActions",
-                      )}
-                    </p>
-                    {filter !== "all" && (
-                      <a
-                        href={routes.board.href({ boardId: data.board.id })}
-                        mix={on("click", (event) => {
-                          event.preventDefault();
-                          filter = "all";
-                          handle.update();
+                    {canFilterActions && (
+                      <p class="actions-shown">
+                        {t("guided.shown", {
+                          shown: filtered.length,
+                          total: state.proposals.length,
                         })}
-                      >
-                        {t("guided.showAllActions")}
-                      </a>
+                      </p>
                     )}
-                  </div>
+                    <div class="action-grid current-action-list">
+                      {filtered.map((p) => actionCard(p))}
+                    </div>
+                    {!filtered.length && (
+                      <div class="empty-state">
+                        <p>
+                          {t(
+                            state.proposals.length
+                              ? "guided.noMatch"
+                              : "guided.noActions",
+                          )}
+                        </p>
+                        {filter !== "all" && (
+                          <a
+                            href={viewHref()}
+                            mix={on("click", (event) => {
+                              event.preventDefault();
+                              filter = "all";
+                              handle.update();
+                            })}
+                          >
+                            {t("guided.showAllActions")}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </section>
             )}
@@ -1737,7 +1951,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                   <button
                     class="primary"
                     disabled={
-                      pending || !["discuss", "actions"].includes(state.stage)
+                      pending ||
+                      readOnly ||
+                      !["discuss", "actions"].includes(data.state.stage)
                     }
                   >
                     {t(
@@ -1749,7 +1965,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
               <details
                 data-editor="decision"
                 open={
-                  facilitator &&
+                  canManage &&
                   state.stage === "discuss" &&
                   topics.some(
                     (topic) => topic.id === handle.props.initialView?.decision,
@@ -1800,7 +2016,10 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                   <button
                     class="primary"
                     disabled={
-                      pending || !facilitator || state.stage !== "discuss"
+                      pending ||
+                      readOnly ||
+                      !facilitator ||
+                      data.state.stage !== "discuss"
                     }
                   >
                     {t("guided.recordDecision")}
@@ -1887,7 +2106,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
               class="primary"
               disabled={
                 pending ||
-                state.stage !== "collect" ||
+                readOnly ||
+                data.state.stage !== "collect" ||
                 state.categorySetup?.confirmed === false
               }
             >

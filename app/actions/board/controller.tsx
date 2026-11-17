@@ -1,5 +1,11 @@
-import { hasGuidedSession, readSession } from "../../models/guided/session.ts";
-import { viewerPayload } from "../guided/payload.ts";
+import {
+  hasGuidedSession,
+  readSession,
+  readMeetingRecord,
+} from "../../models/guided/session.ts";
+import { reviewStage } from "../../models/guided/stages.ts";
+import { viewerPayload, redactMeetingRecord } from "../guided/payload.ts";
+import { redirect } from "remix/response/redirect";
 import { Workspace } from "../guided/public/workspace.tsx";
 import { Document } from "../document.tsx";
 import { createAction } from "remix/router";
@@ -21,6 +27,22 @@ export default createAction(routes.board, {
 
     if (await hasGuidedSession(context.db, board.id)) {
       let view = await readSession(context.db, board.id);
+      const recordParam = context.url.searchParams.get("record");
+      const record =
+        recordParam === null
+          ? null
+          : await readMeetingRecord(
+              context.db,
+              board.id,
+              /^[1-9]\d*$/.test(recordParam) ? Number(recordParam) : NaN,
+            );
+      if (recordParam !== null && !record)
+        return new Response(context.i18n.t("history.notFound"), {
+          status: 404,
+        });
+      const step = context.url.searchParams.get("step") ?? "";
+      if (!record && step && reviewStage(view!.state.stage, step) !== step)
+        return redirect(routes.board.href({ boardId: board.id }), 303);
       return context.render(
         <Document i18n={context.i18n} title={board.title}>
           <Workspace
@@ -28,6 +50,14 @@ export default createAction(routes.board, {
             origin={context.url.origin}
             initial={viewerPayload(view!, member.id)}
             locale={context.i18n.locale}
+            record={
+              record
+                ? {
+                    ...record,
+                    closure: redactMeetingRecord(record.closure, member.id),
+                  }
+                : null
+            }
             initialView={{
               category:
                 context.url.searchParams.get("category") ??
@@ -38,6 +68,7 @@ export default createAction(routes.board, {
               capture: context.url.searchParams.get("capture") ?? "",
               captureNote: context.url.searchParams.get("captureNote") ?? "",
               decision: context.url.searchParams.get("decision") ?? "",
+              step,
             }}
           />
         </Document>,

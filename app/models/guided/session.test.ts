@@ -12,6 +12,7 @@ import {
   topics,
   rankedTopics,
   CommandError,
+  readMeetingRecord,
   type Command,
   type SessionView,
 } from "./session.ts";
@@ -70,6 +71,174 @@ async function fixture(count = 6) {
   return { db, id, owner, participant, read, command, reject };
 }
 describe("guided session authority and atomic invariants", () => {
+  async function closedFixture() {
+    const f = await fixture(2);
+    await f.command("advance");
+    await f.command("advance");
+    let v = await f.read();
+    await f.command("ballot", { ballot: v.state.ballot, value: false });
+    await f.command("advance");
+    v = await f.read();
+    const topic = topics(v)[0].id;
+    await f.command("decision", { topic, text: "Original agreement" });
+    await f.command("propose", {
+      topic,
+      text: "Original action",
+      owner: f.participant,
+    });
+    await f.command("advance");
+    await f.command("advance");
+    return { ...f, topic };
+  }
+  it("reopens only for the facilitator, preserves the dated closure and current progress, and records a distinct second version", async () => {
+    const f = await closedFixture(),
+      closed = await f.read(),
+      original = await readMeetingRecord(f.db, f.id, 1);
+    assert.ok(original);
+    assert.deepEqual(original.closure, closed.state.closure);
+    assert.equal(closed.history!.length, 1);
+    await f.reject(
+      () => f.command("reopen", { version: 1 }, f.participant),
+      "forbidden",
+    );
+    await f.reject(() => f.command("reopen", { version: 2 }), "conflict");
+    await f.command(
+      "complete",
+      { proposal: closed.state.proposals[0].id, value: true },
+      f.participant,
+    );
+    let before = await f.read(),
+      intent = {
+        id: crypto.randomUUID(),
+        revision: before.revision,
+        kind: "reopen",
+        version: 1,
+      };
+    const reopened = await commandSession(f.db, f.id, f.owner, intent);
+    assert.equal(reopened.state.stage, "discuss");
+    assert.equal(reopened.state.closure, null);
+    assert.equal(reopened.state.closureVersion, 1);
+    assert.equal(reopened.state.proposals[0].completed, true);
+    assert.deepEqual(reopened.cards, closed.cards);
+    assert.deepEqual(reopened.categories, closed.categories);
+    assert.deepEqual(reopened.state.votes, closed.state.votes);
+    assert.deepEqual(reopened.state.decisions, closed.state.decisions);
+    assert.deepEqual(await readMeetingRecord(f.db, f.id, 1), original);
+    assert.equal(
+      (await commandSession(f.db, f.id, f.owner, intent)).revision,
+      reopened.revision,
+    );
+    await f.reject(() => f.command("reopen", { version: 1 }), "locked");
+    await f.command("decision", { topic: f.topic, text: "Revised agreement" });
+    await f.command("advance");
+    await f.command("advance");
+    const second = await f.read();
+    assert.equal(second.state.closureVersion, 2);
+    assert.deepEqual(
+      second.history!.map((r) => r.version),
+      [2, 1],
+    );
+    assert.equal(
+      (await readMeetingRecord(f.db, f.id, 2))!.closure.decisions[f.topic],
+      "Revised agreement",
+    );
+    assert.deepEqual(await readMeetingRecord(f.db, f.id, 1), original);
+    assert.equal(
+      (await commandSession(f.db, f.id, f.owner, intent)).state.stage,
+      "summary",
+    );
+    assert.equal((await f.read()).history!.length, 2);
+  });
+  it("serializes competing reopen commands and forbids archive rewriting, deletion, and arbitrary closure clearing", async () => {
+    const f = await closedFixture(),
+      v = await f.read();
+    for (const statement of [
+      "UPDATE guided_closures SET snapshot='{}' WHERE board_id=?",
+      "DELETE FROM guided_closures WHERE board_id=?",
+      "UPDATE guided_sessions SET data=json_set(data,'$.closure',NULL,'$.stage','discuss') WHERE board_id=?",
+      "UPDATE guided_sessions SET data=json_set(data,'$.closureVersion',4) WHERE board_id=?",
+    ]) {
+      let blocked = false;
+      try {
+        await f.db.exec(statement, [f.id]);
+      } catch {
+        blocked = true;
+      }
+      assert.ok(blocked);
+    }
+    const results = await Promise.allSettled(
+      [1, 2].map(() =>
+        commandSession(f.db, f.id, f.owner, {
+          id: crypto.randomUUID(),
+          revision: v.revision,
+          kind: "reopen",
+          version: 1,
+        }),
+      ),
+    );
+    assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+    assert.equal(
+      (results.find((r) => r.status === "rejected") as PromiseRejectedResult)
+        .reason.code,
+      "conflict",
+    );
+    assert.equal((await f.read()).history!.length, 1);
+    await f.db.exec("DELETE FROM boards WHERE id=?", [f.id]);
+    assert.equal(
+      (
+        await f.db.exec(
+          "SELECT count(*) AS n FROM guided_closures WHERE board_id=?",
+          [f.id],
+        )
+      ).rows![0].n,
+      0,
+    );
+  });
+  it("rolls back closure, archive and receipt together when archive storage fails, allowing the identical command to retry", async () => {
+    const f = await fixture(1);
+    await f.command("advance");
+    await f.command("advance");
+    let v = await f.read();
+    await f.command("ballot", { ballot: v.state.ballot, value: false });
+    await f.command("advance");
+    await f.command("advance");
+    v = await f.read();
+    await f.db.executeScript(
+      "CREATE TRIGGER fail_archive BEFORE INSERT ON guided_closures BEGIN SELECT RAISE(ABORT,'storage_unavailable'); END;",
+    );
+    const intent = {
+      id: crypto.randomUUID(),
+      revision: v.revision,
+      kind: "advance",
+    };
+    let failed = false;
+    try {
+      await commandSession(f.db, f.id, f.owner, intent);
+    } catch {
+      failed = true;
+    }
+    assert.ok(failed);
+    const unchanged = await f.read();
+    assert.equal(unchanged.revision, v.revision);
+    assert.equal(unchanged.state.stage, "actions");
+    assert.equal(unchanged.state.closure, null);
+    assert.equal(unchanged.history!.length, 0);
+    assert.equal(
+      (
+        await f.db.exec(
+          "SELECT count(*) AS n FROM guided_command_receipts WHERE command_id=?",
+          [intent.id],
+        )
+      ).rows![0].n,
+      0,
+    );
+    await f.db.executeScript("DROP TRIGGER fail_archive;");
+    assert.equal(
+      (await commandSession(f.db, f.id, f.owner, intent)).state.stage,
+      "summary",
+    );
+    assert.equal((await f.read()).history!.length, 1);
+  });
   it("adds ungrouped notes to an existing theme without changing its identity or evidence and replays retries once", async () => {
     let f = await fixture(),
       original = await f.read(),

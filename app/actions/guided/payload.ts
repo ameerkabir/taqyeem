@@ -1,6 +1,20 @@
-import type { SessionView } from "../../models/guided/session.ts";
+import type { SessionView, Closure } from "../../models/guided/session.ts";
 import { tally } from "../../models/guided/session.ts";
 import type { Card } from "../../data/board.ts";
+export function redactMeetingRecord(
+  closure: Closure,
+  memberId: string,
+): Closure {
+  return {
+    ...closure,
+    cards: closure.cards.map((card) => ({
+      ...card,
+      memberId:
+        card.isAnonymous && card.memberId !== memberId ? "" : card.memberId,
+      voteCount: 0,
+    })),
+  };
+}
 export function viewerPayload(view: SessionView, memberId: string) {
   const safeCard = (card: Card) => ({
     ...card,
@@ -16,7 +30,7 @@ export function viewerPayload(view: SessionView, memberId: string) {
     ready: { [memberId]: view.state.ready[memberId] ?? false },
     votes: { [memberId]: view.state.votes[memberId] ?? [] },
     closure: view.state.closure
-      ? { ...view.state.closure, cards: view.state.closure.cards.map(safeCard) }
+      ? redactMeetingRecord(view.state.closure, memberId)
       : null,
   };
   return {

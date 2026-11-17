@@ -72,6 +72,7 @@ export const commandController = createAction(routes.sessionCommand, {
         .filter(Boolean);
     if (form.has("notes")) command.notes = form.getAll("notes");
     if (form.has("ballot")) command.ballot = Number(form.get("ballot"));
+    if (form.has("version")) command.version = Number(form.get("version"));
     if (form.has("value")) {
       let v = form.get("value");
       command.value =
@@ -100,6 +101,7 @@ export const commandController = createAction(routes.sessionCommand, {
           "due",
           "proposal",
           "ballot",
+          "version",
           "value",
         ]) {
           if (form.getAll(key).length > 1)
