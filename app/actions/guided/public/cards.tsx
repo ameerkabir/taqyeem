@@ -1,6 +1,7 @@
 import { on, type Handle } from "remix/component";
 import type { Card } from "../../../data/board.ts";
 import type { Topic, Proposal } from "../../../models/guided/session.ts";
+import { formatDate } from "../../../i18n/format-date.ts";
 import type { ViewerPayload } from "../payload.ts";
 import { numberLocaleFor, type Locale } from "../../../i18n/locales.ts";
 import { createTranslator } from "../../../i18n/translator.ts";
@@ -226,10 +227,7 @@ export function ActionCard(
             <>
               {" "}
               ·{" "}
-              {new Intl.DateTimeFormat(numberLocaleFor(locale), {
-                dateStyle: "medium",
-                timeZone: "UTC",
-              }).format(new Date(p.due))}
+              {formatDate(numberLocaleFor(locale), p.due, "due")}
             </>
           )}
         </p>

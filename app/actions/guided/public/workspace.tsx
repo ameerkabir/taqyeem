@@ -17,6 +17,15 @@ import {
   type Topic,
 } from "../../../models/guided/topics.ts";
 import { isDraftField } from "../draft-fields.ts";
+import { formSignature } from "../client/form-signature.ts";
+import { laneLayout } from "../client/lanes.ts";
+import {
+  canFilterActions,
+  matchesActionFilter,
+  parseActionFilter,
+} from "../client/action-filter.ts";
+import { buildSummaryText } from "../client/summary-text.ts";
+import { formatDate } from "../../../i18n/format-date.ts";
 import { stages, reviewStage } from "../../../models/guided/stages.ts";
 const noteDragType = "application/x-taqyeem-note";
 
@@ -52,18 +61,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
   let data = handle.props.initial,
     privateTopic = handle.props.initialView?.topic ?? "",
     expanded = false,
-    filter = [
-      "all",
-      "suggested",
-      "agreed",
-      "deferred",
-      "declined",
-      "open",
-      "completed",
-      "mine",
-    ].includes(handle.props.initialView?.filter ?? "")
-      ? handle.props.initialView!.filter
-      : "all",
+    filter: string = parseActionFilter(handle.props.initialView?.filter),
     category =
       handle.props.initialView?.category || data.categories[0]?.id || "";
   let lastInitial = handle.props.initial,
@@ -387,9 +385,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       return;
     }
     save(form);
-    let submitted = new URLSearchParams(
-      [...new FormData(form)].map(([k, v]) => [k, String(v)]),
-    ).toString();
+    let submitted = formSignature(form);
     // Capture the clicked theme button before pending UI disables it.
     let body = new FormData(form, submitter);
     pending = true;
@@ -431,9 +427,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         }
         if (
           ["theme", "propose", "decision"].includes(kind) &&
-          new URLSearchParams(
-            [...new FormData(form)].map(([k, v]) => [k, String(v)]),
-          ).toString() === submitted
+          formSignature(form) === submitted
         ) {
           // Adding to an existing theme does not consume a drafted new title.
           let title = form.querySelector<HTMLInputElement>(
@@ -453,9 +447,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
           crypto.randomUUID();
       } else {
         let unchanged =
-          new URLSearchParams(
-            [...new FormData(form)].map(([k, v]) => [k, String(v)]),
-          ).toString() === submitted;
+          formSignature(form) === submitted;
         if (unchanged) form.reset();
         submission = crypto.randomUUID();
         (form.elements.namedItem("submissionId") as HTMLInputElement).value =
@@ -530,13 +522,10 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     let active =
         ranked.find((x) => x.id === privateTopic) ?? sharedTopic ?? ranked[0],
       mine = state.votes[data.memberId] ?? [];
-    let currentCategory =
-        data.categories.find((c) => c.id === category) ?? data.categories[0],
-      shelf = Math.floor(data.categories.indexOf(currentCategory) / 3);
-    let lanes =
-      data.categories.length <= 4
-        ? data.categories
-        : data.categories.slice(shelf * 3, shelf * 3 + 3);
+    let { current: currentCategory, lanes } = laneLayout(
+      data.categories,
+      category,
+    );
     const command = (
       kind: string,
       fields: CommandProps["fields"],
@@ -630,18 +619,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         pending={pending}
       />
     );
-    function matches(p: Proposal, value: string) {
-      return (
-        value === "all" ||
-        (value === "mine" && p.owner === data.memberId) ||
-        (value === "open" && p.disposition === "agreed" && !p.completed) ||
-        (value === "completed" && p.disposition === "agreed" && p.completed) ||
-        p.disposition === value
-      );
-    }
-    const canFilterActions = state.proposals.length > 3;
+    const matches = (p: Proposal, value: string) =>
+      matchesActionFilter(p, value, data.memberId);
+    const canFilter = canFilterActions(state.proposals.length);
     // A stale URL or saved choice must never hide items when the filter is absent.
-    if (!archived && !canFilterActions) filter = "all";
+    if (!archived && !canFilter) filter = "all";
     let filtered = state.proposals.filter((p) => matches(p, filter));
     function viewHref(values: Record<string, string> = {}) {
       const query = new URLSearchParams(values);
@@ -664,53 +646,18 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       }
       handle.update();
     }
-    const summaryText = () => {
-      const record = state.closure;
-      const source = record?.cards ?? data.cards;
-      const names = new Map(
-        data.members.map((member) => [member.id, member.displayName]),
-      );
-      const date = (value: string) =>
-        new Intl.DateTimeFormat(handle.props.locale, {
-          dateStyle: "medium",
-          timeZone: "UTC",
-        }).format(new Date(value));
-      return [
-        data.board.title,
-        t("guided.history"),
-        ...(record
-          ? [t("history.version", { version: state.closureVersion ?? 1 })]
-          : []),
-        record
-          ? t("guided.closedAt", {
-              date: new Intl.DateTimeFormat(handle.props.locale, {
-                dateStyle: "long",
-                timeStyle: "short",
-              }).format(new Date(record.at)),
-            })
-          : t("guided.legacyHistory"),
-        ...(record?.topics ?? ranked).flatMap((topic) => [
-          topic.title,
-          t(
-            `guided.${record?.outcomes[topic.id] ?? "unaddressed"}` as "guided.unaddressed",
-          ),
-          record?.decisions[topic.id] ?? t("guided.noDecision"),
-          ...topic.notes.flatMap((id) => {
-            let card = source.find((c) => c.id === id);
-            return card
-              ? [
-                  card.body,
-                  `${data.categories.find((c) => c.id === card.categoryId)?.label ?? ""} · ${card.isAnonymous ? t("cards.anonymous") : (names.get(card.memberId) ?? "")}`,
-                ]
-              : [];
-          }),
-        ]),
-        ...(record?.proposals ?? []).map(
-          (p) =>
-            `${p.text} — ${t(`guided.${p.disposition}`)} · ${names.get(p.owner) ?? t("guided.unassigned")}${p.due ? ` · ${date(p.due)}` : ""}${p.topic ? ` · ${(record?.topics ?? ranked).find((topic) => topic.id === p.topic)?.title ?? ""}` : ""}`,
-        ),
-      ].join("\n\n");
-    };
+    const summaryText = () =>
+      buildSummaryText({
+        boardTitle: data.board.title,
+        closure: state.closure,
+        closureVersion: state.closureVersion,
+        ranked,
+        cards: data.cards,
+        categories: data.categories,
+        members: data.members,
+        t,
+        locale: handle.props.locale,
+      });
     return (
       <main
         id={rootId}
@@ -923,10 +870,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                       selected={record.version === handle.props.record?.version}
                     >
                       {t("history.version", { version: record.version })} ·{" "}
-                      {new Intl.DateTimeFormat(
+                      {formatDate(
                         numberLocaleFor(handle.props.locale),
-                        { dateStyle: "medium", timeStyle: "short" },
-                      ).format(new Date(record.closedAt))}
+                        record.closedAt,
+                        "medium-time",
+                      )}
                     </option>
                   ))}
                 </select>
@@ -1131,7 +1079,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                       }
                       data-tone={cat.tone ?? 0}
                       data-active={
-                        cat.id === currentCategory.id ? "true" : "false"
+                        cat.id === currentCategory?.id ? "true" : "false"
                       }
                     >
                       <h3 dir="auto">
@@ -1767,10 +1715,11 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                             })}{" "}
                             ·{" "}
                             {t("guided.closedAt", {
-                              date: new Intl.DateTimeFormat(
+                              date: formatDate(
                                 numberLocaleFor(handle.props.locale),
-                                { dateStyle: "long", timeStyle: "short" },
-                              ).format(new Date(state.closure.at)),
+                                state.closure.at,
+                                "long-time",
+                              ),
                             })}
                           </p>
                         )}
@@ -1896,9 +1845,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                         })}
                       </p>
                     )}
-                    {(canFilterActions || state.stage === "actions") && (
+                    {(canFilter || state.stage === "actions") && (
                       <div class="actions-toolbar">
-                        {canFilterActions && (
+                        {canFilter && (
                           <form method="get" data-view-form>
                             {readOnly && !archived && (
                               <input
@@ -1959,7 +1908,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
                         )}
                       </div>
                     )}
-                    {canFilterActions && (
+                    {canFilter && (
                       <p class="actions-shown">
                         {t("guided.shown", {
                           shown: filtered.length,
