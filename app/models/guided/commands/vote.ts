@@ -31,7 +31,9 @@ export const vote: CommandHandler = {
     if (command.value) {
       mine.add(id);
       requireThat(mine.size <= state.budget, "budget");
-    } else mine.delete(id);
+    } else {
+      mine.delete(id);
+    }
     state.votes[memberId] = [...mine];
   },
 };

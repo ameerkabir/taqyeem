@@ -22,7 +22,9 @@ export async function joinBoard(
   displayName: string,
 ): Promise<JoinBoardResult | null> {
   let board = await loadBoard(db, boardId);
-  if (!board) return null;
+  if (!board) {
+    return null;
+  }
 
   try {
     let row = await insertMember(db, { boardId, displayName, role: "participant" });
@@ -32,7 +34,9 @@ export async function joinBoard(
     };
   } catch (error) {
     // Names are unique per board (normalised), including the organiser's.
-    if (error instanceof MemberNameTakenError) return { ok: false, reason: "name_taken" };
+    if (error instanceof MemberNameTakenError) {
+      return { ok: false, reason: "name_taken" };
+    }
     throw error;
   }
 }

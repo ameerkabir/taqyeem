@@ -10,13 +10,16 @@ export function requireThat(
   code: CommandError["code"] = "locked",
   status = 409,
 ): asserts ok {
-  if (!ok) throw new CommandError(code, status);
+  if (!ok) {
+    throw new CommandError(code, status);
+  }
 }
 
 /** A trimmed, non-empty string of at most `max` characters. */
 export function text(value: unknown, max = 500): string {
-  if (typeof value !== "string" || !value.trim() || value.trim().length > max)
+  if (typeof value !== "string" || !value.trim() || value.trim().length > max) {
     throw new CommandError("invalid", 400);
+  }
   return value.trim();
 }
 

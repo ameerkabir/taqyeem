@@ -26,8 +26,9 @@ describe("guided board policy", () => {
 
   it("projects each guided stage onto the legacy status and never opens legacy voting", () => {
     assert.equal(guided("collect").status, "collecting");
-    for (let stage of ["group", "vote", "discuss", "actions"] as const)
+    for (let stage of ["group", "vote", "discuss", "actions"] as const) {
       assert.equal(guided(stage).status, "meeting", stage);
+    }
     assert.equal(guided("summary").status, "closed");
     assert.equal(guided("vote").votingOpen, false);
     assert.equal(guided("discuss").guidedRevision, 7);
@@ -36,8 +37,9 @@ describe("guided board policy", () => {
 
   it("allows note changes only while collecting", () => {
     assert.equal(guidedContributionsClosed(guided("collect")), false);
-    for (let stage of ["group", "vote", "discuss", "actions", "summary"] as const)
+    for (let stage of ["group", "vote", "discuss", "actions", "summary"] as const) {
       assert.equal(guidedContributionsClosed(guided(stage)), true, stage);
+    }
   });
 
   it("lets only the organiser move notes between categories on guided boards", () => {

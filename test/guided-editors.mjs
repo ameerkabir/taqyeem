@@ -68,7 +68,9 @@ try {
       posted();
       await gate;
       await route.continue();
-    } else await route.continue();
+    } else {
+      await route.continue();
+    }
   });
   await page.locator(".add-note").click();
   await page.locator("dialog textarea").fill("The submitted snapshot");

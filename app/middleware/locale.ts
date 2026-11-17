@@ -46,7 +46,9 @@ export function getI18n(
   context: Pick<RequestContext, "request" | "get">,
 ): I18n {
   let existing = context.get(i18nContext);
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
   let locale = resolveLocale({
     acceptLanguage: context.request.headers.get("Accept-Language"),
   });
@@ -58,10 +60,14 @@ function mergeVary(existing: string | null): string {
     .split(",")
     .map((token) => token.trim())
     .filter(Boolean);
-  if (tokens.includes("*")) return "*";
+  if (tokens.includes("*")) {
+    return "*";
+  }
   let lower = new Set(tokens.map((token) => token.toLowerCase()));
   for (let name of ["Cookie", "Accept-Language"]) {
-    if (!lower.has(name.toLowerCase())) tokens.push(name);
+    if (!lower.has(name.toLowerCase())) {
+      tokens.push(name);
+    }
   }
   return tokens.join(", ");
 }
@@ -72,10 +78,13 @@ export function withLocaleHeaders(
   locale: Locale,
 ): Response {
   let headers = new Headers(response.headers);
-  if (!headers.has("Content-Language")) headers.set("Content-Language", locale);
+  if (!headers.has("Content-Language")) {
+    headers.set("Content-Language", locale);
+  }
   headers.set("Vary", mergeVary(headers.get("Vary")));
-  if (!headers.has("Cache-Control"))
+  if (!headers.has("Cache-Control")) {
     headers.set("Cache-Control", "private, no-cache");
+  }
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

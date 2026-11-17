@@ -17,7 +17,9 @@ export function cardManagementError(
   operation: "edit" | "delete",
   t: Translator["t"],
 ) {
-  if (!card) return { message: t("access.cardNotFound"), status: 404 };
+  if (!card) {
+    return { message: t("access.cardNotFound"), status: 404 };
+  }
   if (card.memberId !== memberId) {
     return {
       message:
@@ -27,10 +29,12 @@ export function cardManagementError(
       status: 403,
     };
   }
-  if (guidedContributionsClosed(board))
+  if (guidedContributionsClosed(board)) {
     return { message: t("guided.collectOnly"), status: 403 };
-  if (board.status === "closed")
+  }
+  if (board.status === "closed") {
     return { message: t("access.boardClosed"), status: 403 };
+  }
   if (board.votingOpen) {
     return {
       message:
@@ -54,7 +58,9 @@ export function cardAccessError(
   let i18n = getI18n(context);
   let board = context.get(boardContext);
   let render = context.get(Renderer) as RenderFunction | undefined;
-  if (!render) return new Response(message, { status });
+  if (!render) {
+    return new Response(message, { status });
+  }
   return render(
     <CardPage
       i18n={i18n}

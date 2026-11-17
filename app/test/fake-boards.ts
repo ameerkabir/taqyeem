@@ -71,7 +71,9 @@ export function createFakeBoardModels(
     getGuidedStatus: async (boardId) => store.guided.get(boardId) ?? null,
     setVotingOpen: async (boardId, votingOpen) => {
       let board = store.boards.get(boardId);
-      if (!board) return null;
+      if (!board) {
+        return null;
+      }
 
       board.votingOpen = votingOpen;
       return board;
@@ -79,7 +81,9 @@ export function createFakeBoardModels(
 
     setBoardStatus: async (boardId, status) => {
       let board = store.boards.get(boardId);
-      if (!board) return null;
+      if (!board) {
+        return null;
+      }
 
       board.status = status;
       if (status === "closed") {
@@ -99,7 +103,9 @@ export function createFakeBoardModels(
     createCard: async (card: Card, submissionId: string) => {
       let key = JSON.stringify([card.boardId, card.memberId, submissionId]);
       let existing = store.submissions.get(key);
-      if (existing) return { ok: true, card: existing };
+      if (existing) {
+        return { ok: true, card: existing };
+      }
 
       let currentTime = now();
       let recentCards = store.cards.filter(
@@ -143,10 +149,14 @@ export function createFakeBoardModels(
       let card = store.cards.find(
         (saved) => saved.boardId === boardId && saved.id === cardId,
       );
-      if (!card) return null;
+      if (!card) {
+        return null;
+      }
       // Only editable fields may change, even if a caller supplies extra properties.
       card.body = changes.body;
-      if (!preserveCategory) card.categoryId = changes.categoryId;
+      if (!preserveCategory) {
+        card.categoryId = changes.categoryId;
+      }
       card.isAnonymous = changes.isAnonymous;
       return card;
     },
@@ -166,9 +176,13 @@ export function createFakeBoardModels(
 
     joinBoard: async (boardId, displayName) => {
       let board = store.boards.get(boardId);
-      if (!board) return null;
+      if (!board) {
+        return null;
+      }
       let key = memberNameKey(displayName);
-      if (key === "") throw new Error("A member name must contain a visible character");
+      if (key === "") {
+        throw new Error("A member name must contain a visible character");
+      }
       if (
         store.members.some(
           (m) => m.boardId === boardId && memberNameKey(m.displayName) === key,
@@ -187,7 +201,9 @@ export function createFakeBoardModels(
 
     listViewerVotes: async (boardId: string) => {
       let memberId = await resolveViewerMemberId(boardId);
-      if (!memberId) return [];
+      if (!memberId) {
+        return [];
+      }
 
       return store.cards
         .filter((card) => {

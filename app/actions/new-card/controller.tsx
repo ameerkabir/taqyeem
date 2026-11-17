@@ -74,18 +74,20 @@ export default createController(routes.newCard, {
           submissionId,
         );
       } catch (error) {
-        if (isCollectLock(error))
+        if (isCollectLock(error)) {
           return newCardError(
             context,
             context.i18n.t("guided.collectOnly"),
             409,
             { data, categories },
           );
-        if (error instanceof DataTableDatabaseError)
+        }
+        if (error instanceof DataTableDatabaseError) {
           return newCardError(context, context.i18n.t("newCard.failed"), 503, {
             data,
             categories,
           });
+        }
         throw error;
       }
       if (!result.ok) {
@@ -108,15 +110,19 @@ export default createController(routes.newCard, {
 function requireCreationAllowed(): Middleware {
   return (context, next) => {
     let board = context.get(boardContext);
-    if (!board) throw new Error("Creation policy requires loadBoard");
-    if (board.categorySetupRequired)
+    if (!board) {
+      throw new Error("Creation policy requires loadBoard");
+    }
+    if (board.categorySetupRequired) {
       return newCardError(context, getI18n(context).t("setup.required"), 403);
-    if (guidedContributionsClosed(board))
+    }
+    if (guidedContributionsClosed(board)) {
       return newCardError(
         context,
         getI18n(context).t("guided.collectOnly"),
         403,
       );
+    }
     if (context.request.method === "POST" && board.status === "closed") {
       return newCardError(
         context,

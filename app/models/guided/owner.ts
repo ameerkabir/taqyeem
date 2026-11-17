@@ -11,10 +11,14 @@ export async function resolveOwner(
   name: FormDataEntryValue | null,
 ): Promise<string> {
   let search = String(name ?? "").trim();
-  if (!search) return "";
+  if (!search) {
+    return "";
+  }
   let owner = (await models.listMembers(boardId)).find(
     (m) => m.displayName === search,
   );
-  if (!owner) throw new CommandError("invalid", 400);
+  if (!owner) {
+    throw new CommandError("invalid", 400);
+  }
   return owner.id;
 }

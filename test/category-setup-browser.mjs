@@ -64,7 +64,9 @@ try {
   let before = await (await page.request.get(base + path + "/session")).json();
   await page.addInitScript(
     ({ prefix, categoryId, submissionId }) => {
-      if (sessionStorage.getItem(prefix + "seeded")) return;
+      if (sessionStorage.getItem(prefix + "seeded")) {
+        return;
+      }
       sessionStorage.setItem(prefix + "seeded", "yes");
       sessionStorage.setItem(
         prefix + "note",

@@ -37,7 +37,9 @@ export const DeleteCardForm = clientEntry(
             formStyle,
             on("submit", async (event) => {
               event.preventDefault();
-              if (pending) return;
+              if (pending) {
+                return;
+              }
               pending = true;
               error = undefined;
               handle.update();

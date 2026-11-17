@@ -12,7 +12,9 @@ export const RefreshCards = clientEntry(
           let frame = handle.frames.get("board-cards");
 
           // Keep ordinary form navigation if the frame isn't mounted.
-          if (!frame) return;
+          if (!frame) {
+            return;
+          }
 
           event.preventDefault();
           await frame.reload();

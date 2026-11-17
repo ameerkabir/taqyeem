@@ -9,7 +9,9 @@ export function withGuidedStatus(
   board: Board,
   guided: GuidedStatus | null,
 ): Board {
-  if (!guided) return board;
+  if (!guided) {
+    return board;
+  }
   return {
     ...board,
     guidedStage: guided.stage,

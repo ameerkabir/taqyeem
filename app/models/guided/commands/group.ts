@@ -31,13 +31,15 @@ export const theme: CommandHandler = {
       "invalid",
       400,
     );
-    if (target) target.notes.push(...ids);
-    else
+    if (target) {
+      target.notes.push(...ids);
+    } else {
       state.themes.push({
         id: command.id,
         title: uniqueThemeTitle(state, command.title),
         notes: ids,
       });
+    }
   },
 };
 

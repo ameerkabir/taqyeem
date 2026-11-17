@@ -163,8 +163,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
   }
   /** Saves every draft plus the viewer's private view state so a reload resumes where they were. */
   function persist() {
-    for (let f of root().querySelectorAll<HTMLFormElement>("form[data-draft]"))
+    for (let f of root().querySelectorAll<HTMLFormElement>("form[data-draft]")) {
       save(f);
+    }
     storage.set(
       "viewer",
       JSON.stringify({
@@ -200,7 +201,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
           signal: handle.signal,
         },
       );
-      if (response.status === 304) return;
+      if (response.status === 304) {
+        return;
+      }
       if (isNotMemberResponse(response)) {
         needsJoin = true;
         error = translator().t("access.joinBoard");
@@ -208,7 +211,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         handle.update();
         return;
       }
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        throw new Error();
+      }
       let next: ViewerPayload = await response.json();
       if (!pending && next.revision >= data.revision) {
         let changed = next.revision !== data.revision;
@@ -238,16 +243,19 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
           v.open &&
           !viewing().readOnly &&
           data.state.categorySetup?.confirmed !== false
-        )
+        ) {
           noteDialog().showModal();
+        }
         for (let d of root().querySelectorAll<HTMLDetailsElement>(
           "details[data-editor]",
-        ))
+        )) {
           d.open = v.details?.includes(d.dataset.editor);
+        }
       }
     } catch {}
-    for (let f of root().querySelectorAll<HTMLFormElement>("form[data-draft]"))
+    for (let f of root().querySelectorAll<HTMLFormElement>("form[data-draft]")) {
       restore(f);
+    }
     startPolling(
       handle.signal,
       (afterReconnect) => void refresh(afterReconnect),
@@ -259,8 +267,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         if (
           event.target instanceof HTMLFormElement &&
           !root().contains(event.target)
-        )
+        ) {
           persist();
+        }
       },
       { capture: true, signal: handle.signal },
     );
@@ -276,12 +285,15 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
   });
   /** Opens the note dialog, defaulting its category to the lane being viewed. */
   function openNote() {
-    if (viewing().readOnly || data.state.categorySetup?.confirmed === false)
+    if (viewing().readOnly || data.state.categorySetup?.confirmed === false) {
       return;
+    }
     let form = noteDialog().querySelector<HTMLFormElement>("form")!;
     if (!noteOpened && !get("note")) {
       let select = form.elements.namedItem("categoryId");
-      if (select instanceof HTMLSelectElement) select.value = category;
+      if (select instanceof HTMLSelectElement) {
+        select.value = category;
+      }
     }
     noteOpened = true;
     noteDialog().showModal();
@@ -487,19 +499,23 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
   return () => {
     if (handle.props.initial !== lastInitial) {
       lastInitial = handle.props.initial;
-      if (lastInitial.revision >= data.revision) data = lastInitial;
+      if (lastInitial.revision >= data.revision) {
+        data = lastInitial;
+      }
     }
     let nextView = JSON.stringify(handle.props.initialView);
     if (nextView !== lastView) {
       lastView = nextView;
       let view = handle.props.initialView;
-      if (view?.category && data.categories.some((c) => c.id === view.category))
+      if (view?.category && data.categories.some((c) => c.id === view.category)) {
         category = view.category;
+      }
       privateTopic = view?.topic ?? privateTopic;
       filter = view?.filter ?? filter;
     }
-    if (!data.categories.some((c) => c.id === category))
+    if (!data.categories.some((c) => c.id === category)) {
       category = data.categories[0]?.id ?? "";
+    }
     const { t, formatNumber } = translator();
     const mode = viewing(),
       readOnly = mode.readOnly,
@@ -527,8 +543,9 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       ranked = [...topics].sort(
         (a, b) => (data.counts[b.id] ?? 0) - (data.counts[a.id] ?? 0),
       );
-    if (privateTopic && !ranked.some((topic) => topic.id === privateTopic))
+    if (privateTopic && !ranked.some((topic) => topic.id === privateTopic)) {
       privateTopic = "";
+    }
     let sharedTopic = ranked.find((topic) => topic.id === state.liveTopic);
     let active =
         ranked.find((x) => x.id === privateTopic) ?? sharedTopic ?? ranked[0],

@@ -37,13 +37,15 @@ export default createAction(routes.board, {
               board.id,
               /^[1-9]\d*$/.test(recordParam) ? Number(recordParam) : NaN,
             );
-      if (recordParam !== null && !record)
+      if (recordParam !== null && !record) {
         return new Response(context.i18n.t("history.notFound"), {
           status: 404,
         });
+      }
       const step = context.url.searchParams.get("step") ?? "";
-      if (!record && step && reviewStage(view.state.stage, step) !== step)
+      if (!record && step && reviewStage(view.state.stage, step) !== step) {
         return redirect(routes.board.href({ boardId: board.id }), 303);
+      }
       return context.render(
         <Document i18n={context.i18n} title={board.title}>
           <Workspace

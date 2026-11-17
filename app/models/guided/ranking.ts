@@ -4,8 +4,11 @@ import type { SessionView, SharedSession } from "./types.ts";
 /** Votes per topic id across every member's current ballot. */
 export function tally(state: SharedSession): Record<string, number> {
   let counts: Record<string, number> = {};
-  for (let votes of Object.values(state.votes))
-    for (let id of votes) counts[id] = (counts[id] ?? 0) + 1;
+  for (let votes of Object.values(state.votes)) {
+    for (let id of votes) {
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+  }
   return counts;
 }
 

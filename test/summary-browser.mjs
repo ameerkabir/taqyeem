@@ -17,7 +17,7 @@ const checks = [],
   errors = [];
 let activePage;
 try {
-  for (const enhanced of [true, false])
+  for (const enhanced of [true, false]) {
     for (const count of [0, 1, 3, 4]) {
       const context = await browser.newContext({
           javaScriptEnabled: enhanced,
@@ -54,18 +54,22 @@ try {
         return r.json();
       }
       async function click(locator) {
-        if (!enhanced)
+        if (!enhanced) {
           await Promise.all([
             page.waitForNavigation({ waitUntil: "domcontentloaded" }),
             locator.click(),
           ]);
-        else await locator.click();
+        } else {
+          await locator.click();
+        }
       }
       async function command(kind, within = page) {
         const button = within
           .locator(`form.command-form:has([name=kind][value="${kind}"]) button`)
           .first();
-        if (!enhanced) return click(button);
+        if (!enhanced) {
+          return click(button);
+        }
         const response = page.waitForResponse(
           (r) =>
             r.url().endsWith("/commands") && r.request().method() === "POST",
@@ -196,11 +200,12 @@ try {
           count,
         );
       }
-      if (enhanced && count === 1)
+      if (enhanced && count === 1) {
         await page.screenshot({
           path: output + "/summary-one-action-desktop.png",
           fullPage: true,
         });
+      }
       if (count > 0) {
         assert.equal(await page.locator(".summary-agreement[open]").count(), 0);
         await page.locator(".summary-agreement > summary").click();
@@ -210,12 +215,13 @@ try {
             .count(),
           count,
         );
-        if (count >= 3)
+        if (count >= 3) {
           assert.ok(
             (await page.locator(".historical-actions").innerText()).includes(
               "Try a smaller review checklist",
             ),
           );
+        }
         await page.locator(".summary-agreement > summary").click();
         if (enhanced) {
           await page.evaluate(() =>
@@ -247,10 +253,11 @@ try {
         );
         if (count > 3) {
           await page.locator("[data-view=filter]").selectOption("completed");
-          if (!enhanced)
+          if (!enhanced) {
             await click(
               page.locator(".actions-toolbar [data-view-form] button"),
             );
+          }
           assert.equal(
             await page.locator(".current-action-list > .action-card").count(),
             1,
@@ -300,6 +307,7 @@ try {
       await participantContext.close();
       await context.close();
     }
+  }
   assert.deepEqual(errors, []);
   await writeFile(
     output + "/results.json",
@@ -307,11 +315,12 @@ try {
   );
   console.log(JSON.stringify({ checks, output }, null, 2));
 } catch (error) {
-  if (activePage && !activePage.isClosed())
+  if (activePage && !activePage.isClosed()) {
     await activePage.screenshot({
       path: output + "/failure.png",
       fullPage: true,
     });
+  }
   throw error;
 } finally {
   await browser.close();

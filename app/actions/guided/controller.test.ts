@@ -67,11 +67,12 @@ async function setup(autoConfigure = true) {
       !native,
     );
   };
-  if (autoConfigure)
+  if (autoConfigure) {
     assert.equal(
       (await command("configure", { choice: "classic" })).status,
       200,
     );
+  }
   return { db, path, owner, participant, request, read, command };
 }
 describe("guided route boundary", () => {
@@ -295,7 +296,7 @@ describe("guided route boundary", () => {
   it("reports duplicate theme names and supports adding selected notes to an existing theme through native and enhanced commands", async () => {
     let f = await setup(),
       initial = await f.read();
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 3; i++) {
       assert.equal(
         (
           await f.request(f.path + "/new", f.owner, {
@@ -306,6 +307,7 @@ describe("guided route boundary", () => {
         ).status,
         303,
       );
+    }
     await f.command("advance");
     let ids = (await f.read()).cards.map((c) => c.id);
     assert.equal(

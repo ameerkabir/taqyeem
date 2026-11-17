@@ -195,10 +195,13 @@ describe("new card guards", () => {
     it(`rejects ${testCase.name} before looking up categories`, async () => {
       let app = await setup({ listCategories: mustNotRun });
       let data = validForm();
-      if (testCase.value === null) data.delete(testCase.field);
-      else if (typeof testCase.value === "string")
+      if (testCase.value === null) {
+        data.delete(testCase.field);
+      } else if (typeof testCase.value === "string") {
         data.set(testCase.field, testCase.value);
-      else data.set(testCase.field, testCase.value);
+      } else {
+        data.set(testCase.field, testCase.value);
+      }
 
       let response = await app.submit(data);
       assert.equal(response.status, 400);
@@ -540,7 +543,9 @@ describe("new card anonymity", () => {
     it(`saves isAnonymous=${isAnonymous} from the checkbox submission`, async () => {
       let app = await setup();
       let data = validForm();
-      if (isAnonymous) data.set("isAnonymous", "true");
+      if (isAnonymous) {
+        data.set("isAnonymous", "true");
+      }
       let response = await app.submit(data);
       assert.equal(response.status, 303);
       assert.equal(app.saved.length, 1);

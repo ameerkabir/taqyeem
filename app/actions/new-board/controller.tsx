@@ -57,7 +57,9 @@ export default createController(routes.newBoard, {
           error = new CreateBoardError({ cause: error, orphanedBoardId });
         }
         // Only storage failures are turned into a retry page; anything else is a bug.
-        if (!(error instanceof CreateBoardError)) throw error;
+        if (!(error instanceof CreateBoardError)) {
+          throw error;
+        }
         if (error.cleanupFailed) {
           // The failed board could not be removed; surface its id so it can be cleaned up.
           console.error("createBoard cleanup failed", {

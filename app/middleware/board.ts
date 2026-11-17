@@ -32,8 +32,9 @@ export function loadBoard(
 ): Middleware<{ key: typeof boardContext; value: Board; property: "board" }> {
   return async (context, next) => {
     let models = context.get(boardModelsContext);
-    if (!models)
+    if (!models) {
       throw new Error("loadBoard requires loadBoardModels middleware");
+    }
 
     let boardId = options.boardId ?? context.params.boardId;
     let board = boardId ? await models.getBoard(boardId) : null;
@@ -60,13 +61,16 @@ export function requireLegacyBoard(
 ): Middleware {
   return (context, next) => {
     let board = context.get(boardContext);
-    if (!board) throw new Error("requireLegacyBoard requires loadBoard");
-    if (isGuided(board))
+    if (!board) {
+      throw new Error("requireLegacyBoard requires loadBoard");
+    }
+    if (isGuided(board)) {
       return (options.onError ?? boardAccessError)(
         context,
         getI18n(context).t("guided.commandRequired"),
         409,
       );
+    }
     return next();
   };
 }

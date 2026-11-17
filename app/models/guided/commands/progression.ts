@@ -13,7 +13,9 @@ export const advance: CommandHandler = {
   facilitatorOnly: true,
   apply({ view, state }) {
     requireThat(state.stage !== "summary");
-    if (state.stage === "vote") requireThat(!state.ballotOpen);
+    if (state.stage === "vote") {
+      requireThat(!state.ballotOpen);
+    }
     let next = stages[stages.indexOf(state.stage) + 1];
     state.stage = next;
     state.ready = {};
@@ -22,7 +24,9 @@ export const advance: CommandHandler = {
       state.ballotOpen = true;
       state.votes = {};
     }
-    if (next === "discuss") state.liveTopic = rankedTopics(view)[0]?.id ?? "";
+    if (next === "discuss") {
+      state.liveTopic = rankedTopics(view)[0]?.id ?? "";
+    }
     if (next === "summary") {
       state.closureVersion = (state.closureVersion ?? 0) + 1;
       state.closure = buildClosure(view, state);
@@ -49,7 +53,8 @@ export const reopen: CommandHandler = {
     state.stage = "discuss";
     state.ready = {};
     state.ballotOpen = false;
-    if (!topics(view).some((topic) => topic.id === state.liveTopic))
+    if (!topics(view).some((topic) => topic.id === state.liveTopic)) {
       state.liveTopic = rankedTopics(view)[0]?.id ?? "";
+    }
   },
 };

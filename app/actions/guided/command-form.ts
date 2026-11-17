@@ -43,23 +43,39 @@ export function readCommandForm(form: FormData): Command {
     revision: Number(form.get("revision")),
     kind: String(form.get("kind") ?? ""),
   };
-  for (let key of scalarFields)
-    if (form.has(key)) command[key] = form.get(key);
-  if (form.has("labels"))
+  for (let key of scalarFields) {
+    if (form.has(key)) {
+      command[key] = form.get(key);
+    }
+  }
+  if (form.has("labels")) {
     command.labels = String(form.get("labels"))
       .split(/\r?\n/)
       .map((label) => label.trim())
       .filter(Boolean);
-  if (form.has("notes")) command.notes = form.getAll("notes");
-  if (form.has("ballot")) command.ballot = Number(form.get("ballot"));
-  if (form.has("version")) command.version = Number(form.get("version"));
-  if (form.has("value")) command.value = readValue(form.get("value"), command.kind);
+  }
+  if (form.has("notes")) {
+    command.notes = form.getAll("notes");
+  }
+  if (form.has("ballot")) {
+    command.ballot = Number(form.get("ballot"));
+  }
+  if (form.has("version")) {
+    command.version = Number(form.get("version"));
+  }
+  if (form.has("value")) {
+    command.value = readValue(form.get("value"), command.kind);
+  }
   return command;
 }
 
 function readValue(value: FormDataEntryValue | null, kind: string) {
-  if (value === "true") return true;
-  if (value === "false") return false;
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
   return kind === "budget" ? Number(value) : value;
 }
 
@@ -69,9 +85,15 @@ function readValue(value: FormDataEntryValue | null, kind: string) {
  * @throws {CommandError} `invalid` (400)
  */
 export function checkCommandForm(form: FormData, kind: string): void {
-  if (kind === "convert") return;
-  for (let key of singleFields)
-    if (form.getAll(key).length > 1) throw new CommandError("invalid", 400);
-  if (!/^\d+$/.test(String(form.get("revision") ?? "")))
+  if (kind === "convert") {
+    return;
+  }
+  for (let key of singleFields) {
+    if (form.getAll(key).length > 1) {
+      throw new CommandError("invalid", 400);
+    }
+  }
+  if (!/^\d+$/.test(String(form.get("revision") ?? ""))) {
     throw new CommandError("invalid", 400);
+  }
 }

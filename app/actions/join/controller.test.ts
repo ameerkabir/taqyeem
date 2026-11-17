@@ -17,7 +17,9 @@ const origin = "http://localhost";
 async function call(db: Database, path: string, init: RequestInit & { cookie?: string; fields?: Record<string, string> } = {}) {
   let { cookie, fields, ...rest } = init;
   let headers = new Headers(rest.headers);
-  if (cookie) headers.set("Cookie", cookie);
+  if (cookie) {
+    headers.set("Cookie", cookie);
+  }
   let response=await createAppRouter({ ...options, db }).fetch(
     new Request(origin + path, {
       ...rest,
@@ -176,7 +178,9 @@ describe("join form", () => {
         let value = Reflect.get(target, property, target);
         if (property === "create") {
           return async (table: unknown, ...rest: unknown[]) => {
-            if (table === members) throw new Error("simulated write failure");
+            if (table === members) {
+              throw new Error("simulated write failure");
+            }
             return (value as (...a: unknown[]) => unknown).call(target, table, ...rest);
           };
         }

@@ -57,26 +57,33 @@ export const draftForm = createMixin<HTMLFormElement, [string]>(
           ? store.getJson<{ fields: SavedField[]; focus: string; start: number | null; end: number | null }>(key)
           : null;
         if (saved && key) {
-          for (let field of saved.fields)
+          for (let field of saved.fields) {
             for (let node of namedControls(form)) {
               if (
                 node.name !== field.name ||
                 ["revision", "id"].includes(node.name)
-              )
+              ) {
                 continue;
+              }
               if (
                 node instanceof HTMLInputElement &&
                 (node.type === "checkbox" || node.type === "radio")
               ) {
-                if (node.value === field.value) node.checked = !!field.checked;
-              } else node.value = field.value;
+                if (node.value === field.value) {
+                  node.checked = !!field.checked;
+                }
+              } else {
+                node.value = field.value;
+              }
             }
+          }
           handle.queueTask(() => {
             let field = form.elements.namedItem(saved.focus);
             if (field instanceof HTMLElement) {
               field.focus();
-              if (field instanceof HTMLTextAreaElement && saved.start !== null)
+              if (field instanceof HTMLTextAreaElement && saved.start !== null) {
                 field.setSelectionRange(saved.start, saved.end);
+              }
             }
             let text = form.querySelector("textarea");
             text?.dispatchEvent(new Event("input", { bubbles: true }));
@@ -92,8 +99,9 @@ export const draftForm = createMixin<HTMLFormElement, [string]>(
       document.addEventListener(
         "click",
         (event) => {
-          if (event.target instanceof Element && event.target.closest("a"))
+          if (event.target instanceof Element && event.target.closest("a")) {
             save();
+          }
         },
         { capture: true, signal: handle.signal },
       );

@@ -5,7 +5,9 @@ import { checkCommandForm, readCommandForm } from "./command-form.ts";
 
 const form = (entries: [string, string][]) => {
   let data = new FormData();
-  for (let [k, v] of entries) data.append(k, v);
+  for (let [k, v] of entries) {
+    data.append(k, v);
+  }
   return data;
 };
 const rejects = (data: FormData, kind = "ready") => {
@@ -50,13 +52,15 @@ describe("checkCommandForm", () => {
   });
 
   it("rejects a repeated single-value field", () => {
-    for (let key of ["id", "kind", "text", "ownerSearch", "labels", "value"])
+    for (let key of ["id", "kind", "text", "ownerSearch", "labels", "value"]) {
       assert.equal(rejects(form([["revision", "1"], [key, "a"], [key, "b"]])), true, key);
+    }
   });
 
   it("requires a whole-number revision", () => {
-    for (let revision of ["", "-1", "1.5", "abc"])
+    for (let revision of ["", "-1", "1.5", "abc"]) {
       assert.equal(rejects(form([["revision", revision]])), true, revision);
+    }
     assert.equal(rejects(form([])), true);
   });
 

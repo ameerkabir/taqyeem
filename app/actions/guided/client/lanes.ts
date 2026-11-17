@@ -18,7 +18,9 @@ export interface LaneLayout {
 export function laneLayout(categories: Category[], currentId: string): LaneLayout {
   let current = categories.find((c) => c.id === currentId) ?? categories[0];
   let shelf = Math.floor(categories.indexOf(current!) / shelfSize);
-  if (shelf < 0) shelf = 0;
+  if (shelf < 0) {
+    shelf = 0;
+  }
   let lanes =
     categories.length <= maxLanesTogether
       ? categories

@@ -26,16 +26,20 @@ export const stateController = createAction(routes.sessionState, {
   async handler(context) {
     // loadBoard already read the guided stage and revision; an unchanged poll costs nothing more.
     let { guidedRevision } = context.board;
-    if (guidedRevision === undefined)
+    if (guidedRevision === undefined) {
       return new Response(null, { status: 404 });
+    }
     let tag = `"guided:${context.board.id}:${context.member.id}:${guidedRevision}"`;
-    if (context.request.headers.get("If-None-Match") === tag)
+    if (context.request.headers.get("If-None-Match") === tag) {
       return new Response(null, {
         status: 304,
         headers: { "Cache-Control": "private, no-store", ETag: tag },
       });
+    }
     let view = await readSession(context.db, context.board.id);
-    if (!view) return new Response(null, { status: 404 });
+    if (!view) {
+      return new Response(null, { status: 404 });
+    }
     return Response.json(viewerPayload(view, context.member.id), {
       headers: {
         "Cache-Control": "private, no-store",
@@ -52,24 +56,32 @@ export const commandController = createAction(routes.sessionCommand, {
     let view: SessionView | null;
     try {
       checkCommandForm(form, command.kind);
-      if (form.has("ownerSearch"))
+      if (form.has("ownerSearch")) {
         command.owner = await resolveOwner(
           context.models,
           context.board.id,
           form.get("ownerSearch"),
         );
+      }
       if (command.kind === "convert") {
-        if (context.board.organiserMemberId !== context.member.id)
+        if (context.board.organiserMemberId !== context.member.id) {
           throw new CommandError("forbidden", 403);
-        if (context.board.guidedStage) throw new CommandError("conflict");
+        }
+        if (context.board.guidedStage) {
+          throw new CommandError("conflict");
+        }
         // The insert is the arbiter: a competing conversion that won first is a conflict.
         let started = await createSession(context.db, context.board.id, {
           legacy: true,
         });
-        if (!started?.created) throw new CommandError("conflict");
+        if (!started?.created) {
+          throw new CommandError("conflict");
+        }
         view = started.view;
       } else {
-        if (!context.board.guidedStage) throw new CommandError("invalid", 400);
+        if (!context.board.guidedStage) {
+          throw new CommandError("invalid", 400);
+        }
         view = await commandSession(
           context.db,
           context.board.id,
@@ -78,15 +90,19 @@ export const commandController = createAction(routes.sessionCommand, {
         );
       }
     } catch (error) {
-      if (error instanceof DataTableDatabaseError)
+      if (error instanceof DataTableDatabaseError) {
         error = new CommandError("storage", 503);
-      if (!(error instanceof CommandError)) throw error;
+      }
+      if (!(error instanceof CommandError)) {
+        throw error;
+      }
       let message = context.i18n.t(`guided.error.${error.code}`);
-      if (context.request.headers.get("Accept")?.includes("application/json"))
+      if (context.request.headers.get("Accept")?.includes("application/json")) {
         return Response.json(
           { error: message, code: error.code },
           { status: error.status },
         );
+      }
       // The retry form only needs the current revision, not the whole session.
       let current =
         error.code === "storage"

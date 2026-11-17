@@ -31,7 +31,9 @@ export function createDbBoardModels(
       let created = await createBoard(db, input);
       let board = await loadBoard(db, created.board.id);
       // createBoard has just written the organiser, so the board is live.
-      if (!board) throw new Error("A newly created board could not be loaded");
+      if (!board) {
+        throw new Error("A newly created board could not be loaded");
+      }
       let organiser: Member = {
         id: created.organiser.id,
         boardId: created.organiser.board_id,

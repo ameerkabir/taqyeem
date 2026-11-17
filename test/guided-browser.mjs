@@ -27,8 +27,9 @@ const memberContext = await browser.newContext({
 });
 const owner = await ownerContext.newPage(),
   member = await memberContext.newPage();
-for (const page of [owner, member])
+for (const page of [owner, member]) {
   page.on("pageerror", (e) => errors.push(e.message));
+}
 const pause = () => new Promise((r) => setTimeout(r, 400));
 async function commandForm(page, kind) {
   return page.locator(
@@ -84,12 +85,15 @@ async function add(page, text, anonymous = false, categoryIndex) {
     await page.locator("dialog [name=categoryId]").inputValue(),
     await page.locator("[data-view=category]").inputValue(),
   );
-  if (categoryIndex !== undefined)
+  if (categoryIndex !== undefined) {
     await page
       .locator("dialog [name=categoryId]")
       .selectOption({ index: categoryIndex });
+  }
   await page.locator("dialog textarea").fill(text);
-  if (anonymous) await page.locator("dialog input[type=checkbox]").check();
+  if (anonymous) {
+    await page.locator("dialog input[type=checkbox]").check();
+  }
   await page.locator("dialog button.primary").click();
   await page.locator("dialog[open]").waitFor({ state: "hidden" });
   await pause();
@@ -178,7 +182,9 @@ try {
       await route.fetch();
       await route.abort("failed");
       await owner.unroute("**/boards/*/new");
-    } else await route.continue();
+    } else {
+      await route.continue();
+    }
   });
   await owner.locator(".add-note").click();
   await owner

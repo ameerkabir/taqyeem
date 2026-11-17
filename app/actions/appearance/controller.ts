@@ -8,10 +8,11 @@ export default createAction(routes.setAppearance, {
   async handler(context) {
     let form = await context.request.formData(),
       value = form.get("appearance");
-    if (value !== "light" && value !== "dark")
+    if (value !== "light" && value !== "dark") {
       return new Response(context.i18n.t("guided.error.invalid"), {
         status: 400,
       });
+    }
     let response = redirect(
       safeReturnTo(form.get("returnTo"), context.url.origin),
       303,

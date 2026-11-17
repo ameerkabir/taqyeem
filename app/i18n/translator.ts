@@ -59,7 +59,9 @@ export function isolate(text: string): string {
 
 export function createTranslator(locale: Locale): Translator {
   let cached = translators.get(locale);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   let numbers = new Intl.NumberFormat(numberLocaleFor(locale));
   let plurals = new Intl.PluralRules(locale);

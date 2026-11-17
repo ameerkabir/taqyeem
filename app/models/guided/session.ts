@@ -78,7 +78,9 @@ export async function createSession(
   { legacy = false, requireCategorySetup = false } = {},
 ): Promise<{ created: boolean; view: SessionView } | null> {
   let board = await loadBoard(db, boardId);
-  if (!board) return null;
+  if (!board) {
+    return null;
+  }
   let result = await db.exec(
     sql`INSERT OR IGNORE INTO guided_sessions(board_id,data) VALUES (${boardId},${JSON.stringify({ ...initialState(board), legacy: legacy || board.status !== "collecting", ...(requireCategorySetup ? { categorySetup: { confirmed: false, categories: [] } } : {}) })})`,
   );
@@ -91,14 +93,18 @@ export async function readSession(
   boardId: string,
 ): Promise<SessionView | null> {
   let board = await loadBoard(db, boardId);
-  if (!board) return null;
+  if (!board) {
+    return null;
+  }
   // Read revision first: any evidence mutation during subsequent reads makes command CAS fail.
   let row = (
     await db.exec(
       sql`SELECT revision,data FROM guided_sessions WHERE board_id=${boardId}`,
     )
   ).rows?.[0];
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   let [cards, categories, members, records] = await Promise.all([
     listCards(db, boardId),
     loadCategories(db, boardId),
@@ -126,7 +132,9 @@ export async function readMeetingRecord(
   boardId: string,
   version: number,
 ): Promise<MeetingRecord | null> {
-  if (!Number.isSafeInteger(version) || version < 1) return null;
+  if (!Number.isSafeInteger(version) || version < 1) {
+    return null;
+  }
   const row = (
     await db.exec(
       sql`SELECT closed_at,snapshot FROM guided_closures WHERE board_id=${boardId} AND version=${version}`,
@@ -154,7 +162,9 @@ export async function commandSession(
   command: Command,
 ) {
   let view = await readSession(db, boardId);
-  if (!view) throw new CommandError("invalid", 404);
+  if (!view) {
+    throw new CommandError("invalid", 404);
+  }
   requireThat(
     view.members.some((m) => m.id === memberId),
     "forbidden",
@@ -168,7 +178,9 @@ export async function commandSession(
         sql`SELECT member_id,fingerprint FROM guided_command_receipts WHERE board_id=${boardId} AND command_id=${command.id}`,
       )
     ).rows?.[0];
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     requireThat(
       row.member_id === memberId &&
         (row.fingerprint === fingerprint || row.fingerprint === rawFingerprint),
@@ -178,7 +190,9 @@ export async function commandSession(
     return readSession(db, boardId);
   }
   const prior = await replay();
-  if (prior) return prior;
+  if (prior) {
+    return prior;
+  }
   let state = applyCommand(view, memberId, command);
   state.receipt = {
     id: command.id,
@@ -202,11 +216,14 @@ export async function commandSession(
   AND EXISTS(SELECT 1 FROM members WHERE id=${memberId} AND board_id=${boardId} AND (${requiresFacilitator ? 1 : 0}=0 OR role='organiser'))`);
   if (result.affectedRows !== 1) {
     const winner = await replay();
-    if (winner) return winner;
+    if (winner) {
+      return winner;
+    }
     throw new CommandError("conflict");
   }
   // Closing writes a meeting record, so re-read to include it in `history`.
-  if (handler.changesEvidence || state.stage === "summary")
+  if (handler.changesEvidence || state.stage === "summary") {
     return (await readSession(db, boardId))!;
+  }
   return { ...view, state, revision: view.revision + 1 };
 }

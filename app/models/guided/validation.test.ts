@@ -55,13 +55,15 @@ describe("guided validation", () => {
 
   it("accepts 1–8 visible distinct category labels", () => {
     assert.deepEqual(validateCategoryLabels([" A ", "ب"]), ["A", "ب"]);
-    for (let labels of [[], Array(9).fill("x").map((x, i) => x + i), ["A", "a"], ["A", "A​"], ["​"], ["a\u0007"], "A"])
+    for (let labels of [[], Array(9).fill("x").map((x, i) => x + i), ["A", "a"], ["A", "A​"], ["​"], ["a\u0007"], "A"]) {
       assert.equal(refusal(() => validateCategoryLabels(labels))?.code, "invalid", JSON.stringify(labels));
+    }
   });
 
   it("accepts only real calendar days", () => {
     assert.equal(isCalendarDate("2028-02-29"), true);
-    for (let value of ["2026-02-30", "2026-2-1", "tomorrow", "2026-13-01"])
+    for (let value of ["2026-02-30", "2026-2-1", "tomorrow", "2026-13-01"]) {
       assert.equal(isCalendarDate(value), false, value);
+    }
   });
 });

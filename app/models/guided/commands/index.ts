@@ -72,9 +72,13 @@ export function applyCommand(
     state.categorySetup?.confirmed !== false || command.kind === "configure",
   );
   const handler = handlerFor(command.kind);
-  if (!handler) throw new CommandError("invalid", 400);
+  if (!handler) {
+    throw new CommandError("invalid", 400);
+  }
   const facilitator = view.board.organiserMemberId === memberId;
-  if (handler.facilitatorOnly) requireThat(facilitator, "forbidden", 403);
+  if (handler.facilitatorOnly) {
+    requireThat(facilitator, "forbidden", 403);
+  }
   handler.apply({
     view,
     state,

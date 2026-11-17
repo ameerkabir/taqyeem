@@ -26,8 +26,9 @@ export default createController(routes.joinBoard, {
         board.id,
         context.url.searchParams.get("section"),
       );
-      if (await isMember(context.models, board.id, members))
+      if (await isMember(context.models, board.id, members)) {
         return toBoard(board.id, section);
+      }
       let invitation = invitationFor(board, members, context.i18n.t);
       return context.render(
         <JoinPage
@@ -53,8 +54,9 @@ export default createController(routes.joinBoard, {
       let closed = board.status === "closed";
 
       // A repeated submit (double click, back button) must not create a second member.
-      if (await isMember(context.models, board.id, members))
+      if (await isMember(context.models, board.id, members)) {
         return toBoard(board.id, section);
+      }
       let invitation = invitationFor(board, members, context.i18n.t);
 
       let parsed = parseJoinForm(data, context.i18n.t);
@@ -143,7 +145,9 @@ async function validSection(
   boardId: string,
   value: unknown,
 ) {
-  if (typeof value !== "string" || value === "") return undefined;
+  if (typeof value !== "string" || value === "") {
+    return undefined;
+  }
   let categories = await models.listCategories(boardId);
   return categories.some((category) => category.id === value)
     ? value
@@ -172,7 +176,9 @@ async function isMember(
   members: readonly Member[],
 ) {
   let memberId = await models.getViewerMemberId(boardId);
-  if (!memberId) return false;
+  if (!memberId) {
+    return false;
+  }
   return members.some(
     (member) => member.id === memberId && member.boardId === boardId,
   );

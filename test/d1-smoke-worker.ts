@@ -20,7 +20,9 @@ const probe = table({
   },
 });
 function check(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
+  if (!condition) {
+    throw new Error(message);
+  }
 }
 
 export default {
@@ -141,7 +143,7 @@ export default {
       check(configured.categories.map(c => c.label).join(",") === "Keep,Change,Try,Appreciate", "D1 category trigger must replace categories in the setup command");
       check(configured.categories.every((c, i) => c.tone === i), "D1 persists category tones");
       check((await commandSession(db, id, actor, setup)).revision === configured.revision, "D1 category setup retry must be idempotent");
-      for (let i = 0; i < 2; i++)
+      for (let i = 0; i < 2; i++) {
         await createCard(
           db,
           {
@@ -154,6 +156,7 @@ export default {
           },
           crypto.randomUUID(),
         );
+      }
       async function command(
         kind: string,
         fields: Record<string, unknown> = {},

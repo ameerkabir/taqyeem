@@ -47,7 +47,9 @@ child.stderr.on("data", (chunk) => {
 try {
   let ready = false;
   for (let attempt = 0; attempt < 150; attempt++) {
-    if (child.exitCode !== null) throw new Error(output);
+    if (child.exitCode !== null) {
+      throw new Error(output);
+    }
     if (output.includes("Ready on")) {
       ready = true;
       break;
@@ -76,7 +78,9 @@ try {
 } finally {
   child.kill("SIGTERM");
   await new Promise<void>((resolve) => {
-    if (child.exitCode !== null) return resolve();
+    if (child.exitCode !== null) {
+      return resolve();
+    }
     child.once("exit", () => resolve());
   });
   await rm(state, { recursive: true, force: true });

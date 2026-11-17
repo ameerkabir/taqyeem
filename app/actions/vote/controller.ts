@@ -42,12 +42,13 @@ export default createAction(routes.vote, {
     }
 
     let card = await context.models.getCard(board.id, context.params.cardId);
-    if (!card)
+    if (!card) {
       return cardAccessError(
         context,
         context.i18n.t("access.cardNotFound"),
         404,
       );
+    }
 
     let result = await context.models.setCardVote(
       board.id,
@@ -56,12 +57,13 @@ export default createAction(routes.vote, {
       voted === "true",
     );
 
-    if (!result)
+    if (!result) {
       return cardAccessError(
         context,
         context.i18n.t("access.cardNotFound"),
         404,
       );
+    }
 
     if (context.request.headers.get("Accept")?.includes("application/json")) {
       return Response.json(result);

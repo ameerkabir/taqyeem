@@ -80,7 +80,9 @@ export function createVoteModel(
         current = previousOverride;
         throw cause;
       } finally {
-        if (!signal.aborted) update();
+        if (!signal.aborted) {
+          update();
+        }
       }
     },
   };

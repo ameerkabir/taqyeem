@@ -27,15 +27,19 @@ try {
       page = await context.newPage();
     page.on("pageerror", (error) => errors.push(error.message));
     async function click(locator) {
-      if (!enhanced)
+      if (!enhanced) {
         await Promise.all([
           page.waitForNavigation({ waitUntil: "domcontentloaded" }),
           locator.click(),
         ]);
-      else await locator.click();
+      } else {
+        await locator.click();
+      }
     }
     async function commandClick(locator, expectedStatus = 200) {
-      if (!enhanced) return click(locator);
+      if (!enhanced) {
+        return click(locator);
+      }
       const response = page.waitForResponse(
         (r) => r.url().endsWith("/commands") && r.request().method() === "POST",
       );
@@ -67,8 +71,9 @@ try {
         : page.locator('form[action$="/new"]');
       await form.locator("[name=text]").fill(`Original evidence ${i}`);
       await click(form.locator("button.primary,button[type=submit]").first());
-      if (enhanced)
+      if (enhanced) {
         await page.locator("dialog[open]").waitFor({ state: "hidden" });
+      }
     }
     const source = (await read()).cards;
     await commandClick(
@@ -140,11 +145,12 @@ try {
     await select(3);
     await create().locator("[name=title]").fill("A future theme draft");
     await commandClick(themeCard(delivery.id).locator("button[name=theme]"));
-    if (enhanced)
+    if (enhanced) {
       assert.equal(
         await create().locator("[name=title]").inputValue(),
         "A future theme draft",
       );
+    }
     state = await read();
     assert.equal(
       state.state.themes.find((t) => t.id === delivery.id).notes.length,
@@ -180,12 +186,13 @@ try {
     await page.waitForFunction(
       () => document.documentElement.dataset.theme === "dark",
     );
-    if (enhanced)
+    if (enhanced) {
       await page.waitForFunction(
         () =>
           document.querySelector(".workspace")?.getAttribute("aria-busy") ===
           "false",
       );
+    }
     await themeCard(delivery.id).locator("details.evidence > summary").click();
     assert.equal(
       await page.evaluate(

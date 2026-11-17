@@ -26,7 +26,9 @@ export async function insertMember(
   let displayName = input.displayName.trim();
   let nameKey = memberNameKey(displayName);
   // e.g. a name made only of zero-width characters: not empty to trim(), invisible to people.
-  if (nameKey === "") throw new Error("A member name must contain a visible character");
+  if (nameKey === "") {
+    throw new Error("A member name must contain a visible character");
+  }
 
   try {
     return await db.create(
@@ -44,7 +46,9 @@ export async function insertMember(
     let clash = await db.findOne(members, {
       where: { board_id: input.boardId, name_key: nameKey },
     });
-    if (clash) throw new MemberNameTakenError();
+    if (clash) {
+      throw new MemberNameTakenError();
+    }
     throw error;
   }
 }

@@ -128,7 +128,9 @@ export default createController(routes.editAction, {
       let proposal = view?.state.proposals.find(
         (p) => p.id === context.params.proposalId,
       );
-      if (!view || !proposal) return new Response(null, { status: 404 });
+      if (!view || !proposal) {
+        return new Response(null, { status: 404 });
+      }
       if (
         !["discuss", "actions"].includes(view.state.stage) ||
         (context.member.id !== view.board.organiserMemberId &&
@@ -136,10 +138,11 @@ export default createController(routes.editAction, {
             proposal.author === context.member.id &&
             proposal.disposition === "suggested"
           ))
-      )
+      ) {
         return new Response(context.i18n.t("guided.error.forbidden"), {
           status: 403,
         });
+      }
       return context.render(
         <EditActionPage
           view={view}
@@ -150,8 +153,9 @@ export default createController(routes.editAction, {
       );
     },
     async action(context) {
-      if (!context.board.guidedStage)
+      if (!context.board.guidedStage) {
         return new Response(null, { status: 404 });
+      }
       let form = await context.request.formData();
       try {
         let owner = await resolveOwner(
@@ -170,10 +174,13 @@ export default createController(routes.editAction, {
           topic: form.get("topic"),
         });
       } catch (error) {
-        if (error instanceof DataTableDatabaseError)
+        if (error instanceof DataTableDatabaseError) {
           error = new CommandError("storage", 503);
-        if (!(error instanceof CommandError)) throw error;
-        if (error.code === "storage")
+        }
+        if (!(error instanceof CommandError)) {
+          throw error;
+        }
+        if (error.code === "storage") {
           return context.render(
             <CommandRetryPage
               i18n={context.i18n}
@@ -185,11 +192,14 @@ export default createController(routes.editAction, {
             />,
             { status: 503 },
           );
+        }
         let view = await readSession(context.db, context.board.id),
           proposal = view?.state.proposals.find(
             (p) => p.id === context.params.proposalId,
           );
-        if (!view || !proposal) return new Response(null, { status: 404 });
+        if (!view || !proposal) {
+          return new Response(null, { status: 404 });
+        }
         return context.render(
           <EditActionPage
             view={view}

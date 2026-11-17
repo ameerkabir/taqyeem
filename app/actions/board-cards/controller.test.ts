@@ -33,7 +33,9 @@ async function setup(overrides: Partial<Board> = {}, missingBoard = false) {
     models,
     fetch(section?: string) {
       let url = new URL(routes.boardCards.href({ boardId: "demo" }), "http://localhost");
-      if (section !== undefined) url.searchParams.set("section", section);
+      if (section !== undefined) {
+        url.searchParams.set("section", section);
+      }
       return router.fetch(url);
     },
   };

@@ -6,9 +6,15 @@ const LOCALE_PATH = "/locale";
  * Anything else (absolute URLs, protocol-relative URLs, backslashes) becomes "/".
  */
 export function safeReturnTo(value: unknown, origin: string): string {
-  if (typeof value !== "string" || value.length === 0 || value.length > 2048) return "/";
-  if (!value.startsWith("/") || value.startsWith("//")) return "/";
-  if (value.includes("\\") || CONTROL_CHARACTERS.test(value)) return "/";
+  if (typeof value !== "string" || value.length === 0 || value.length > 2048) {
+    return "/";
+  }
+  if (!value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
+  if (value.includes("\\") || CONTROL_CHARACTERS.test(value)) {
+    return "/";
+  }
 
   let url: URL;
   try {
@@ -16,7 +22,11 @@ export function safeReturnTo(value: unknown, origin: string): string {
   } catch {
     return "/";
   }
-  if (url.origin !== origin) return "/";
-  if (url.pathname === LOCALE_PATH) return "/";
+  if (url.origin !== origin) {
+    return "/";
+  }
+  if (url.pathname === LOCALE_PATH) {
+    return "/";
+  }
   return url.pathname + url.search;
 }

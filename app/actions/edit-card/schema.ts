@@ -33,11 +33,14 @@ export function parseEditCardForm(data: FormData, t: Translator["t"]) {
     {
       abortEarly: true,
       errorMap(context) {
-        if (context.path?.[0] === "categoryId") return t("card.error.invalidCategory");
-        if (context.path?.[0] === "text")
+        if (context.path?.[0] === "categoryId") {
+          return t("card.error.invalidCategory");
+        }
+        if (context.path?.[0] === "text") {
           return context.code === "string.max_length"
             ? t("card.error.textMax", { max: MAX_CARD_TEXT_LENGTH })
             : t("card.error.textRequired");
+        }
       },
     },
   );

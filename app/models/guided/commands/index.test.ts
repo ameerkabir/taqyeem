@@ -8,8 +8,9 @@ describe("command handlers", () => {
       "move-note", "configure", "ready", "budget", "theme", "rename", "ungroup",
       "ballot", "vote", "live", "outcome", "decision", "propose", "edit-proposal",
       "disposition", "complete", "advance", "reopen",
-    ])
+    ]) {
       assert.ok(handlerFor(kind), kind);
+    }
   });
 
   it("treats unknown kinds and inherited object keys as unknown", () => {

@@ -26,14 +26,16 @@ export default createController(routes.editCard, {
         "edit",
         context.i18n.t,
       );
-      if (failure)
+      if (failure) {
         return cardAccessError(context, failure.message, failure.status);
-      if (!card)
+      }
+      if (!card) {
         return cardAccessError(
           context,
           context.i18n.t("access.cardNotFound"),
           404,
         );
+      }
       let categories = await context.models.listCategories(board.id);
       return context.render(
         <EditCardPage
@@ -87,24 +89,29 @@ export default createController(routes.editCard, {
           { status },
         );
       };
-      if (failure) return formError(failure.message, failure.status);
+      if (failure) {
+        return formError(failure.message, failure.status);
+      }
       let data = await context.request.formData();
       let parsed = parseEditCardForm(data, context.i18n.t);
-      if (!parsed.success)
+      if (!parsed.success) {
         return formError(parsed.issues[0].message, 400, data);
+      }
       let { text, categoryId, isAnonymous } = parsed.value;
       let categories = await context.models.listCategories(board.id);
-      if (!categories.some((category) => category.id === categoryId))
+      if (!categories.some((category) => category.id === categoryId)) {
         return formError(
           context.i18n.t("card.error.invalidCategory"),
           400,
           data,
         );
+      }
       let updated;
       const preserveCategory =
         !canChangeCardCategory(board, member.id);
-      if (preserveCategory && categoryId !== card.categoryId)
+      if (preserveCategory && categoryId !== card.categoryId) {
         return formError(context.i18n.t("collect.moveRestricted"), 403, data);
+      }
       try {
         updated = await context.models.updateCard(
           board.id,
@@ -117,18 +124,21 @@ export default createController(routes.editCard, {
           preserveCategory,
         );
       } catch (error) {
-        if (isCollectLock(error))
+        if (isCollectLock(error)) {
           return formError(context.i18n.t("guided.collectOnly"), 409, data);
-        if (error instanceof DataTableDatabaseError)
+        }
+        if (error instanceof DataTableDatabaseError) {
           return formError(context.i18n.t("editCard.failed"), 503, data);
+        }
         throw error;
       }
-      if (!updated)
+      if (!updated) {
         return cardAccessError(
           context,
           context.i18n.t("access.cardNotFound"),
           404,
         );
+      }
       return redirect(
         `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(updated.categoryId)}`,
         303,
