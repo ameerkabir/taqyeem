@@ -15,6 +15,12 @@ export default createAction(routes.boardStatus, {
   ],
 
   async handler(context) {
+    if (context.board.guidedStage)
+      return cardAccessError(
+        context,
+        context.i18n.t("guided.commandRequired"),
+        409,
+      );
     let { board, models } = context;
     let form = await context.request.formData();
     let values = form.getAll("status");
@@ -24,12 +30,20 @@ export default createAction(routes.boardStatus, {
       values.length !== 1 ||
       (status !== "collecting" && status !== "meeting" && status !== "closed")
     ) {
-      return cardAccessError(context, context.i18n.t("access.invalidStage"), 400);
+      return cardAccessError(
+        context,
+        context.i18n.t("access.invalidStage"),
+        400,
+      );
     }
 
     let updated = await models.setBoardStatus(board.id, status);
     if (!updated) {
-      return cardAccessError(context, context.i18n.t("access.boardNotFound"), 404);
+      return cardAccessError(
+        context,
+        context.i18n.t("access.boardNotFound"),
+        404,
+      );
     }
 
     let categories = await models.listCategories(board.id);

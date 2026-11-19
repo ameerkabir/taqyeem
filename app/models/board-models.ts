@@ -42,6 +42,7 @@ export interface BoardModels {
     boardId: string,
     cardId: string,
     changes: Pick<Card, "body" | "categoryId" | "isAnonymous">,
+    preserveCategory?: boolean,
   ): Promise<Card | null>;
 
   deleteCard(boardId: string, cardId: string): Promise<boolean>;

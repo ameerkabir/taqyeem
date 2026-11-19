@@ -138,14 +138,14 @@ export function createFakeBoardModels(
       return withVoteCount(card) ?? null;
     },
 
-    updateCard: async (boardId, cardId, changes) => {
+    updateCard: async (boardId, cardId, changes, preserveCategory) => {
       let card = store.cards.find(
         (saved) => saved.boardId === boardId && saved.id === cardId,
       );
       if (!card) return null;
       // Only editable fields may change, even if a caller supplies extra properties.
       card.body = changes.body;
-      card.categoryId = changes.categoryId;
+      if (!preserveCategory) card.categoryId = changes.categoryId;
       card.isAnonymous = changes.isAnonymous;
       return card;
     },

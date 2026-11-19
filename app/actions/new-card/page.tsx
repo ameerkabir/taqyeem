@@ -14,7 +14,8 @@ import type { I18n } from "../../middleware/locale.ts";
 import { isolate } from "../../i18n/translator.ts";
 import { NewCardForm, type NewCardFormProps } from "./public/form.tsx";
 
-interface NewCardPageProps extends Omit<NewCardFormProps, "boardId" | "locale"> {
+interface NewCardPageProps
+  extends Omit<NewCardFormProps, "boardId" | "locale"> {
   i18n: I18n;
   board: Board;
 }
@@ -35,17 +36,26 @@ export function NewCardPage(handle: Handle<NewCardPageProps>) {
           <section mix={panelStyle} aria-labelledby="new-card-title">
             <header mix={headerStyle}>
               <div>
-                <p dir="auto" mix={boardNameStyle}>{board.title}</p>
+                <p dir="auto" mix={boardNameStyle}>
+                  {board.title}
+                </p>
                 <h1 id="new-card-title" mix={titleStyle}>
                   {i18n.t("newCard.title")}
                 </h1>
               </div>
-              <a href={routes.board.href({ boardId: board.id })} mix={cancelStyle}>
+              <a
+                href={routes.board.href({ boardId: board.id })}
+                mix={cancelStyle}
+              >
                 {i18n.t("common.cancel")}
               </a>
             </header>
 
             <NewCardForm
+              blocked={
+                board.categorySetupRequired ||
+                (!!board.guidedStage && board.guidedStage !== "collect")
+              }
               boardId={board.id}
               locale={i18n.locale}
               {...formProps}

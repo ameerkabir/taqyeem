@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "Enhanced desktop: create and rename reject duplicate names with retained fields; selected notes append to an existing stable theme with a blank new title; all source evidence survives; Arabic/dark layout fits",
+    "Native phone: create and rename reject duplicate names with retained fields; selected notes append to an existing stable theme with a blank new title; all source evidence survives; Arabic/dark layout fits"
+  ],
+  "pageErrors": [],
+  "runDate": "2026-11-16",
+  "runtime": "Local Cloudflare Worker / Miniflare; Chromium emulation"
+}

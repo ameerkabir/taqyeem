@@ -28,6 +28,20 @@ async function boardWithTwoNotes() {
   let organiser = cookieOf(created);
   let path = created.headers.get("Location")!;
   let participant = cookieOf(await call(`${path}/join`, { method: "POST", fields: { displayName: "Pat" } }));
+  let state = (await (
+    await call(`${path}/session`, { cookie: organiser })
+  ).json()) as { revision: number };
+  let configured = await call(`${path}/commands`, {
+    method: "POST",
+    cookie: organiser,
+    fields: {
+      id: crypto.randomUUID(),
+      revision: String(state.revision),
+      kind: "configure",
+      choice: "classic",
+    },
+  });
+  assert.equal(configured.status, 303);
   let [category] = await db.findMany(categories, { where: { board_id: path.split("/").pop()! } });
   async function note(cookie: string, text: string, isAnonymous: boolean) {
     let response = await call(`${path}/new`, {

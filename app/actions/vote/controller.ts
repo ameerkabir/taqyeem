@@ -12,12 +12,26 @@ export default createAction(routes.vote, {
   ],
 
   async handler(context) {
+    if (context.board.guidedStage)
+      return cardAccessError(
+        context,
+        context.i18n.t("guided.commandRequired"),
+        409,
+      );
     let { board, member } = context;
     if (board.status === "closed") {
-      return cardAccessError(context, context.i18n.t("access.boardClosed"), 403);
+      return cardAccessError(
+        context,
+        context.i18n.t("access.boardClosed"),
+        403,
+      );
     }
     if (!board.votingOpen) {
-      return cardAccessError(context, context.i18n.t("access.votingUnavailable"), 403);
+      return cardAccessError(
+        context,
+        context.i18n.t("access.votingUnavailable"),
+        403,
+      );
     }
 
     let form = await context.request.formData();
@@ -25,11 +39,20 @@ export default createAction(routes.vote, {
     let voted = values[0];
 
     if (values.length !== 1 || (voted !== "true" && voted !== "false")) {
-      return cardAccessError(context, context.i18n.t("access.invalidVote"), 400);
+      return cardAccessError(
+        context,
+        context.i18n.t("access.invalidVote"),
+        400,
+      );
     }
 
     let card = await context.models.getCard(board.id, context.params.cardId);
-    if (!card) return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
+    if (!card)
+      return cardAccessError(
+        context,
+        context.i18n.t("access.cardNotFound"),
+        404,
+      );
 
     let result = await context.models.setCardVote(
       board.id,
@@ -38,7 +61,12 @@ export default createAction(routes.vote, {
       voted === "true",
     );
 
-    if (!result) return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
+    if (!result)
+      return cardAccessError(
+        context,
+        context.i18n.t("access.cardNotFound"),
+        404,
+      );
 
     if (context.request.headers.get("Accept")?.includes("application/json")) {
       return Response.json(result);

@@ -53,9 +53,9 @@ describe("board not found page", () => {
 
   it("offers no form and no hint about whether other boards exist", async () => {
     let html = await (await request(missing(), { headers: { "Accept-Language": "en" } })).text();
-    // The language switcher is a form on every page; nothing else may be one.
+    // Only language/appearance preferences belong on every page.
     let forms = html.match(/<form[^>]*>/g) ?? [];
-    assert.ok(forms.every((form) => form.includes(`action="${routes.setLocale.href()}"`)), forms.join(" "));
+    assert.ok(forms.every((form) => [routes.setLocale.href(), routes.setAppearance.href()].some(path=>form.includes(`action="${path}"`))), forms.join(" "));
     assert.ok(!html.includes('name="displayName"'));
     assert.ok(!html.includes("/join"));
   });

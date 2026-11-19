@@ -10,7 +10,8 @@ export async function insertCategories(
 ) {
   let clean = labels.map((label) => label.trim());
   // "A board has at least one category" cannot be a database constraint, so refuse before writing.
-  if (clean.length === 0) throw new Error("A board needs at least one category");
+  if (clean.length === 0)
+    throw new Error("A board needs at least one category");
   return db.createMany(
     categories,
     clean.map((label, position) => ({
@@ -18,6 +19,7 @@ export async function insertCategories(
       board_id: boardId,
       label,
       position,
+      tone: position % 4,
     })),
     { returnRows: true },
   );

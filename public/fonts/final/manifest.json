@@ -1,0 +1,50 @@
+[
+  {
+    "file": "font-0.woff2",
+    "source": "https://fonts.gstatic.com/s/alexandria/v6/UMBXrPdDqW66y0Y2usFeaijdA5E64BdCIg.woff2",
+    "bytes": 31188,
+    "sha256": "ef0ea68f2c0a45efe1a6fa5a63bdf8d95429cdbc741fa77e597119c66b02b894"
+  },
+  {
+    "file": "font-1.woff2",
+    "source": "https://fonts.gstatic.com/s/alexandria/v6/UMBXrPdDqW66y0Y2usFeaiLdA5E64BdCIg.woff2",
+    "bytes": 10760,
+    "sha256": "f2aae11fe5c691a261f0494f8d3b8d9c7a7f6378e1ac3f8dd34f637f9fa07856"
+  },
+  {
+    "file": "font-2.woff2",
+    "source": "https://fonts.gstatic.com/s/alexandria/v6/UMBXrPdDqW66y0Y2usFeaiPdA5E64BdCIg.woff2",
+    "bytes": 28384,
+    "sha256": "bd327a51636577e24a7168512d2df11db2275ac141cc2f1fc8f0c1765ecc3d86"
+  },
+  {
+    "file": "font-3.woff2",
+    "source": "https://fonts.gstatic.com/s/alexandria/v6/UMBXrPdDqW66y0Y2usFeai3dA5E64Bc.woff2",
+    "bytes": 30128,
+    "sha256": "3c87a4fbe5f104fdc9ed5e3636d07aaa8336da7981e4dfbefcfd6a6f41ef1895"
+  },
+  {
+    "file": "font-4.woff2",
+    "source": "https://fonts.gstatic.com/s/readexpro/v27/SLXYc1bJ7HE5YDoGPuzj_dh8uc7wUy8ZQQyX2Iw1ZEzehiB9Q1U.woff2",
+    "bytes": 22764,
+    "sha256": "1a432d26fc51264ab2107cd379522ee1ea0d8301b717902e2f20d641a43c0658"
+  },
+  {
+    "file": "font-5.woff2",
+    "source": "https://fonts.gstatic.com/s/readexpro/v27/SLXYc1bJ7HE5YDoGPuzj_dh8uc7wUy8ZQQyX2Iw_ZEzehiB9Q1U.woff2",
+    "bytes": 11164,
+    "sha256": "b3c05f134c78977cf1b3981b1f373432ad5b01838431c70619af0f79dd107e67"
+  },
+  {
+    "file": "font-6.woff2",
+    "source": "https://fonts.gstatic.com/s/readexpro/v27/SLXYc1bJ7HE5YDoGPuzj_dh8uc7wUy8ZQQyX2Iw-ZEzehiB9Q1U.woff2",
+    "bytes": 27832,
+    "sha256": "fd95c16683e2018b973d10ef3690248e52f2c724df493c034bffe16d20957c96"
+  },
+  {
+    "file": "font-7.woff2",
+    "source": "https://fonts.gstatic.com/s/readexpro/v27/SLXYc1bJ7HE5YDoGPuzj_dh8uc7wUy8ZQQyX2IwwZEzehiB9.woff2",
+    "bytes": 31392,
+    "sha256": "87022255400cd42a181da336332f553676b11a4808678ba5e18ce12fa0e1f8d9"
+  }
+]

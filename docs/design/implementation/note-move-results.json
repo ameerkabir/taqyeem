@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "Enhanced: organiser moves another member's anonymous note; category, real tint and ownership survive reload; participant moves and post-Collect/review controls are rejected; keyboard/native picker and Arabic/dark layouts fit five widths; real drag, draft retention, follower polling, failed writes and replay after a lost response also pass",
+    "Native: organiser moves another member's anonymous note; category, real tint and ownership survive reload; participant moves and post-Collect/review controls are rejected; keyboard/native picker and Arabic/dark layouts fit five widths"
+  ],
+  "pageErrors": [],
+  "runDate": "2026-11-17",
+  "runtime": "Local Cloudflare Worker / Miniflare; Chromium emulation"
+}

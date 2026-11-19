@@ -15,6 +15,12 @@ export default createAction(routes.boardVoting, {
   ],
 
   async handler(context) {
+    if (context.board.guidedStage)
+      return cardAccessError(
+        context,
+        context.i18n.t("guided.commandRequired"),
+        409,
+      );
     let { board, models } = context;
 
     let form = await context.request.formData();
@@ -22,13 +28,21 @@ export default createAction(routes.boardVoting, {
     let value = values[0];
 
     if (values.length !== 1 || (value !== "true" && value !== "false")) {
-      return cardAccessError(context, context.i18n.t("access.invalidVotingValue"), 400);
+      return cardAccessError(
+        context,
+        context.i18n.t("access.invalidVotingValue"),
+        400,
+      );
     }
 
     let votingOpen = value === "true";
 
     if (board.status === "closed" && votingOpen) {
-      return cardAccessError(context, context.i18n.t("access.cannotOpenVotingClosed"), 403);
+      return cardAccessError(
+        context,
+        context.i18n.t("access.cannotOpenVotingClosed"),
+        403,
+      );
     }
 
     let categories = await models.listCategories(board.id);
@@ -42,7 +56,11 @@ export default createAction(routes.boardVoting, {
     let updated = await models.setVotingOpen(board.id, votingOpen);
 
     if (!updated) {
-      return cardAccessError(context, context.i18n.t("access.boardNotFound"), 404);
+      return cardAccessError(
+        context,
+        context.i18n.t("access.boardNotFound"),
+        404,
+      );
     }
 
     let location = routes.board.href({ boardId: board.id });

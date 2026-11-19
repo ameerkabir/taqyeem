@@ -27,6 +27,7 @@ export default createAction(routes.boardCards, {
         i18n={context.i18n}
         activeId={activeId}
         board={board}
+        categories={categories}
         cards={cards}
         members={members}
         viewerVotes={viewerVotes}

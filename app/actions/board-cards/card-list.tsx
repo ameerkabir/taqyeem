@@ -1,5 +1,5 @@
 import { type Handle } from "remix/component";
-import type { Board, Card, Member } from "../../data/board.ts";
+import type { Board, Card, Member, Category } from "../../data/board.ts";
 import {
   cardAuthorStyle,
   organiserBadgeStyle,
@@ -23,6 +23,7 @@ import type { I18n } from "../../middleware/locale.ts";
 interface CardListProps {
   i18n: I18n;
   activeId: string;
+  categories?: Category[];
   board: Board;
   cards: Card[];
   members: Member[];
@@ -53,7 +54,15 @@ export function Cardlist(handle: Handle<CardListProps>) {
         ) : (
           <ul mix={listStyle}>
             {activeCards.map((card) => (
-              <li key={card.id} mix={cardStyle}>
+              <li
+                key={card.id}
+                class="feedback-card"
+                data-tone={
+                  handle.props.categories?.find((c) => c.id === card.categoryId)
+                    ?.tone ?? 0
+                }
+                mix={cardStyle}
+              >
                 <div mix={cardHeaderStyle}>
                   <p dir="auto" mix={cardBodyStyle}>
                     {card.body}
@@ -122,14 +131,17 @@ export function Cardlist(handle: Handle<CardListProps>) {
                     {/* Names are unique per board but look-alike characters can slip past, so
                         the organiser is marked: a note that says "Sam" without the badge is not
                         from the person running the board. Anonymous notes name no one. */}
-                    {!card.isAnonymous && card.memberId === board.organiserMemberId && (
-                      <span mix={organiserBadgeStyle}>{t("cards.organiserBadge")}</span>
-                    )}
+                    {!card.isAnonymous &&
+                      card.memberId === board.organiserMemberId && (
+                        <span mix={organiserBadgeStyle}>
+                          {t("cards.organiserBadge")}
+                        </span>
+                      )}
                   </p>
 
                   <VoteCounter
                     locale={i18n.locale}
-                    card={card}
+                    card={{id:card.id,boardId:card.boardId,voteCount:card.voteCount}}
                     voted={voted.has(card.id)}
                     disabled={board.status === "closed" || !board.votingOpen}
                   />

@@ -42,6 +42,7 @@ export let categories = table({
     board_id: column.uuid(),
     label: column.varchar(MAX_CATEGORY_LABEL_LENGTH),
     position: column.integer(),
+    tone: column.integer(),
   },
 });
 

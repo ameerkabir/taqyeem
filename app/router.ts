@@ -2,9 +2,16 @@ import { createRouter, type RouterContext } from "remix/router";
 import { render } from "remix/middleware/render";
 import { cop } from "remix/middleware/cop";
 import { loadLocale, getI18n } from "./middleware/locale.ts";
-import { loadAppDependencies, type AppDependencies } from "./middleware/dependencies.ts";
+import {
+  loadAppDependencies,
+  type AppDependencies,
+} from "./middleware/dependencies.ts";
 import { loadSession } from "./sessions.ts";
 
+import {
+  stateController,
+  commandController,
+} from "./actions/guided/controller.tsx";
 import controller from "./actions/controller.tsx";
 import boardController from "./actions/board/controller.tsx";
 import newCardController from "./actions/new-card/controller.tsx";
@@ -16,6 +23,8 @@ import boardCardsController from "./actions/board-cards/controller.tsx";
 import voteController from "./actions/vote/controller.ts";
 import boardVotingController from "./actions/board-voting/controller.ts";
 import boardStatusController from "./actions/board-status/controller.ts";
+import editActionController from "./actions/edit-action/controller.tsx";
+import appearanceController from "./actions/appearance/controller.ts";
 import localeController from "./actions/locale/controller.ts";
 import newBoardController from "./actions/new-board/controller.tsx";
 import joinController from "./actions/join/controller.tsx";
@@ -24,7 +33,7 @@ import joinController from "./actions/join/controller.tsx";
 // directly by Vite in dev and by Cloudflare's Workers Assets in production (see
 // vite.config.ts and wrangler.jsonc) — this router only ever sees dynamic requests.
 export interface AppRouterOptions extends AppDependencies {
-  sessionSecret: string;
+  sessionSecret: string | string[];
 }
 
 // A fresh router for each incoming request; never cache request capabilities.
@@ -35,17 +44,22 @@ export function createAppRouter(options: AppRouterOptions) {
       cop({
         // Locale resolves before cop so a rejected cross-origin request keeps the user's language.
         onDeny: (_reason, context) =>
-          new Response(getI18n(context).t("access.crossOriginDenied"), { status: 403 }),
+          new Response(getI18n(context).t("access.crossOriginDenied"), {
+            status: 403,
+          }),
       }),
       render(),
       loadAppDependencies(options),
-      loadSession(options.sessionSecret),
+      loadSession(options.sessionSecret, options.db),
       loadBoardModels(),
     ],
   });
 
   router.map({ home: routes.home }, controller);
   router.map(routes.board, boardController);
+  router.map(routes.sessionState, stateController);
+  router.map(routes.editAction, editActionController);
+  router.map(routes.sessionCommand, commandController);
   router.map(routes.newCard, newCardController);
   router.map(routes.editCard, editCardController);
   router.map(routes.deleteCard, deleteCardController);
@@ -56,6 +70,7 @@ export function createAppRouter(options: AppRouterOptions) {
   router.map(routes.newBoard, newBoardController);
   router.map(routes.joinBoard, joinController);
   router.map(routes.setLocale, localeController);
+  router.map(routes.setAppearance, appearanceController);
 
   return router;
 }

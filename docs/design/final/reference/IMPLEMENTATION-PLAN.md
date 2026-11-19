@@ -1,0 +1,26 @@
+# Incremental implementation plan — after design approval
+
+This is a proposed sequence, not work implemented or authorised in this phase. Keep the isolated candidate available as a reference. Resolve blocking findings in QA-REPORT before requesting design approval; approval of a visual direction does not settle every production policy.
+
+1. **Approve interaction and privacy contracts.** Review the continuous journey in English and Arabic with facilitators and participants. Confirm editing locks, one-theme membership, vote budgets/closure/reopening, zero-vote discussion, explicit outcomes, unresolved proposals, historical records and post-meeting permissions. Obtain native Arabic copy/typographic review and real phone/screen-reader testing. Decide privacy language and the intended free offering without unsupported operational promises.
+
+2. **Make identity continuity reliable.** Select durable session storage/recovery for the existing Remix 3 session middleware. Preserve board-scoped membership and organiser authority, use secure server-side checks, test isolate/restart continuity and avoid name-only impersonation. Establish retention and invitation access policies. Keep locale preference independent of identity.
+
+3. **Introduce theme and six-stage domain rules.** Extend `BoardModels` with narrow commands and versioned state. Add forward-only numbered migrations after approval; preserve all original cards. Represent source membership separately from facilitator-authored titles. Keep shared live topic distinct from viewer browsing. Test permissions and empty-stage paths at the model boundary before adding UI.
+
+4. **Add versioned topic ballots.** Specify eligible topics and deterministic order, one vote per topic, per-member budget, hidden aggregate results and explicit readiness. Enforce invariants with supported atomic SQL/constraints rather than the prototype store. Define pending-command closure and reopening behaviour, idempotency keys, stale-version rejection and regrouping invalidation. Test competing clients and retry races using the existing SQLite/D1 test patterns.
+
+5. **Persist discussion, proposals and action records.** Store explicit discussed/skipped outcomes and decisions independently of navigation. Preserve suggested/agreed/deferred/declined disposition independently of open/completed execution. Add optional owner/date and source references, role/ownership checks and historical closure snapshots. Test no-action decisions and unresolved suggestions surviving closure.
+
+6. **Build production UI incrementally.** Use the existing explicit routes/controllers and installed Remix 3 component mental model, not React hooks or copied prototype engines. Introduce approved tokens and focused browser components; preserve active editor nodes and continuously retained drafts. Reuse current validation/idempotency interfaces, add semantic status/errors, full source inspection, labelled category navigation and responsive discussion composition. Extend English/Arabic catalogues and test parameter/plural parity.
+
+7. **Add transport and recovery.** Choose a real shared-state transport only after consistency requirements are settled. Add revision-aware subscriptions or refresh, authentication, reconnect reconciliation, idempotent replay and explicit recovery. Test facilitator stage changes while participants type, vote-close races, duplicate delivery, disconnection and multiple tabs. Do not infer online presence from membership or note authors.
+
+8. **Verify and release separately.** Run repository tests/typecheck, migration/model contracts, continuous multiuser journey, accessibility manual checks plus axe, both scripts/themes, required widths, zoom/text spacing and long sessions. Validate real iOS/Android keyboards and screen readers, actual exports and cross-device invitation/recovery. Review privacy/security and rollout/recovery procedures against implemented behaviour. Deployment, publishing and production rollout need separate explicit authorisation.
+
+Each step should be reviewable before its dependent step. Keep backend changes separate from visual adoption where possible, and keep historical production data intact throughout migration.
+
+## GitHub execution map — 2026-11-14
+The existing backlog is now reconciled to the latest final candidate under [epic #38](https://github.com/ameerkabir/taqyeem/issues/38), rather than creating duplicate redesign tickets. Start with [#39](https://github.com/ameerkabir/taqyeem/issues/39) (versioned handoff/signoff), then #40 foundations, #54 durable membership and #56 legacy compatibility. #47/#52/#53 implement shared progression, themes and topic ballots; existing #22 plus new #55 back Actions and historical decisions; existing #20/#23 own discussion/summary UI, #16/#17 real transport/recovery, and #50 integrated acceptance. Native blocking relationships define sequencing. See [the ticket index](planning/GITHUB-BACKLOG.md).
+
+This is ticket planning only. The prototype remains local/untracked, which #39 explicitly records; no source push, production change, remote migration or deployment was performed. Optional character art/templates stay future scope. Outstanding real-device, screen-reader, native Arabic and long-session validation is tracked rather than represented as complete.

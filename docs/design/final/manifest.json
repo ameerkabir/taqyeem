@@ -1,0 +1,76 @@
+{
+  "reference_branch": "design/final-candidate",
+  "application_base": "08f07585789ca38420abf51c07fe63f53896c466",
+  "files": [
+    {
+      "path": "reference/DESIGN-SYSTEM.md",
+      "source": "DESIGN-SYSTEM.md",
+      "sha256": "64d6e6286390e34f5ce2d9b9be10f3060d70753177af5a79bb83af518ba1e65d"
+    },
+    {
+      "path": "reference/UX-DECISIONS.md",
+      "source": "UX-DECISIONS.md",
+      "sha256": "254431fbad47edb6b7caed700d9d6be1d23af4deb32381af2ae7007e4ec1466a"
+    },
+    {
+      "path": "reference/CARD-COLOUR-REVIEW.md",
+      "source": "CARD-COLOUR-REVIEW.md",
+      "sha256": "81a5f5fa5c8308c8a80640d52eab6b8305d32121dc2b938acdd8a228a4cc3d65"
+    },
+    {
+      "path": "reference/QA-REPORT.md",
+      "source": "QA-REPORT.md",
+      "sha256": "bcce6619a01bbe2a66b44c0e54327b6d08d38dfe8424189240d9e772217beaa9"
+    },
+    {
+      "path": "reference/PRODUCTION-GAPS.md",
+      "source": "PRODUCTION-GAPS.md",
+      "sha256": "22064f81d0c2bc4b3e67b3ad1f145a026b43f2405ba61d0c03c4f3b6fad7c41c"
+    },
+    {
+      "path": "reference/IMPLEMENTATION-PLAN.md",
+      "source": "IMPLEMENTATION-PLAN.md",
+      "sha256": "649611225e4d431f0a149c2f7526953110f7a2093089859173faf3f418adba98"
+    },
+    {
+      "path": "screenshots/home-notes-1280-en-light.png",
+      "source": "qa/home-notes-1280-en-light.png",
+      "sha256": "3c72d0adb97a7ae21552c713d104e7b53ef928273e3392662cbe6da9d3f3327f"
+    },
+    {
+      "path": "screenshots/home-notes-390-ar-dark.png",
+      "source": "qa/home-notes-390-ar-dark.png",
+      "sha256": "45f862d6b17396eca599c0193caf414f9f3b1e6a454115aae5dff1f7f9fff07f"
+    },
+    {
+      "path": "screenshots/category-palette-four-lanes-light.png",
+      "source": "qa/category-palette-four-lanes-light.png",
+      "sha256": "8926b5b22e59628301dafbdb02e2b98c9c39c39e87563bd514cf3637910e13f5"
+    },
+    {
+      "path": "screenshots/category-palette-four-lanes-dark.png",
+      "source": "qa/category-palette-four-lanes-dark.png",
+      "sha256": "b588a41fed805ad21cf9f4fdc9a9bc175675323c512f2abe2451554fd17adf47"
+    },
+    {
+      "path": "screenshots/collect-controls-1280-en.png",
+      "source": "qa/collect-controls-1280-en.png",
+      "sha256": "5c13e40dad960168f3b57e5810aa6ace498bad1b11983d238ddf482eb3681da5"
+    },
+    {
+      "path": "screenshots/collect-controls-390-ar.png",
+      "source": "qa/collect-controls-390-ar.png",
+      "sha256": "7c97582163bf74c912aaa3010c2b7ddd93ce605a1f9d0a8371ea366680ef3895"
+    },
+    {
+      "path": "screenshots/actions-toolbar-1280-en-light-all.png",
+      "source": "qa/actions-toolbar-1280-en-light-all.png",
+      "sha256": "f1041c557924e947d62d3ae4b45d7ff9a578b1aac9b8d50634e671b68421cd2e"
+    },
+    {
+      "path": "screenshots/actions-toolbar-390-ar-dark-all.png",
+      "source": "qa/actions-toolbar-390-ar-dark-all.png",
+      "sha256": "95b675c3b6373527d8f6269d884f0a3d856ccb6d33a433aaa891e855be730c51"
+    }
+  ]
+}

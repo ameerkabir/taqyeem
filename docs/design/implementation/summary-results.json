@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "Enhanced, 0 items: filters and shown counts absent; stale filter URL ignored; meeting decision remains visible; empty action list remains clear",
+    "Enhanced, 1 items: filters and shown counts absent; stale filter URL ignored; meeting decision remains visible; recorded actions can be inspected and printed, and progress updates preserve the closure",
+    "Enhanced, 3 items: filters and shown counts absent; stale filter URL ignored; meeting decision remains visible; recorded actions can be inspected and printed, and progress updates preserve the closure",
+    "Enhanced, 4 items: working filters and empty-result recovery; meeting decision remains visible; recorded actions can be inspected and printed, and progress updates preserve the closure",
+    "Native, 0 items: filters and shown counts absent; stale filter URL ignored; meeting decision remains visible; empty action list remains clear",
+    "Native, 1 items: filters and shown counts absent; stale filter URL ignored; meeting decision remains visible; recorded actions can be inspected and printed, and progress updates preserve the closure",
+    "Native, 3 items: filters and shown counts absent; stale filter URL ignored; meeting decision remains visible; recorded actions can be inspected and printed, and progress updates preserve the closure",
+    "Native, 4 items: working filters and empty-result recovery; meeting decision remains visible; recorded actions can be inspected and printed, and progress updates preserve the closure"
+  ],
+  "pageErrors": [],
+  "runDate": "2026-11-16",
+  "runtime": "Local Cloudflare Worker / Miniflare; Chromium emulation"
+}

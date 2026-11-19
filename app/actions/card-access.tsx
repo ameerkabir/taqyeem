@@ -19,10 +19,15 @@ export function cardManagementError(
   if (!card) return { message: t("access.cardNotFound"), status: 404 };
   if (card.memberId !== memberId) {
     return {
-      message: operation === "edit" ? t("access.cannotEdit") : t("access.cannotDelete"),
+      message:
+        operation === "edit"
+          ? t("access.cannotEdit")
+          : t("access.cannotDelete"),
       status: 403,
     };
   }
+  if (board.guidedStage && board.guidedStage !== "collect")
+    return { message: t("guided.collectOnly"), status: 403 };
   if (board.status === "closed")
     return { message: t("access.boardClosed"), status: 403 };
   if (board.votingOpen) {
@@ -54,7 +59,9 @@ export function cardAccessError(
       i18n={i18n}
       title={i18n.t("access.requestFailedTitle")}
       boardTitle={board?.title ?? i18n.t("app.name")}
-      cancelHref={board ? routes.board.href({ boardId: board.id }) : routes.home.href()}
+      cancelHref={
+        board ? routes.board.href({ boardId: board.id }) : routes.home.href()
+      }
     >
       <p role="alert" mix={errorStyle}>
         {message}

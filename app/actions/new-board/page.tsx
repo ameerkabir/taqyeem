@@ -31,13 +31,17 @@ interface NewBoardPageProps {
 
 export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
   return () => {
-    let { i18n, values, titleError, organiserNameError, submitError } = handle.props;
+    let { i18n, values, titleError, organiserNameError, submitError } =
+      handle.props;
     let { t } = i18n;
 
     return (
       <Document
         i18n={i18n}
-        title={t("page.title", { title: t("newBoard.documentTitle"), suffix: t("app.name") })}
+        title={t("page.title", {
+          title: t("newBoard.documentTitle"),
+          suffix: t("app.name"),
+        })}
       >
         <main mix={pageStyle}>
           <section mix={panelStyle} aria-labelledby="new-board-title">
@@ -45,11 +49,13 @@ export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
             <h1 id="new-board-title" mix={titleStyle}>
               {t("newBoard.heading")}
             </h1>
-            <p mix={hintStyle}>
-              {t("newBoard.intro")}
-            </p>
+            <p mix={hintStyle}>{t("newBoard.intro")}</p>
 
-            <form method="post" action={routes.newBoard.action.href()} mix={formStyle}>
+            <form
+              method="post"
+              action={routes.newBoard.action.href()}
+              mix={formStyle}
+            >
               {submitError && (
                 <p id="board-submit-error" role="alert" mix={errorStyle}>
                   {submitError}
@@ -64,7 +70,9 @@ export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
                   defaultValue={values?.title ?? ""}
                   maxLength={MAX_BOARD_TITLE_LENGTH}
                   aria-invalid={titleError ? "true" : undefined}
-                  aria-describedby={titleError ? "board-title-error" : undefined}
+                  aria-describedby={
+                    titleError ? "board-title-error" : undefined
+                  }
                   placeholder={t("newBoard.titlePlaceholder")}
                   required
                   dir="auto"
@@ -108,15 +116,15 @@ export function NewBoardPage(handle: Handle<NewBoardPageProps>) {
                 </p>
               )}
 
-              <section aria-labelledby="default-categories-title">
-                <h2 id="default-categories-title">{t("newBoard.categoriesHeading")}</h2>
+              <details>
+                <summary>{t("newBoard.categoriesHeading")}</summary>
                 <p mix={hintStyle}>{t("newBoard.categoriesHint")}</p>
                 <ul mix={categoriesStyle}>
                   {defaultCategoryLabels(t).map((label) => (
                     <li key={label}>{label}</li>
                   ))}
                 </ul>
-              </section>
+              </details>
 
               <button type="submit" mix={submitStyle}>
                 {t("newBoard.submit")}

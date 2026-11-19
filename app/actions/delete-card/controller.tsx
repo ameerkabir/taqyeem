@@ -1,3 +1,5 @@
+import { DataTableDatabaseError } from "remix/data-table";
+import { isCollectLock } from "../../models/guided/errors.ts";
 import { createController } from "remix/router";
 import { redirect } from "remix/response/redirect";
 import { routes } from "../../routes.ts";
@@ -24,8 +26,15 @@ export default createController(routes.deleteCard, {
       );
       if (failure)
         return cardAccessError(context, failure.message, failure.status);
-      if (!card) return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
-      return context.render(<DeleteCardPage i18n={context.i18n} board={board} card={card} />);
+      if (!card)
+        return cardAccessError(
+          context,
+          context.i18n.t("access.cardNotFound"),
+          404,
+        );
+      return context.render(
+        <DeleteCardPage i18n={context.i18n} board={board} card={card} />,
+      );
     },
     async action(context) {
       let { board, member } = context;
@@ -39,9 +48,36 @@ export default createController(routes.deleteCard, {
       );
       if (failure)
         return cardAccessError(context, failure.message, failure.status);
-      if (!card) return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
-      let deleted = await context.models.deleteCard(board.id, card.id);
-      if (!deleted) return cardAccessError(context, context.i18n.t("access.cardNotFound"), 404);
+      if (!card)
+        return cardAccessError(
+          context,
+          context.i18n.t("access.cardNotFound"),
+          404,
+        );
+      let deleted;
+      try {
+        deleted = await context.models.deleteCard(board.id, card.id);
+      } catch (error) {
+        if (isCollectLock(error))
+          return cardAccessError(
+            context,
+            context.i18n.t("guided.collectOnly"),
+            409,
+          );
+        if (error instanceof DataTableDatabaseError)
+          return cardAccessError(
+            context,
+            context.i18n.t("deleteCard.failed"),
+            503,
+          );
+        throw error;
+      }
+      if (!deleted)
+        return cardAccessError(
+          context,
+          context.i18n.t("access.cardNotFound"),
+          404,
+        );
       return redirect(
         `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(card.categoryId)}`,
         303,

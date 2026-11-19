@@ -22,7 +22,7 @@ async function setup(overrides: Partial<BoardModels> = {}, boardId = "demo") {
     return next();
   };
   let routes = route({ protected: "/protected" });
-  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret", await testDatabase()), provideModels] });
   router.get("/public", () => new Response("Public"));
   router.map(
     routes,

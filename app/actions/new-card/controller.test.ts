@@ -1,3 +1,4 @@
+import {DataTableDatabaseError} from "remix/data-table";
 import { testDatabase } from "../../test/dependencies.ts";
 import { loadLocale } from "../../middleware/locale.ts";
 import { loadAppDependencies } from "../../middleware/dependencies.ts";
@@ -34,7 +35,7 @@ async function setup(
     context.set(boardModelsContext, models, { property: "models" });
     return next();
   };
-  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret"), provideModels] });
+  let router = createRouter({ middleware: [loadLocale(), loadAppDependencies({ db: await testDatabase(), config: { appEnv: "test" }, waitUntil() {} }), render(), loadSession("test-only-session-secret", await testDatabase()), provideModels] });
   router.map(routes.board, boardController);
   router.map(routes.boardCards, boardCardsController);
   router.map(routes.newCard, newCardController);
@@ -547,4 +548,25 @@ describe("new card anonymity", () => {
       assert.equal(app.saved[0].memberId, "m1");
     });
   }
+});
+
+describe("native storage failure recovery", () => {
+  it("keeps text, category, anonymity and the original submission id on a real storage error", async () => {
+    let f = await setup({
+        async createCard() {
+          throw new DataTableDatabaseError("Simulated unavailable D1");
+        },
+      }),
+      form = validForm();
+    form.set("isAnonymous", "true");
+    let submission = form.get("submissionId");
+    let response = await f.submit(form, false);
+    assert.equal(response.status, 503);
+    let html = await response.text();
+    assert.ok(html.includes(String(submission)));
+    assert.ok(html.includes("ملاحظة للفريق"));
+    assert.ok(html.includes("checked"));
+    assert.ok(html.includes('role="alert"'));
+    assert.equal(f.saved.length, 0);
+  });
 });

@@ -1,5 +1,6 @@
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
+import { sql } from "remix/data-table";
 import type { Database } from "remix/data-table";
 import { boards, categories, members } from "../../data/tables.ts";
 import { MAX_MEMBER_NAME_LENGTH } from "../../data/limits.ts";
@@ -13,17 +14,19 @@ const options = {
 };
 const origin = "http://localhost";
 
-function call(db: Database, path: string, init: RequestInit & { cookie?: string; fields?: Record<string, string> } = {}) {
+async function call(db: Database, path: string, init: RequestInit & { cookie?: string; fields?: Record<string, string> } = {}) {
   let { cookie, fields, ...rest } = init;
   let headers = new Headers(rest.headers);
   if (cookie) headers.set("Cookie", cookie);
-  return createAppRouter({ ...options, db }).fetch(
+  let response=await createAppRouter({ ...options, db }).fetch(
     new Request(origin + path, {
       ...rest,
       headers,
       body: fields ? new URLSearchParams(fields) : undefined,
     }),
   );
+  await response.clone().text();
+  return response;
 }
 
 function sessionCookie(response: Response) {
@@ -36,7 +39,23 @@ async function createBoard(db: Database, title = "لوحة الفريق") {
     fields: { title, organiserDisplayName: "Sam" },
   });
   assert.equal(response.status, 303);
-  return { path: response.headers.get("Location")!, organiserCookie: sessionCookie(response) };
+  let path = response.headers.get("Location")!,
+    organiserCookie = sessionCookie(response);
+  let state = (await (
+    await call(db, path + "/session", { cookie: organiserCookie })
+  ).json()) as { revision: number };
+  let configured = await call(db, path + "/commands", {
+    method: "POST",
+    cookie: organiserCookie,
+    fields: {
+      id: crypto.randomUUID(),
+      revision: String(state.revision),
+      kind: "configure",
+      choice: "classic",
+    },
+  });
+  assert.equal(configured.status, 303);
+  return { path, organiserCookie };
 }
 
 describe("join form", () => {
@@ -235,6 +254,8 @@ async function categoryIds(db: Database, path: string) {
 }
 
 async function closeBoard(db: Database, path: string, organiserCookie: string) {
+  // Preserve the old close/reopen contract separately from guided immutable closure.
+  await db.exec(sql`DELETE FROM guided_sessions WHERE board_id=${path.split("/").pop()!}`);
   let response = await call(db, `${path}/status`, { method: "POST", cookie: organiserCookie, fields: { status: "closed" } });
   assert.equal(response.status, 303);
 }
