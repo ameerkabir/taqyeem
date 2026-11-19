@@ -67,11 +67,12 @@ async function setup(autoConfigure = true) {
       !native,
     );
   };
-  if (autoConfigure)
+  if (autoConfigure) {
     assert.equal(
       (await command("configure", { choice: "classic" })).status,
       200,
     );
+  }
   return { db, path, owner, participant, request, read, command };
 }
 describe("guided route boundary", () => {
@@ -295,7 +296,7 @@ describe("guided route boundary", () => {
   it("reports duplicate theme names and supports adding selected notes to an existing theme through native and enhanced commands", async () => {
     let f = await setup(),
       initial = await f.read();
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 3; i++) {
       assert.equal(
         (
           await f.request(f.path + "/new", f.owner, {
@@ -306,6 +307,7 @@ describe("guided route boundary", () => {
         ).status,
         303,
       );
+    }
     await f.command("advance");
     let ids = (await f.read()).cards.map((c) => c.id);
     assert.equal(
@@ -499,6 +501,12 @@ describe("guided route boundary", () => {
       (await f.request(f.path + "/commands", f.owner, { kind: "convert" }))
         .status,
       200,
+    );
+    // The board is now guided; converting it again is a conflict, not a reset.
+    assert.equal(
+      (await f.request(f.path + "/commands", f.owner, { kind: "convert" }))
+        .status,
+      409,
     );
     let view = await f.read();
     assert.equal(view.state.stage, "discuss");
@@ -695,6 +703,10 @@ describe("guided route boundary", () => {
         .map((_, i) => String(i))
         .join("\n"),
       "\u200b",
+      // Names that only differ by spacing or invisible characters read as one category.
+      "Went well\nWent  well",
+      "Ideas\nIdeas\u200b",
+      "Ideas\nＩｄｅａｓ",
     ]) {
       assert.equal(
         (await f.command("configure", { choice: "custom", labels })).status,
@@ -753,5 +765,37 @@ describe("guided route boundary", () => {
     let final = await f.read();
     assert.equal(final.state.categorySetup?.confirmed, true);
     assert.ok(final.categories.length === 2 || final.categories.length === 3);
+  });
+  it("answers a JSON command with the committed session, matching what a later poll returns", async () => {
+    let f = await setup(),
+      before = await f.read();
+    let response = await f.command("ready", { value: "true" });
+    assert.equal(response.status, 200);
+    let committed = (await response.json()) as ViewerPayload;
+    assert.equal(committed.revision, before.revision + 1);
+    let polled = await f.read();
+    assert.equal(polled.revision, committed.revision);
+    assert.deepEqual(polled.state, committed.state);
+    assert.deepEqual(polled.cards, committed.cards);
+  });
+  it("gives a failed native command a retry form carrying the board's current revision", async () => {
+    let f = await setup(),
+      current = await f.read();
+    let response = await f.request(
+      f.path + "/commands",
+      f.owner,
+      {
+        id: crypto.randomUUID(),
+        revision: String(current.revision + 50),
+        kind: "advance",
+      },
+      false,
+    );
+    assert.equal(response.status, 409);
+    let html = await response.text();
+    assert.ok(
+      html.includes(`name="revision" value="${current.revision}"`),
+      "retry form uses the stored revision, not the stale submitted one",
+    );
   });
 });

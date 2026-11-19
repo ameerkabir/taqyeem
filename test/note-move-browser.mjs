@@ -101,15 +101,16 @@ try {
       client.locator(`.feedback-card[data-card-id="${anonymous.id}"]`);
     await owner.goto(base + path);
     await participant.goto(base + path);
-    if (enhanced)
+    if (enhanced) {
       await owner.locator(".workspace[data-enhanced=true]").waitFor();
+    }
     assert.equal(
       await participant
         .locator('.feedback-card[draggable="true"],.note-move')
         .count(),
       0,
     );
-    for (const note of [anonymous, publicNote])
+    for (const note of [anonymous, publicNote]) {
       assert.equal(
         (
           await api(
@@ -120,18 +121,22 @@ try {
         ).status(),
         403,
       );
+    }
     async function click(locator) {
-      if (!enhanced)
+      if (!enhanced) {
         await Promise.all([
           owner.waitForNavigation({ waitUntil: "domcontentloaded" }),
           locator.click(),
         ]);
-      else await locator.click();
+      } else {
+        await locator.click();
+      }
     }
     async function movePicker(categoryId) {
       const details = card().locator(".note-move");
-      if ((await details.getAttribute("open")) === null)
+      if ((await details.getAttribute("open")) === null) {
         await details.locator("summary").click();
+      }
       await details.locator("select").selectOption(categoryId);
       if (enhanced) {
         const response = owner.waitForResponse(
@@ -141,7 +146,9 @@ try {
         await details.locator("button").click();
         assert.equal((await response).status(), 200);
         await owner.locator('.workspace[aria-busy="false"]').waitFor();
-      } else await click(details.locator("button"));
+      } else {
+        await click(details.locator("button"));
+      }
     }
     async function assertCategory(categoryId, tone, color) {
       assert.equal(
@@ -170,7 +177,7 @@ try {
       );
     }
     if (enhanced) {
-      await owner.locator(".add-note").click();
+      await owner.locator('.lane[data-active="true"] .add-note').click();
       const draft = owner.locator("dialog textarea");
       await draft.fill("My draft survives category moves — مسودة محفوظة");
       await draft.evaluate((node) => (node.dataset.identity = "retained-note"));
@@ -214,7 +221,9 @@ try {
             ?.closest(".lane")?.dataset.categoryId === destination,
         { id: anonymous.id, destination: peach.id },
       );
-    } else await movePicker(peach.id);
+    } else {
+      await movePicker(peach.id);
+    }
     await assertCategory(peach.id, 1, "rgb(250, 231, 218)");
     await owner.screenshot({
       path: `${output}/move-note-${enhanced ? "desktop" : "native-phone"}.png`,
@@ -274,10 +283,12 @@ try {
       });
       assert.equal(replay.status(), 200, await replay.text());
       assert.equal((await read()).revision, beforeReplay.revision);
-    } else await movePicker(green.id);
+    } else {
+      await movePicker(green.id);
+    }
     await assertCategory(green.id, 0, "rgb(227, 241, 222)");
-    for (const language of ["en", "ar"])
-      for (const theme of ["light", "dark"])
+    for (const language of ["en", "ar"]) {
+      for (const theme of ["light", "dark"]) {
         for (const width of [375, 390, 768, 1280, 1440]) {
           await context.addCookies([
             {
@@ -290,8 +301,9 @@ try {
           await owner.setViewportSize({ width, height: 1000 });
           await owner.goto(base + path + "?category=" + green.id);
           const details = card().locator(".note-move");
-          if ((await details.getAttribute("open")) === null)
+          if ((await details.getAttribute("open")) === null) {
             await details.locator("summary").click();
+          }
           assert.equal(await details.locator("select").inputValue(), green.id);
           const bounds = await details.evaluate((node) => {
             const box = node.closest(".feedback-card").getBoundingClientRect();
@@ -319,6 +331,8 @@ try {
             });
           }
         }
+      }
+    }
     assert.equal((await api("advance")).status(), 200);
     await owner.goto(base + path + "?step=collect");
     assert.equal(
@@ -350,10 +364,11 @@ try {
   );
   console.log(JSON.stringify({ checks, output }, null, 2));
 } catch (error) {
-  if (active)
+  if (active) {
     await active
       .screenshot({ path: output + "/failure.png", fullPage: true })
       .catch(() => {});
+  }
   throw error;
 } finally {
   await browser.close();

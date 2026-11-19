@@ -67,14 +67,18 @@ export function requireBoardMember(
     }
 
     let memberId = await models.getViewerMemberId(board.id);
-    if (!memberId) return reject("access.joinBoard");
+    if (!memberId) {
+      return reject("access.joinBoard");
+    }
 
     let members = await models.listMembers(board.id);
     let member = members.find(
       (candidate) =>
         candidate.id === memberId && candidate.boardId === board.id,
     );
-    if (!member) return reject("access.memberNotFound");
+    if (!member) {
+      return reject("access.memberNotFound");
+    }
 
     context.set(boardMemberContext, member, { property: "member" });
     return next();

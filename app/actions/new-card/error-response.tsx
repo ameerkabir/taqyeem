@@ -29,12 +29,15 @@ export async function newCardError(
   }
 
   let board = context.get(boardContext);
-  if (!board) return boardAccessError(context, message, status);
+  if (!board) {
+    return boardAccessError(context, message, status);
+  }
   let models = context.get(boardModelsContext);
   // This route uses the standard component renderer installed in app/router.ts.
   let render = context.get(Renderer) as RenderFunction | undefined;
-  if (!models || !render)
+  if (!models || !render) {
     throw new Error("newCardError requires models and render middleware");
+  }
 
   let data =
     options.data ??

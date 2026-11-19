@@ -17,7 +17,9 @@ const origin = "http://localhost";
 async function call(db: Database, path: string, init: RequestInit & { cookie?: string; fields?: Record<string, string> } = {}) {
   let { cookie, fields, ...rest } = init;
   let headers = new Headers(rest.headers);
-  if (cookie) headers.set("Cookie", cookie);
+  if (cookie) {
+    headers.set("Cookie", cookie);
+  }
   let response=await createAppRouter({ ...options, db }).fetch(
     new Request(origin + path, {
       ...rest,
@@ -176,7 +178,9 @@ describe("join form", () => {
         let value = Reflect.get(target, property, target);
         if (property === "create") {
           return async (table: unknown, ...rest: unknown[]) => {
-            if (table === members) throw new Error("simulated write failure");
+            if (table === members) {
+              throw new Error("simulated write failure");
+            }
             return (value as (...a: unknown[]) => unknown).call(target, table, ...rest);
           };
         }
@@ -423,5 +427,36 @@ describe("returning to the requested category after joining", () => {
     assert.equal(note.headers.get("Location"), `${path}/join?section=${second}`);
     // Nothing asked for: nothing attached.
     assert.equal((await call(db, path)).headers.get("Location"), `${path}/join`);
+  });
+});
+
+describe("join invitation", () => {
+  it("names the facilitator, counts members and labels a guided stage in the viewer's language", async () => {
+    let { invitationFor } = await import("./controller.tsx");
+    let { createTranslator } = await import("../../i18n/translator.ts");
+    let board = {
+      id: "b",
+      title: "T",
+      organiserMemberId: "m1",
+      status: "meeting" as const,
+      guidedStage: "vote",
+      votingOpen: false,
+      currentSectionId: null,
+    };
+    let members = [
+      { id: "m1", boardId: "b", displayName: "سارة" },
+      { id: "m2", boardId: "b", displayName: "Lee" },
+    ];
+    let en = createTranslator("en").t;
+    assert.deepEqual(invitationFor(board, members, en), {
+      facilitatorName: "سارة",
+      joinedCount: 2,
+      stage: en("guided.vote"),
+    });
+    let legacy = { ...board, guidedStage: undefined };
+    assert.equal(
+      invitationFor(legacy, members, en).stage,
+      en("board.status.meeting"),
+    );
   });
 });

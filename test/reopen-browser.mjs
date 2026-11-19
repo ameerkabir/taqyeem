@@ -53,18 +53,22 @@ try {
       return r.json();
     }
     async function click(client, locator) {
-      if (!enhanced)
+      if (!enhanced) {
         await Promise.all([
           client.waitForNavigation({ waitUntil: "domcontentloaded" }),
           locator.click(),
         ]);
-      else await locator.click();
+      } else {
+        await locator.click();
+      }
     }
     async function command(kind, within = page) {
       const button = within
         .locator(`form.command-form:has([name=kind][value="${kind}"]) button`)
         .first();
-      if (!enhanced) return click(page, button);
+      if (!enhanced) {
+        return click(page, button);
+      }
       const response = page.waitForResponse(
         (r) => r.url().endsWith("/commands") && r.request().method() === "POST",
       );
@@ -85,8 +89,9 @@ try {
       await client
         .locator(".history-navigation select")
         .selectOption(String(version));
-      if (!enhanced)
+      if (!enhanced) {
         await click(client, client.locator(".history-navigation button"));
+      }
       await client.waitForURL(
         (url) => url.searchParams.get("record") === String(version),
       );
@@ -94,7 +99,7 @@ try {
     }
     await api("configure", { choice: "classic" });
     const initial = await read();
-    for (let i = 0; i < 2; i++)
+    for (let i = 0; i < 2; i++) {
       assert.equal(
         (
           await page.request.post(base + path + "/new", {
@@ -111,6 +116,7 @@ try {
         ).status(),
         303,
       );
+    }
     await api("advance");
     await api("advance");
     let v = await read();
@@ -197,7 +203,7 @@ try {
       await page.locator(".stage-rail li[data-state=upcoming] a").count(),
       0,
     );
-    if (enhanced)
+    if (enhanced) {
       for (const [editor, text, marker] of [
         [action, "An unfinished action draft", "action-kept"],
         [decision, "An unfinished decision draft", "decision-kept"],
@@ -209,6 +215,7 @@ try {
         );
         assert.equal(await editor.locator("[name=topic]").inputValue(), second);
       }
+    }
     await command("advance");
     await command("advance");
     await page.locator(".reopen-meeting").waitFor();
@@ -238,7 +245,7 @@ try {
     assert.deepEqual(v.cards, first.cards);
     assert.deepEqual(v.state.votes, first.state.votes);
     assert.equal(v.history.length, 1);
-    if (enhanced)
+    if (enhanced) {
       for (const [editor, text, marker] of [
         [action, "An unfinished action draft", "action-kept"],
         [decision, "An unfinished decision draft", "decision-kept"],
@@ -250,6 +257,7 @@ try {
         );
         assert.equal(await editor.locator("[name=topic]").inputValue(), second);
       }
+    }
     await api("decision", {
       topic,
       text: "Revised agreement: keep pairing and a smaller checklist.",
@@ -260,7 +268,7 @@ try {
       owner: initial.memberId,
       due: "",
     });
-    if (enhanced)
+    if (enhanced) {
       await page.waitForFunction(
         (revision) =>
           Number(
@@ -269,7 +277,9 @@ try {
           ) >= revision,
         (await read()).revision,
       );
-    else await page.reload();
+    } else {
+      await page.reload();
+    }
     await command("advance");
     await command("advance");
     const secondClose = await read();
@@ -347,14 +357,16 @@ try {
       .locator(".summary-decision")
       .first()
       .innerText();
-    if (enhanced)
+    if (enhanced) {
       await participant.waitForFunction(
         () =>
           document
             .querySelector(".workspace")
             ?.getAttribute("data-shared-stage") === "discuss",
       );
-    else await participant.reload();
+    } else {
+      await participant.reload();
+    }
     assert.equal(
       await participant.locator(".summary-decision").first().innerText(),
       participantBefore,
@@ -388,8 +400,9 @@ try {
   );
   console.log(JSON.stringify({ checks, output }, null, 2));
 } catch (error) {
-  if (active && !active.isClosed())
+  if (active && !active.isClosed()) {
     await active.screenshot({ path: output + "/failure.png", fullPage: true });
+  }
   throw error;
 } finally {
   await browser.close();

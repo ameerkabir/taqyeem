@@ -15,7 +15,9 @@ async function legacyDatabase() {
   try {
     let source = new URL(".", migrationsDirectory).pathname;
     for (let file of await readdir(source)) {
-      if (/^000[1-5].*\.sql$/.test(file)) await cp(join(source, file), join(directory, file));
+      if (/^000[1-5].*\.sql$/.test(file)) {
+        await cp(join(source, file), join(directory, file));
+      }
     }
     let db = await createTestDatabase(pathToFileURL(directory + "/"));
     return db;

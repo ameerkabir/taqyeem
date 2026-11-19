@@ -5,8 +5,7 @@ import {
 } from "remix/router";
 import type { Board } from "../data/board.ts";
 import { boardModelsContext } from "./models.ts";
-import { sql } from "remix/data-table";
-import { databaseContext } from "./dependencies.ts";
+import { isGuided, withGuidedStatus } from "../models/guided/policy.ts";
 import { getI18n } from "./locale.ts";
 
 export const boardContext = createContextKey<Board>();
@@ -33,8 +32,9 @@ export function loadBoard(
 ): Middleware<{ key: typeof boardContext; value: Board; property: "board" }> {
   return async (context, next) => {
     let models = context.get(boardModelsContext);
-    if (!models)
+    if (!models) {
       throw new Error("loadBoard requires loadBoardModels middleware");
+    }
 
     let boardId = options.boardId ?? context.params.boardId;
     let board = boardId ? await models.getBoard(boardId) : null;
@@ -46,28 +46,31 @@ export function loadBoard(
       );
     }
 
-    let db = context.get(databaseContext);
-    if (db) {
-      let row = (
-        await db.exec(
-          sql`SELECT json_extract(data,'$.categorySetup.confirmed') AS configured,json_extract(data,'$.stage') AS stage FROM guided_sessions WHERE board_id=${board.id}`,
-        )
-      ).rows?.[0];
-      if (row)
-        board = {
-          ...board,
-          guidedStage: String(row.stage),
-          categorySetupRequired: row.configured === 0,
-          status:
-            row.stage === "summary"
-              ? "closed"
-              : row.stage === "collect"
-                ? "collecting"
-                : "meeting",
-          votingOpen: false,
-        };
-    }
+    board = withGuidedStatus(board, await models.getGuidedStatus(board.id));
     context.set(boardContext, board, { property: "board" });
+    return next();
+  };
+}
+
+/**
+ * Guards the legacy status, voting and vote endpoints: a guided board changes those
+ * through shared session commands instead.
+ */
+export function requireLegacyBoard(
+  options: { onError?: BoardAccessErrorHandler } = {},
+): Middleware {
+  return (context, next) => {
+    let board = context.get(boardContext);
+    if (!board) {
+      throw new Error("requireLegacyBoard requires loadBoard");
+    }
+    if (isGuided(board)) {
+      return (options.onError ?? boardAccessError)(
+        context,
+        getI18n(context).t("guided.commandRequired"),
+        409,
+      );
+    }
     return next();
   };
 }

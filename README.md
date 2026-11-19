@@ -22,10 +22,14 @@ A minimal Remix application starter with a home page.
 ## Commands
 
 ```sh
-npm i
+npm ci
 npm run dev
-npm run hmr
-npm run start
-npm test
 npm run typecheck
+npm test
+npm run build
+npm run test:d1
 ```
+
+Requires Node 24.3 or later. `npm run dev` needs `SESSION_SECRET` in `.dev.vars`. Test
+layers, CI and the browser journeys kept outside CI are described in
+[`docs/decisions/0006-testing.md`](docs/decisions/0006-testing.md).

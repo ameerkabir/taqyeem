@@ -64,7 +64,9 @@ try {
   let before = await (await page.request.get(base + path + "/session")).json();
   await page.addInitScript(
     ({ prefix, categoryId, submissionId }) => {
-      if (sessionStorage.getItem(prefix + "seeded")) return;
+      if (sessionStorage.getItem(prefix + "seeded")) {
+        return;
+      }
       sessionStorage.setItem(prefix + "seeded", "yes");
       sessionStorage.setItem(
         prefix + "note",
@@ -101,19 +103,19 @@ try {
     fullPage: true,
   });
   await page.locator(".category-setup button.primary").click();
-  await page.locator(".add-note").waitFor();
+  await page.locator('.lane[data-active="true"] .add-note').waitFor();
   let data = await (await page.request.get(base + path + "/session")).json();
   assert.deepEqual(
     data.categories.map((c) => c.label),
     ["Keep doing", "Change", "Try next", "Appreciation"],
   );
   assert.equal(data.state.categorySetup.confirmed, true);
-  await participant.locator(".add-note").waitFor();
+  await participant.locator('.lane[data-active="true"] .add-note').waitFor();
   await page.screenshot({
     path: output + "/empty-collect-phone-arabic.png",
     fullPage: true,
   });
-  await page.locator(".add-note").click();
+  await page.locator('.lane[data-active="true"] .add-note').click();
   assert.equal(
     await page.locator("dialog textarea").inputValue(),
     "Retained before category setup",
@@ -144,7 +146,7 @@ try {
   await page.locator("[data-appearance=light]").click();
   path = await create("Classic retrospective");
   await page.locator(".category-setup button.primary").click();
-  await page.locator(".add-note").waitFor();
+  await page.locator('.lane[data-active="true"] .add-note').waitFor();
   for (const [width, height] of [
     [375, 812],
     [390, 844],
@@ -166,9 +168,9 @@ try {
     fullPage: true,
   });
   assert.equal(await page.locator(".lane-empty").count(), 3);
-  assert.equal(await page.locator(".add-note").count(), 1);
+  assert.equal(await page.locator(".lane .add-note").count(), 3);
   checks.push(
-    "Classic categories are explicit; empty Collect has three readable lanes, one Add note control and no page overflow at five viewports",
+    "Classic categories are explicit; empty Collect has three readable lanes, an Add note control in each lane and no page overflow at five viewports",
   );
   // Native fallback creates and confirms a custom board without JavaScript.
   const nativeContext = await browser.newContext({
@@ -201,7 +203,7 @@ try {
     native.waitForNavigation(),
     native.locator("form.command-form button.primary").click(),
   ]);
-  assert.equal(await native.locator(".add-note").count(), 1);
+  assert.equal(await native.locator(".lane .add-note").count(), 2);
   assert.equal(await native.locator(".lane h3").count(), 2);
   checks.push(
     "Custom category setup and editable validation recovery work through native forms with JavaScript disabled",

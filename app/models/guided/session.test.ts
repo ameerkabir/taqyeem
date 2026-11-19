@@ -7,6 +7,8 @@ import { createCard } from "../cards/card.ts";
 import { joinBoard } from "../boards/join.ts";
 import {
   readSession,
+  createSession,
+  readGuidedStatus,
   applyCommand,
   commandSession,
   topics,
@@ -30,8 +32,8 @@ async function fixture(count = 6) {
   let joined = await joinBoard(db, id, "Participant");
   assert.ok(joined?.ok);
   let participant = joined.member.id;
-  await readSession(db, id);
-  for (let i = 0; i < count; i++)
+  await createSession(db, id);
+  for (let i = 0; i < count; i++) {
     await createCard(
       db,
       {
@@ -45,6 +47,7 @@ async function fixture(count = 6) {
       crypto.randomUUID(),
       { maxCards: 100, windowMs: 1000 },
     );
+  }
   const read = async () => (await readSession(db, id))!;
   const command = async (
     kind: string,
@@ -243,11 +246,12 @@ describe("guided session authority and atomic invariants", () => {
       }),
     ]);
     assert.equal(races.filter((r) => r.status === "fulfilled").length, 1);
-    for (const result of races)
+    for (const result of races) {
       if (result.status === "rejected") {
         assert.ok(result.reason instanceof CommandError);
         assert.equal(result.reason.code, "conflict");
       }
+    }
     const now = await f.read();
     const moveOrAdvance = await Promise.allSettled([
       commandSession(f.db, f.id, f.owner, {
@@ -268,8 +272,11 @@ describe("guided session authority and atomic invariants", () => {
       1,
     );
     const end = await f.read();
-    if (end.state.stage === "group") assert.deepEqual(end.cards, now.cards);
-    else assert.equal(end.cards[0].categoryId, initial.categories[3].id);
+    if (end.state.stage === "group") {
+      assert.deepEqual(end.cards, now.cards);
+    } else {
+      assert.equal(end.cards[0].categoryId, initial.categories[3].id);
+    }
   });
   async function closedFixture() {
     const f = await fixture(2);
@@ -478,8 +485,9 @@ describe("guided session authority and atomic invariants", () => {
         notes: [ids[3]],
       },
       { theme: theme.id, notes: [crypto.randomUUID()] },
-    ])
+    ]) {
       await f.reject(() => f.command("theme", fields), "invalid");
+    }
     assert.deepEqual((await f.read()).state.themes, after.state.themes);
     await f.command("advance");
     await f.reject(
@@ -499,11 +507,12 @@ describe("guided session authority and atomic invariants", () => {
       "  DELIVERY   HEALTH ",
       "Ｄｅｌｉｖｅｒｙ health",
       "Delivery\u200b health",
-    ])
+    ]) {
       await f.reject(
         () => f.command("theme", { title, notes: [ids[1]] }),
         "duplicateTheme",
       );
+    }
     await f.command("theme", { title: "Quality", notes: [ids[1]] });
     let before = await f.read(),
       second = before.state.themes[1];
@@ -518,11 +527,12 @@ describe("guided session authority and atomic invariants", () => {
       () => f.command("theme", { title: "Cafe\u0301", notes: [ids[2]] }),
       "duplicateTheme",
     );
-    for (const title of ["", "\u200b", "Bad\nname", "x".repeat(161)])
+    for (const title of ["", "\u200b", "Bad\nname", "x".repeat(161)]) {
       await f.reject(
         () => f.command("theme", { title, notes: [ids[2]] }),
         "invalid",
       );
+    }
     let other = await fixture(1);
     await other.command("advance");
     await other.command("theme", {
@@ -903,5 +913,89 @@ describe("guided session authority and atomic invariants", () => {
     );
     await f.command("ready", { value: true }, f.participant);
     assert.equal((await f.read()).state.recent![f.participant].length, 1);
+  });
+});
+
+describe("guided session storage", () => {
+  async function board() {
+    let db = await testDatabase(),
+      created = await createBoard(db, {
+        title: "Storage",
+        organiserDisplayName: "Facilitator",
+        categoryLabels: ["A", "B"],
+      });
+    const rows = async () =>
+      Number(
+        (
+          await db.exec(
+            sql`SELECT count(*) AS n FROM guided_sessions WHERE board_id=${created.board.id}`,
+          )
+        ).rows![0].n,
+      );
+    return { db, id: created.board.id, rows };
+  }
+
+  it("reads without writing: a board with no guided session stays a legacy board", async () => {
+    let { db, id, rows } = await board();
+    assert.equal(await readSession(db, id), null);
+    assert.equal(await readGuidedStatus(db, id), null);
+    assert.equal(await rows(), 0);
+    assert.equal(await readSession(db, crypto.randomUUID()), null);
+  });
+
+  it("creates a session once and reports a repeated create without overwriting it", async () => {
+    let { db, id, rows } = await board();
+    let first = await createSession(db, id, { requireCategorySetup: true });
+    assert.equal(first?.created, true);
+    assert.equal(first?.view.state.categorySetup?.confirmed, false);
+    let configured = await commandSession(db, id, first!.view.board.organiserMemberId, {
+      id: crypto.randomUUID(),
+      revision: first!.view.revision,
+      kind: "configure",
+      choice: "classic",
+    });
+    let again = await createSession(db, id, { legacy: true });
+    assert.equal(again?.created, false);
+    assert.equal(again?.view.revision, configured!.revision);
+    assert.equal(again?.view.state.legacy, false);
+    assert.equal(again?.view.state.categorySetup?.confirmed, true);
+    assert.equal(await rows(), 1);
+    assert.equal(await createSession(db, crypto.randomUUID()), null);
+  });
+
+  it("reports stage, revision and pending category setup in one light read", async () => {
+    let { db, id } = await board();
+    let { view } = (await createSession(db, id, { requireCategorySetup: true }))!;
+    assert.deepEqual(await readGuidedStatus(db, id), {
+      stage: "collect",
+      revision: view.revision,
+      categorySetupRequired: true,
+    });
+    let next = await commandSession(db, id, view.board.organiserMemberId, {
+      id: crypto.randomUUID(),
+      revision: view.revision,
+      kind: "configure",
+      choice: "classic",
+    });
+    assert.deepEqual(await readGuidedStatus(db, id), {
+      stage: "collect",
+      revision: next!.revision,
+      categorySetupRequired: false,
+    });
+  });
+
+  it("returns the committed view from a command so callers need not read it again", async () => {
+    let { db, id } = await board();
+    let { view } = (await createSession(db, id))!;
+    let result = await commandSession(db, id, view.board.organiserMemberId, {
+      id: crypto.randomUUID(),
+      revision: view.revision,
+      kind: "ready",
+      value: true,
+    });
+    let reread = (await readSession(db, id))!;
+    assert.equal(result!.revision, reread.revision);
+    assert.deepEqual(result!.state.ready, reread.state.ready);
+    assert.deepEqual(result!.cards, reread.cards);
   });
 });

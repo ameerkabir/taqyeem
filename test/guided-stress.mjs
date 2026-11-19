@@ -57,7 +57,7 @@ try {
   assert.equal(configured.status(), 200);
   data = await configured.json();
   let cats = [...data.categories];
-  while (cats.length < 8)
+  while (cats.length < 8) {
     cats.push({
       id: crypto.randomUUID(),
       boardId: id,
@@ -65,12 +65,14 @@ try {
       position: cats.length,
       tone: cats.length % 4,
     });
+  }
   let members = [{ id: data.memberId, name: "Fixture facilitator" }];
-  while (members.length < 79)
+  while (members.length < 79) {
     members.push({
       id: crypto.randomUUID(),
       name: `Member ${String(members.length).padStart(2, "0")}`,
     });
+  }
   let cards = Array.from({ length: 50 }, (_, i) => ({
     id: crypto.randomUUID(),
     category: cats[i % 8].id,
@@ -179,8 +181,12 @@ try {
     "actions",
     "summary",
   ]) {
-    if (stage === "group") await command("advance");
-    if (stage === "vote") await command("advance");
+    if (stage === "group") {
+      await command("advance");
+    }
+    if (stage === "vote") {
+      await command("advance");
+    }
     if (stage === "discuss") {
       let v = await read();
       await command("ballot", {
@@ -189,10 +195,12 @@ try {
       });
       await command("advance");
     }
-    if (stage === "actions" || stage === "summary") await command("advance");
-    for (const { page, context, role } of viewers)
-      for (let language of ["en", "ar"])
-        for (let theme of ["light", "dark"])
+    if (stage === "actions" || stage === "summary") {
+      await command("advance");
+    }
+    for (const { page, context, role } of viewers) {
+      for (let language of ["en", "ar"]) {
+        for (let theme of ["light", "dark"]) {
           for (let [width, height] of dimensions) {
             await context.addCookies([
               {
@@ -267,12 +275,16 @@ try {
               language === "ar" &&
               theme === "dark" &&
               ["collect", "discuss", "actions"].includes(stage)
-            )
+            ) {
               await page.screenshot({
                 path: output + `/${stage}-390-ar-dark.png`,
                 fullPage: true,
               });
+            }
           }
+        }
+      }
+    }
   }
   assert.deepEqual(errors, []);
   await writeFile(

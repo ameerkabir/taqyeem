@@ -68,9 +68,11 @@ try {
       posted();
       await gate;
       await route.continue();
-    } else await route.continue();
+    } else {
+      await route.continue();
+    }
   });
-  await page.locator(".add-note").click();
+  await page.locator('.lane[data-active="true"] .add-note').click();
   await page.locator("dialog textarea").fill("The submitted snapshot");
   await page.locator("dialog button.primary").click();
   await dispatched;
@@ -161,7 +163,7 @@ try {
     "Another independent board",
   );
   await page.locator(".category-setup button.primary").click();
-  await page.locator(".add-note").click();
+  await page.locator('.lane[data-active="true"] .add-note').click();
   assert.equal(await page.locator("dialog textarea").inputValue(), "");
   await page.locator("dialog .control-row button").first().click();
   await navigateLink(path, "Editor lifecycle checks");

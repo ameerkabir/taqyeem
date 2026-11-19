@@ -37,7 +37,9 @@ export const VoteCounter = clientEntry(
           aria-busy={pending}
           mix={on("submit", async (event) => {
             event.preventDefault();
-            if (pending) return;
+            if (pending) {
+              return;
+            }
             let form = event.currentTarget;
             // Include the clicked submit button before disabling it.
             let body = new FormData(form, event.submitter);
@@ -53,10 +55,14 @@ export const VoteCounter = clientEntry(
                 signal: handle.signal,
                 update: () => handle.update(),
               });
-              if (handle.signal.aborted) return;
+              if (handle.signal.aborted) {
+                return;
+              }
               try {
                 await handle.frame.reload();
-                if (!handle.signal.aborted) model.reset();
+                if (!handle.signal.aborted) {
+                  model.reset();
+                }
               } catch {
                 // Saving succeeded; retain the confirmed vote if refreshing fails.
                 error = "vote.refreshFailed";

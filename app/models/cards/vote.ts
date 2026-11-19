@@ -40,7 +40,9 @@ export async function setCardVote(
   voted: boolean,
 ): Promise<VoteResult | null> {
   let card = await db.findOne(cards, { where: { board_id: boardId, id: cardId } });
-  if (!card) return null;
+  if (!card) {
+    return null;
+  }
 
   if (voted) {
     if (!(await hasVote(db, cardId, memberId))) {
@@ -48,7 +50,9 @@ export async function setCardVote(
         await db.create(votes, { card_id: cardId, member_id: memberId, board_id: boardId });
       } catch (error) {
         // A concurrent request may have recorded the same vote first; that is fine.
-        if (!(await hasVote(db, cardId, memberId))) throw error;
+        if (!(await hasVote(db, cardId, memberId))) {
+          throw error;
+        }
       }
     }
   } else {

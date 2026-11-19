@@ -10,7 +10,9 @@ function templates(message: unknown): string[] {
 function placeholders(message: unknown): Set<string> {
   let names = new Set<string>();
   for (let template of templates(message)) {
-    for (let match of template.matchAll(/\{(\w+)\}/g)) names.add(match[1]);
+    for (let match of template.matchAll(/\{(\w+)\}/g)) {
+      names.add(match[1]);
+    }
   }
   return names;
 }
@@ -24,12 +26,18 @@ describe("catalogue contract", () => {
     for (let key of Object.keys(en) as (keyof typeof en)[]) {
       assert.equal(typeof ar[key], typeof en[key], key);
       let expected = placeholders(en[key]);
-      if (typeof en[key] !== "string") expected.add("count");
+      if (typeof en[key] !== "string") {
+        expected.add("count");
+      }
       let enNames = placeholders(en[key]);
       let arNames = placeholders(ar[key]);
       // Every variant of a plural may omit {count} ("one vote"), but never invent names.
-      for (let name of arNames) assert.ok(expected.has(name), `${key}: unexpected {${name}}`);
-      if (typeof en[key] === "string") assert.deepEqual([...arNames].sort(), [...enNames].sort(), key);
+      for (let name of arNames) {
+        assert.ok(expected.has(name), `${key}: unexpected {${name}}`);
+      }
+      if (typeof en[key] === "string") {
+        assert.deepEqual([...arNames].sort(), [...enNames].sort(), key);
+      }
     }
   });
 
@@ -37,7 +45,9 @@ describe("catalogue contract", () => {
     for (let [locale, catalogue] of [["ar", ar], ["en", en]] as const) {
       let required = new Intl.PluralRules(locale).resolvedOptions().pluralCategories;
       for (let [key, message] of Object.entries(catalogue)) {
-        if (typeof message === "string") continue;
+        if (typeof message === "string") {
+          continue;
+        }
         for (let category of required) {
           assert.ok(category in message, `${locale}:${key} lacks ${category}`);
         }
@@ -48,7 +58,9 @@ describe("catalogue contract", () => {
   it("contains no markup or secrets-looking values", () => {
     for (let catalogue of [en, ar]) {
       for (let message of Object.values(catalogue)) {
-        for (let template of templates(message)) assert.ok(!/[<>]/.test(template), template);
+        for (let template of templates(message)) {
+          assert.ok(!/[<>]/.test(template), template);
+        }
       }
     }
   });

@@ -40,7 +40,9 @@ describe("optimistic vote model", () => {
   for (let failure of ["rejection", "network", "invalid response"] as const) {
     it(`rolls back after ${failure}`, async () => {
       let model = createVoteModel(async () => {
-        if (failure === "network") throw new Error("offline");
+        if (failure === "network") {
+          throw new Error("offline");
+        }
         return failure === "rejection"
           ? Response.json({ error: "التصويت مغلق" }, { status: 403 })
           : Response.json({ voted: true, count: -1 });
@@ -57,7 +59,9 @@ describe("optimistic vote model", () => {
   it("retains a confirmed vote until a successful refresh, including after a failed retry", async () => {
     let requests = 0;
     let model = createVoteModel(async () => {
-      if (++requests === 1) return Response.json({ voted: true, count: 4 });
+      if (++requests === 1) {
+        return Response.json({ voted: true, count: 4 });
+      }
       throw new Error("offline");
     });
     await model.save(options());

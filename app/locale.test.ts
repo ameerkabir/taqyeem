@@ -29,7 +29,9 @@ beforeEach(async () => {
 
 async function app(headers: Record<string, string>) {
   let router = createAppRouter({ ...options, db });
-  if (/(?:^|;\s*)taqyeem_session=/.test(headers.Cookie ?? "")) return { router, headers };
+  if (/(?:^|;\s*)taqyeem_session=/.test(headers.Cookie ?? "")) {
+    return { router, headers };
+  }
   let viewer = await loginAs(router, DEMO_BOARD_ID, DEMO_VIEWER_MEMBER_ID);
   let cookie = [headers.Cookie, viewer].filter(Boolean).join("; ");
   return { router, headers: { ...headers, Cookie: cookie } };

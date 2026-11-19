@@ -1,7 +1,7 @@
 import { createAction } from "remix/router";
 import { redirect } from "remix/response/redirect";
 import { routes } from "../../routes.ts";
-import { loadBoard } from "../../middleware/board.ts";
+import { loadBoard, requireLegacyBoard } from "../../middleware/board.ts";
 import { requireBoardMember } from "../../middleware/board-member.ts";
 import { requireBoardOrganiser } from "../../middleware/board-organiser.ts";
 import { resolveActiveSection } from "../../models/boards/section.ts";
@@ -12,15 +12,10 @@ export default createAction(routes.boardVoting, {
     loadBoard({ onError: cardAccessError }),
     requireBoardMember({ onError: cardAccessError }),
     requireBoardOrganiser({ onError: cardAccessError }),
+    requireLegacyBoard({ onError: cardAccessError }),
   ],
 
   async handler(context) {
-    if (context.board.guidedStage)
-      return cardAccessError(
-        context,
-        context.i18n.t("guided.commandRequired"),
-        409,
-      );
     let { board, models } = context;
 
     let form = await context.request.formData();
