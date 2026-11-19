@@ -31,7 +31,7 @@ try {
   let path = new URL(page.url()).pathname;
   const read = async () =>
     await (await page.request.get(base + path + "/session")).json();
-  await nativeClick(page.locator(".add-note"));
+  await nativeClick(page.locator('.lane[data-active="true"] .add-note'));
   await page
     .locator("textarea[name=text]")
     .fill("A native note\nwithout JavaScript");

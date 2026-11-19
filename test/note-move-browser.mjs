@@ -177,7 +177,7 @@ try {
       );
     }
     if (enhanced) {
-      await owner.locator(".add-note").click();
+      await owner.locator('.lane[data-active="true"] .add-note').click();
       const draft = owner.locator("dialog textarea");
       await draft.fill("My draft survives category moves — مسودة محفوظة");
       await draft.evaluate((node) => (node.dataset.identity = "retained-note"));

@@ -93,7 +93,8 @@ export interface WorkspaceView {
   /** Reads `topicId` privately; "" follows the team again. */
   viewTopic(topicId: string): void;
   showAllActions(): void;
-  openNote(): void;
+  /** Opens the note dialog, preset to `categoryId` when a lane passes one. */
+  openNote(categoryId?: string): void;
   closeNote(): void;
   discardNote(): void;
   /** Opens the action editor, pre-filled from a note or topic when empty. */

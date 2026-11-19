@@ -60,12 +60,12 @@ try {
     await click(page.locator('form[action="/boards/new"] button'));
     await page.locator(".category-setup").waitFor();
     await commandClick(page.locator(".category-setup button.primary"));
-    await page.locator(".add-note").waitFor();
+    await page.locator('.lane[data-active="true"] .add-note').waitFor();
     const path = new URL(page.url()).pathname;
     const read = async () =>
       await (await page.request.get(base + path + "/session")).json();
     for (let i = 0; i < 4; i++) {
-      await click(page.locator(".add-note"));
+      await click(page.locator('.lane[data-active="true"] .add-note'));
       const form = enhanced
         ? page.locator("dialog form")
         : page.locator('form[action$="/new"]');

@@ -620,12 +620,6 @@
     .collect-toolbar label {
       flex: 1 1 100%;
     }
-    .collect-toolbar .add-note {
-      position: fixed;
-      inset-inline-end: 16px;
-      bottom: calc(16px + env(safe-area-inset-bottom));
-      z-index: 3;
-    }
     .collect-toolbar .command-form {
       font-size: 0.85rem;
     }
@@ -1165,18 +1159,6 @@
     border-bottom: 1px solid
       color-mix(in srgb, var(--color-border) 23%, transparent);
   }
-  .collect-toolbar > .add-note {
-    order: 4;
-    margin-inline-start: auto;
-    gap: 10px;
-    font-size: 13px;
-    box-shadow: 0 2px 0 color-mix(in srgb, var(--color-text) 65%, transparent);
-  }
-  .collect-toolbar > .add-note::before {
-    content: "+";
-    font-size: 20px;
-    line-height: 1;
-  }
   .collect-toolbar > .command-form button {
     padding-inline: 0;
     min-height: 40px;
@@ -1208,7 +1190,12 @@
   }
   .lanes {
     gap: 24px;
-    align-items: start;
+    /* Lanes in a row share a height, so a note can drop anywhere in a lane. */
+    align-items: stretch;
+  }
+  .lane {
+    display: flex;
+    flex-direction: column;
   }
   .lanes[data-lanes="1"] {
     grid-template-columns: minmax(0, 1fr);
@@ -1260,6 +1247,33 @@
   }
   .lane .note-stack {
     margin: 0;
+    flex: 1;
+    align-content: start;
+    min-height: 120px;
+  }
+  .lane .add-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    margin-bottom: 14px;
+    border: 1px dashed color-mix(in srgb, var(--color-border) 60%, transparent);
+    border-radius: 12px;
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .lane .add-note::before {
+    content: "+";
+    font-size: 18px;
+    line-height: 1;
+  }
+  .lane .add-note:hover,
+  .lane .add-note:focus-visible {
+    border-style: solid;
+    background: var(--color-surface);
   }
   .lane-empty {
     min-height: 210px;
@@ -1606,9 +1620,7 @@
     .collect-toolbar label {
       flex: 1;
     }
-    .collect-toolbar .add-note {
-      margin: 0;
-      font-size: 13px;
+    .lane .add-note {
       min-height: 48px;
     }
     .lane > h3 {

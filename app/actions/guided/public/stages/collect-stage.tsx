@@ -18,7 +18,7 @@ export function readyToggle(v: WorkspaceView, label: string) {
   );
 }
 
-/** Category picker (works without JavaScript), Add note, readiness and totals. */
+/** Category picker (works without JavaScript), readiness and totals. */
 function collectToolbar(v: WorkspaceView) {
   let { data, t, formatNumber } = v;
   return (
@@ -37,18 +37,6 @@ function collectToolbar(v: WorkspaceView) {
         </label>
         <button>{t("guided.refresh")}</button>
       </form>
-      {!v.readOnly && (
-        <a
-          class="primary add-note"
-          href={`${routes.newCard.index.href({ boardId: data.board.id })}?category=${v.category}`}
-          mix={on("click", (e) => {
-            e.preventDefault();
-            v.openNote();
-          })}
-        >
-          {t("guided.add")}
-        </a>
-      )}
       {!v.readOnly && readyToggle(v, t("guided.done"))}
       {!v.readOnly && (
         <span class="readiness-count">
@@ -80,7 +68,10 @@ function emptyLane(v: WorkspaceView) {
   );
 }
 
-/** One category lane; it is also the drop target when moving notes. */
+/**
+ * One category lane with its own Add note control. The whole lane, stretched to
+ * the height of its row, is the drop target when moving notes.
+ */
 function lane(v: WorkspaceView, category: Category) {
   let notes = notesIn(v, category.id);
   return (
@@ -98,6 +89,18 @@ function lane(v: WorkspaceView, category: Category) {
         {category.label}{" "}
         <span class="count">{v.formatNumber(notes.length)}</span>
       </h3>
+      {!v.readOnly && (
+        <a
+          class="add-note"
+          href={`${routes.newCard.index.href({ boardId: v.data.board.id })}?category=${category.id}`}
+          mix={on("click", (e) => {
+            e.preventDefault();
+            v.openNote(category.id);
+          })}
+        >
+          {v.t("guided.add")}
+        </a>
+      )}
       <div class="note-stack">
         {notes.map((c) => v.note(c))}
         {!notes.length && emptyLane(v)}

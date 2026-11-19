@@ -285,21 +285,27 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     );
     handle.update();
   });
-  /** Opens the note dialog, defaulting its category to the lane being viewed. */
-  function openNote() {
+  /**
+   * Opens the note dialog. A lane's Add note passes its category, which wins
+   * over a draft's; otherwise it defaults to the lane being viewed.
+   */
+  function openNote(categoryId?: string) {
     if (viewing().readOnly || data.state.categorySetup?.confirmed === false) {
       return;
     }
     let form = noteDialog().querySelector<HTMLFormElement>("form")!;
-    if (!noteOpened && !get("note")) {
-      let select = form.elements.namedItem("categoryId");
-      if (select instanceof HTMLSelectElement) {
-        select.value = category;
-      }
+    let select = form.elements.namedItem("categoryId");
+    if (!noteOpened && !get("note") && select instanceof HTMLSelectElement) {
+      select.value = category;
     }
     noteOpened = true;
     noteDialog().showModal();
     restore(form);
+    // After restore, so the lane chosen now replaces a draft's category.
+    if (categoryId && select instanceof HTMLSelectElement) {
+      category = categoryId;
+      select.value = categoryId;
+    }
     persist();
   }
   /** Closes the note dialog, keeping its draft. */
