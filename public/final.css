@@ -1270,6 +1270,38 @@
     font-size: 18px;
     line-height: 1;
   }
+  .late-notes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    margin-block: 14px;
+  }
+  .late-notes p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+  .late-notes .add-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px dashed color-mix(in srgb, var(--color-border) 60%, transparent);
+    border-radius: 12px;
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .late-notes .add-note::before {
+    content: "+";
+    font-size: 18px;
+    line-height: 1;
+  }
+  .late-notes .add-note:hover,
+  .late-notes .add-note:focus-visible,
   .lane .add-note:hover,
   .lane .add-note:focus-visible {
     border-style: solid;

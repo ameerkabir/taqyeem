@@ -17,6 +17,7 @@ export function withGuidedStatus(
     guidedStage: guided.stage,
     guidedRevision: guided.revision,
     categorySetupRequired: guided.categorySetupRequired,
+    guidedNotesOpen: guided.notesOpen,
     status:
       guided.stage === "summary"
         ? "closed"
@@ -31,9 +32,26 @@ export function isGuided(board: Board): boolean {
   return board.guidedStage !== undefined;
 }
 
-/** Notes can be added, edited or deleted only while a guided board collects. */
+/** Notes can be edited or deleted only while a guided board collects. */
 export function guidedContributionsClosed(board: Board): boolean {
   return isGuided(board) && board.guidedStage !== "collect";
+}
+
+/** Stages where the facilitator may reopen note-taking. */
+export const lateNoteStages: readonly string[] = ["group", "discuss"];
+
+/**
+ * New notes are accepted while collecting, or in Group and Discuss after the
+ * facilitator reopens note-taking. Migration 0013 enforces the same rule.
+ */
+export function guidedNotesClosed(board: Board): boolean {
+  if (!isGuided(board) || board.guidedStage === "collect") {
+    return false;
+  }
+  return !(
+    board.guidedNotesOpen === true &&
+    lateNoteStages.includes(board.guidedStage!)
+  );
 }
 
 /** On guided boards only the organiser moves notes between categories. */

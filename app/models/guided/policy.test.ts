@@ -4,15 +4,16 @@ import { board } from "../../test/fake-board.ts";
 import {
   canChangeCardCategory,
   guidedContributionsClosed,
+  guidedNotesClosed,
   isGuided,
   withGuidedStatus,
 } from "./policy.ts";
 import type { Stage } from "./stages.ts";
 
-const guided = (stage: Stage, categorySetupRequired = false) =>
+const guided = (stage: Stage, categorySetupRequired = false, notesOpen = false) =>
   withGuidedStatus(
     { ...board, status: "collecting", votingOpen: true },
-    { stage, revision: 7, categorySetupRequired },
+    { stage, revision: 7, categorySetupRequired, notesOpen },
   );
 
 describe("guided board policy", () => {
@@ -39,6 +40,20 @@ describe("guided board policy", () => {
     assert.equal(guidedContributionsClosed(guided("collect")), false);
     for (let stage of ["group", "vote", "discuss", "actions", "summary"] as const) {
       assert.equal(guidedContributionsClosed(guided(stage)), true, stage);
+    }
+  });
+
+  it("accepts new notes after Collect only where the facilitator reopened them", () => {
+    assert.equal(guidedNotesClosed({ ...board }), false);
+    assert.equal(guidedNotesClosed(guided("collect")), false);
+    for (let stage of ["group", "discuss"] as const) {
+      assert.equal(guidedNotesClosed(guided(stage)), true, stage);
+      assert.equal(guidedNotesClosed(guided(stage, false, true)), false, stage);
+      // Reopening adds notes; editing and deleting stay Collect-only.
+      assert.equal(guidedContributionsClosed(guided(stage, false, true)), true, stage);
+    }
+    for (let stage of ["vote", "actions", "summary"] as const) {
+      assert.equal(guidedNotesClosed(guided(stage, false, true)), true, stage);
     }
   });
 

@@ -10,7 +10,8 @@ import { NewCardPage } from "./page.tsx";
 import { parseNewCardForm } from "./schema.ts";
 import { newCardError } from "./error-response.tsx";
 import { getI18n } from "../../middleware/locale.ts";
-import { guidedContributionsClosed } from "../../models/guided/policy.ts";
+import { guidedNotesClosed } from "../../models/guided/policy.ts";
+import { attachNote } from "../../models/guided/session.ts";
 
 export default createController(routes.newCard, {
   middleware: [
@@ -34,6 +35,7 @@ export default createController(routes.newCard, {
           categories={categories}
           activeCategoryId={activeCategoryId}
           submissionId={crypto.randomUUID()}
+          attachTopic={context.url.searchParams.get("attachTopic") ?? undefined}
           i18n={context.i18n}
         />,
       );
@@ -98,6 +100,14 @@ export default createController(routes.newCard, {
           { data, categories, retryAfter: result.retryAfter },
         );
       }
+      let topic = data.get("attachTopic");
+      if (board.guidedStage === "discuss" && typeof topic === "string" && topic) {
+        await attachNote(context.db, board.id, member.id, result.card.id, topic);
+        return redirect(
+          `${routes.board.href({ boardId: board.id })}?topic=${encodeURIComponent(topic)}`,
+          303,
+        );
+      }
       return redirect(
         `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(result.card.categoryId)}`,
         303,
@@ -116,7 +126,7 @@ function requireCreationAllowed(): Middleware {
     if (board.categorySetupRequired) {
       return newCardError(context, getI18n(context).t("setup.required"), 403);
     }
-    if (guidedContributionsClosed(board)) {
+    if (guidedNotesClosed(board)) {
       return newCardError(
         context,
         getI18n(context).t("guided.collectOnly"),

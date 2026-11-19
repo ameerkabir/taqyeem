@@ -34,6 +34,9 @@ export function noteDialog(v: WorkspaceView, root: () => HTMLElement) {
         action={routes.newCard.action.href({ boardId: data.board.id })}
       >
         <input type="hidden" name="submissionId" defaultValue={v.submission} />
+        {data.state.stage === "discuss" && v.active && (
+          <input type="hidden" name="attachTopic" value={v.active.id} />
+        )}
         <label>
           {t("form.category")}
           <select name="categoryId" defaultValue={v.category}>
@@ -67,15 +70,15 @@ export function noteDialog(v: WorkspaceView, root: () => HTMLElement) {
         </label>
         <p>{t("guided.privacy")}</p>
         {state.categorySetup?.confirmed === false && <p>{t("setup.required")}</p>}
-        {state.stage !== "collect" && <p>{t("guided.collectOnly")}</p>}
+        {!v.notesAllowed && state.categorySetup?.confirmed !== false && (
+          <p>{t("guided.collectOnly")}</p>
+        )}
         {errorAlert(v)}
         <button
           class="primary"
           disabled={
             v.pending ||
-            v.readOnly ||
-            data.state.stage !== "collect" ||
-            state.categorySetup?.confirmed === false
+            !v.notesAllowed
           }
         >
           {v.pending ? t("guided.saving") : t("guided.post")}

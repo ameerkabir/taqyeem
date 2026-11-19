@@ -74,6 +74,8 @@ export interface WorkspaceView {
   lanes: Category[];
   dropCategory: string;
   canMoveNotes: boolean;
+  /** New notes are accepted now: Collect, or reopened in Group or Discuss. */
+  notesAllowed: boolean;
   submission: string;
 
   // Actions

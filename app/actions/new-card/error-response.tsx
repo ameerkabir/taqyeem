@@ -49,6 +49,7 @@ export async function newCardError(
   let text = data.get("text");
   let categoryId = data.get("categoryId");
   let submissionId = data.get("submissionId");
+  let attachTopic = data.get("attachTopic");
   return render(
     <NewCardPage
       i18n={getI18n(context)}
@@ -63,6 +64,7 @@ export async function newCardError(
       submissionId={
         isSubmissionId(submissionId) ? submissionId : crypto.randomUUID()
       }
+      attachTopic={typeof attachTopic === "string" ? attachTopic : undefined}
       values={{
         text: typeof text === "string" ? text : "",
         isAnonymous: data.get("isAnonymous") === "true",

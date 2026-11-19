@@ -19,6 +19,7 @@ export const advance: CommandHandler = {
     let next = stages[stages.indexOf(state.stage) + 1];
     state.stage = next;
     state.ready = {};
+    state.notesOpen = false;
     if (next === "vote") {
       state.ballot++;
       state.ballotOpen = true;
@@ -52,6 +53,7 @@ export const reopen: CommandHandler = {
     state.closure = null;
     state.stage = "discuss";
     state.ready = {};
+    state.notesOpen = false;
     state.ballotOpen = false;
     if (!topics(view).some((topic) => topic.id === state.liveTopic)) {
       state.liveTopic = rankedTopics(view)[0]?.id ?? "";

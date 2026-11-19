@@ -970,6 +970,7 @@ describe("guided session storage", () => {
       stage: "collect",
       revision: view.revision,
       categorySetupRequired: true,
+      notesOpen: false,
     });
     let next = await commandSession(db, id, view.board.organiserMemberId, {
       id: crypto.randomUUID(),
@@ -981,6 +982,7 @@ describe("guided session storage", () => {
       stage: "collect",
       revision: next!.revision,
       categorySetupRequired: false,
+      notesOpen: false,
     });
   });
 

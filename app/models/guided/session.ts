@@ -57,7 +57,7 @@ export async function readGuidedStatus(
 ): Promise<GuidedStatus | null> {
   let row = (
     await db.exec(
-      sql`SELECT revision,json_extract(data,'$.categorySetup.confirmed') AS configured,json_extract(data,'$.stage') AS stage FROM guided_sessions WHERE board_id=${boardId}`,
+      sql`SELECT revision,json_extract(data,'$.categorySetup.confirmed') AS configured,json_extract(data,'$.stage') AS stage,json_extract(data,'$.notesOpen') AS notes_open FROM guided_sessions WHERE board_id=${boardId}`,
     )
   ).rows?.[0];
   return row
@@ -65,6 +65,7 @@ export async function readGuidedStatus(
         stage: String(row.stage) as Stage,
         revision: Number(row.revision),
         categorySetupRequired: row.configured === 0,
+        notesOpen: Number(row.notes_open) === 1,
       }
     : null;
 }
@@ -226,4 +227,40 @@ export async function commandSession(
     return (await readSession(db, boardId))!;
   }
   return { ...view, state, revision: view.revision + 1 };
+}
+
+/**
+ * Attaches a note added in Discuss to the topic its author was reading. Card
+ * insert and attachment are two writes, so a lost race leaves the note as its
+ * own agenda topic rather than losing it; another command winning the revision
+ * is retried. Returns whether the note was attached.
+ */
+export async function attachNote(
+  db: Database,
+  boardId: string,
+  memberId: string,
+  cardId: string,
+  topic: string,
+): Promise<boolean> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let status = await readGuidedStatus(db, boardId);
+    if (!status || status.stage !== "discuss" || !status.notesOpen) {
+      return false;
+    }
+    try {
+      await commandSession(db, boardId, memberId, {
+        id: crypto.randomUUID(),
+        revision: status.revision,
+        kind: "attach-note",
+        card: cardId,
+        topic,
+      });
+      return true;
+    } catch (error) {
+      if (!(error instanceof CommandError && error.code === "conflict")) {
+        return false;
+      }
+    }
+  }
+  return false;
 }

@@ -337,6 +337,10 @@ export const en = {
     "Make space for every perspective. Add one thought per note.",
   "collect.moveNote": "Move note",
   "collect.moveTo": "Move to category",
+  "notes.reopen": "Allow new notes",
+  "notes.close": "Stop new notes",
+  "notes.addToTopic": "Add note to this topic",
+  "notes.openHint": "The facilitator has reopened note-taking.",
   "collect.moveHint": "Drag notes to another category, or use Move note.",
   "collect.moveRestricted": "Only the facilitator can move a posted note to another category.",
   "collect.total": {

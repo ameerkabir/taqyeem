@@ -11,6 +11,8 @@ export interface Board {
   /** Set only for guided boards; see models/guided/policy.ts. */
   guidedStage?: string;
   guidedRevision?: number;
+  /** Note-taking reopened after Collect (Group or Discuss only). */
+  guidedNotesOpen?: boolean;
   categorySetupRequired?: boolean;
   votingOpen: boolean;
   currentSectionId: string | null;

@@ -342,6 +342,10 @@ export const ar = {
   "collect.intro": "مساحة لكل وجهة نظر. أضف فكرة واحدة في كل ملاحظة.",
   "collect.moveNote": "نقل الملاحظة",
   "collect.moveTo": "نقل إلى فئة",
+  "notes.reopen": "السماح بملاحظات جديدة",
+  "notes.close": "إيقاف الملاحظات الجديدة",
+  "notes.addToTopic": "إضافة ملاحظة لهذا الموضوع",
+  "notes.openHint": "أعاد الميسّر فتح إضافة الملاحظات.",
   "collect.moveHint": "اسحب الملاحظات إلى فئة أخرى، أو استخدم نقل الملاحظة.",
   "collect.moveRestricted": "الميسّر وحده يستطيع نقل الملاحظة المنشورة إلى فئة أخرى.",
   "collect.total": {

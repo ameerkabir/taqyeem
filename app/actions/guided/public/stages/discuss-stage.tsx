@@ -1,6 +1,7 @@
 import { on, type RemixNode } from "remix/component";
 import type { Topic } from "../../../../models/guided/session.ts";
 import { reviewStepField, topicCards } from "./shared.tsx";
+import { lateNotes } from "./late-notes.tsx";
 import type { WorkspaceView } from "./types.ts";
 
 /**
@@ -180,6 +181,7 @@ function topicFeedback(v: WorkspaceView, active: Topic) {
           </div>
         </details>
       )}
+      {lateNotes(v)}
     </section>
   );
 }

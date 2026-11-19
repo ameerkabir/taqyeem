@@ -19,12 +19,12 @@ describe("command handlers", () => {
     assert.equal(handlerFor("__proto__"), undefined);
   });
 
-  it("limits participants to readiness, voting and their own action work", () => {
+  it("limits participants to readiness, voting, attaching their own late notes and their own action work", () => {
     let open = Object.entries(handlers)
       .filter(([, handler]) => !handler.facilitatorOnly)
       .map(([kind]) => kind)
       .sort();
-    assert.deepEqual(open, ["complete", "edit-proposal", "propose", "ready", "vote"]);
+    assert.deepEqual(open, ["attach-note", "complete", "edit-proposal", "propose", "ready", "vote"]);
   });
 
   it("re-reads after commands whose triggers write other rows", () => {
