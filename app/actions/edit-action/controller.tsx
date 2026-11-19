@@ -6,8 +6,8 @@ import { routes } from "../../routes.ts";
 import { loadBoard } from "../../middleware/board.ts";
 import { requireBoardMember } from "../../middleware/board-member.ts";
 import { boardNotFound } from "../board-not-found.tsx";
+import { resolveOwner } from "../../models/guided/owner.ts";
 import {
-  hasGuidedSession,
   readSession,
   commandSession,
   topics,
@@ -122,13 +122,15 @@ export default createController(routes.editAction, {
   ],
   actions: {
     async index(context) {
-      if (!(await hasGuidedSession(context.db, context.board.id)))
+      let view = context.board.guidedStage
+        ? await readSession(context.db, context.board.id)
+        : null;
+      let proposal = view?.state.proposals.find(
+        (p) => p.id === context.params.proposalId,
+      );
+      if (!view || !proposal) {
         return new Response(null, { status: 404 });
-      let view = (await readSession(context.db, context.board.id))!,
-        proposal = view.state.proposals.find(
-          (p) => p.id === context.params.proposalId,
-        );
-      if (!proposal) return new Response(null, { status: 404 });
+      }
       if (
         !["discuss", "actions"].includes(view.state.stage) ||
         (context.member.id !== view.board.organiserMemberId &&
@@ -136,10 +138,11 @@ export default createController(routes.editAction, {
             proposal.author === context.member.id &&
             proposal.disposition === "suggested"
           ))
-      )
+      ) {
         return new Response(context.i18n.t("guided.error.forbidden"), {
           status: 403,
         });
+      }
       return context.render(
         <EditActionPage
           view={view}
@@ -150,29 +153,34 @@ export default createController(routes.editAction, {
       );
     },
     async action(context) {
-      if (!(await hasGuidedSession(context.db, context.board.id)))
+      if (!context.board.guidedStage) {
         return new Response(null, { status: 404 });
+      }
       let form = await context.request.formData();
       try {
-        let name = String(form.get("ownerSearch") ?? "").trim(),
-          members = await context.models.listMembers(context.board.id),
-          owner = members.find((m) => m.displayName === name);
-        if (name && !owner) throw new CommandError("invalid", 400);
+        let owner = await resolveOwner(
+          context.models,
+          context.board.id,
+          form.get("ownerSearch"),
+        );
         await commandSession(context.db, context.board.id, context.member.id, {
           id: String(form.get("id")),
           revision: Number(form.get("revision")),
           kind: "edit-proposal",
           proposal: context.params.proposalId,
           text: form.get("text"),
-          owner: owner?.id ?? "",
+          owner,
           due: form.get("due"),
           topic: form.get("topic"),
         });
       } catch (error) {
-        if (error instanceof DataTableDatabaseError)
+        if (error instanceof DataTableDatabaseError) {
           error = new CommandError("storage", 503);
-        if (!(error instanceof CommandError)) throw error;
-        if (error.code === "storage")
+        }
+        if (!(error instanceof CommandError)) {
+          throw error;
+        }
+        if (error.code === "storage") {
           return context.render(
             <CommandRetryPage
               i18n={context.i18n}
@@ -184,11 +192,14 @@ export default createController(routes.editAction, {
             />,
             { status: 503 },
           );
-        let view = (await readSession(context.db, context.board.id))!,
-          proposal = view.state.proposals.find(
+        }
+        let view = await readSession(context.db, context.board.id),
+          proposal = view?.state.proposals.find(
             (p) => p.id === context.params.proposalId,
           );
-        if (!proposal) return new Response(null, { status: 404 });
+        if (!view || !proposal) {
+          return new Response(null, { status: 404 });
+        }
         return context.render(
           <EditActionPage
             view={view}

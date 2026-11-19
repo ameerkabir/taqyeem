@@ -61,7 +61,9 @@ export const NewCardForm = clientEntry(
             ),
             on("submit", async (event) => {
               event.preventDefault();
-              if (pending) return;
+              if (pending) {
+                return;
+              }
 
               let form = event.currentTarget;
               let data = new FormData(form);
@@ -78,7 +80,9 @@ export const NewCardForm = clientEntry(
                   headers: { Accept: "application/json" },
                   signal,
                 });
-                if (signal.aborted) return;
+                if (signal.aborted) {
+                  return;
+                }
 
                 if (!response.ok) {
                   if (
@@ -87,7 +91,9 @@ export const NewCardForm = clientEntry(
                       ?.includes("application/json")
                   ) {
                     let result = (await response.json()) as { error?: unknown };
-                    if (signal.aborted) return;
+                    if (signal.aborted) {
+                      return;
+                    }
                     error =
                       typeof result.error === "string"
                         ? result.error

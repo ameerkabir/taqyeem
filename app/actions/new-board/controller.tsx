@@ -1,6 +1,6 @@
 import { DataTableDatabaseError } from "remix/data-table";
 import { boards } from "../../data/tables.ts";
-import { readSession } from "../../models/guided/session.ts";
+import { createSession } from "../../models/guided/session.ts";
 import { createController } from "remix/router";
 import { redirect } from "remix/response/redirect";
 import { routes } from "../../routes.ts";
@@ -43,7 +43,9 @@ export default createController(routes.newBoard, {
           ...parsed.value,
           categoryLabels: defaultCategoryLabels(context.i18n.t),
         });
-        await readSession(context.db, created.board.id, false, true);
+        await createSession(context.db, created.board.id, {
+          requireCategorySetup: true,
+        });
       } catch (error) {
         if (error instanceof DataTableDatabaseError && created) {
           let orphanedBoardId;
@@ -55,7 +57,9 @@ export default createController(routes.newBoard, {
           error = new CreateBoardError({ cause: error, orphanedBoardId });
         }
         // Only storage failures are turned into a retry page; anything else is a bug.
-        if (!(error instanceof CreateBoardError)) throw error;
+        if (!(error instanceof CreateBoardError)) {
+          throw error;
+        }
         if (error.cleanupFailed) {
           // The failed board could not be removed; surface its id so it can be cleaned up.
           console.error("createBoard cleanup failed", {

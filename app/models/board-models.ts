@@ -1,4 +1,5 @@
 import type { Board, BoardStatus, Category, Card, Member } from "../data/board.ts";
+import type { GuidedStatus } from "./guided/session.ts";
 
 export type CreateCardResult =
   { ok: true; card: Card } | { ok: false; retryAfter: number };
@@ -31,6 +32,8 @@ export interface CreateBoardResult {
 export interface BoardModels {
   createBoard(input: CreateBoardInput): Promise<CreateBoardResult>;
   getBoard(id: string): Promise<Board | null>;
+  /** The guided session's stage and revision, or null for a legacy board. */
+  getGuidedStatus(boardId: string): Promise<GuidedStatus | null>;
   setVotingOpen(boardId: string, votingOpen: boolean): Promise<Board | null>;
   setBoardStatus(boardId: string, status: BoardStatus): Promise<Board | null>;
 

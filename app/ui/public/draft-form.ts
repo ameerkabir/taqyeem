@@ -1,4 +1,15 @@
 import { createMixin } from "remix/component";
+import { namedControls } from "../form-fields.ts";
+import { createSessionStore } from "../session-store.ts";
+
+const store = createSessionStore("taqyeem-form:");
+
+/** One saved control; an array keeps checkbox and radio groups that share a name. */
+interface SavedField {
+  name: string;
+  value: string;
+  checked?: boolean;
+}
 
 // Drafts are viewer-local, keyed by membership and the original server value/version.
 // They are never a transport for identity, board state, or committed contributions.
@@ -8,28 +19,21 @@ export const draftForm = createMixin<HTMLFormElement, [string]>(
     handle.addEventListener("insert", ({ node: form }) => {
       const storageKey = () => `taqyeem-form:${key}`;
       function save() {
-        if (!key || form.dataset.draftSaved) return;
+        if (!key || form.dataset.draftSaved) {
+          return;
+        }
         try {
-          let fields = [
-            ...form.querySelectorAll("input[name],textarea[name],select[name]"),
-          ].map((element) => {
-            let node = element as
-              | HTMLInputElement
-              | HTMLTextAreaElement
-              | HTMLSelectElement;
-            return {
-              name: node.name,
-              value: node.value,
-              checked:
-                node instanceof HTMLInputElement ? node.checked : undefined,
-            };
-          });
+          let fields: SavedField[] = namedControls(form).map((node) => ({
+            name: node.name,
+            value: node.value,
+            checked: node instanceof HTMLInputElement ? node.checked : undefined,
+          }));
           let active = document.activeElement,
             focus = form.contains(active)
               ? (active as HTMLInputElement).name
               : "";
-          sessionStorage.setItem(
-            storageKey(),
+          store.set(
+            key,
             JSON.stringify({
               fields,
               focus,
@@ -49,32 +53,37 @@ export const draftForm = createMixin<HTMLFormElement, [string]>(
       }
       form.dataset.persistentDraft = storageKey();
       try {
-        let saved = JSON.parse(sessionStorage.getItem(storageKey()) ?? "null");
+        let saved = key
+          ? store.getJson<{ fields: SavedField[]; focus: string; start: number | null; end: number | null }>(key)
+          : null;
         if (saved && key) {
-          for (let field of saved.fields)
-            for (let element of form.querySelectorAll("[name]")) {
-              let node = element as
-                | HTMLInputElement
-                | HTMLTextAreaElement
-                | HTMLSelectElement;
+          for (let field of saved.fields) {
+            for (let node of namedControls(form)) {
               if (
                 node.name !== field.name ||
                 ["revision", "id"].includes(node.name)
-              )
+              ) {
                 continue;
+              }
               if (
                 node instanceof HTMLInputElement &&
                 (node.type === "checkbox" || node.type === "radio")
               ) {
-                if (node.value === field.value) node.checked = !!field.checked;
-              } else node.value = field.value;
+                if (node.value === field.value) {
+                  node.checked = !!field.checked;
+                }
+              } else {
+                node.value = field.value;
+              }
             }
+          }
           handle.queueTask(() => {
             let field = form.elements.namedItem(saved.focus);
             if (field instanceof HTMLElement) {
               field.focus();
-              if (field instanceof HTMLTextAreaElement && saved.start !== null)
+              if (field instanceof HTMLTextAreaElement && saved.start !== null) {
                 field.setSelectionRange(saved.start, saved.end);
+              }
             }
             let text = form.querySelector("textarea");
             text?.dispatchEvent(new Event("input", { bubbles: true }));
@@ -90,8 +99,9 @@ export const draftForm = createMixin<HTMLFormElement, [string]>(
       document.addEventListener(
         "click",
         (event) => {
-          if (event.target instanceof Element && event.target.closest("a"))
+          if (event.target instanceof Element && event.target.closest("a")) {
             save();
+          }
         },
         { capture: true, signal: handle.signal },
       );
@@ -105,8 +115,7 @@ export const draftForm = createMixin<HTMLFormElement, [string]>(
 );
 export function clearPersistentDraft(form: HTMLFormElement) {
   form.dataset.draftSaved = "true";
-  try {
-    if (form.dataset.persistentDraft)
-      sessionStorage.removeItem(form.dataset.persistentDraft);
-  } catch {}
+  if (form.dataset.persistentDraft) {
+    createSessionStore("").remove(form.dataset.persistentDraft);
+  }
 }

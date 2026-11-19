@@ -31,7 +31,9 @@ function failing(db: Database, options: { create?: unknown[]; delete?: boolean }
       // Rows are written with create (one row) or createMany (e.g. all the categories).
       if ((property === "create" || property === "createMany") && options.create) {
         return async (table: unknown, ...rest: unknown[]) => {
-          if (options.create!.includes(table)) throw new Error("simulated write failure");
+          if (options.create!.includes(table)) {
+            throw new Error("simulated write failure");
+          }
           return (value as (...args: unknown[]) => unknown).call(target, table, ...rest);
         };
       }
@@ -113,6 +115,10 @@ describe("new board action", () => {
 });
 
 it("cleans up a board whose guided-session initialization fails and keeps the native values",async()=>{
- let db=await testDatabase();let failed=new Proxy(db,{get(target,property){let value=Reflect.get(target,property,target);if(property==="exec")return async(statement:unknown,...args:unknown[])=>{if(typeof statement==="object"&&statement&&"text" in statement&&String(statement.text).startsWith("INSERT OR IGNORE INTO guided_sessions"))throw new DataTableDatabaseError("Simulated guided initialization failure");return Reflect.apply(value,target,[statement,...args]);};return typeof value==="function"?value.bind(target):value;}});
+ let db=await testDatabase();let failed=new Proxy(db,{get(target,property){let value=Reflect.get(target,property,target);if(property==="exec") {
+   return async(statement:unknown,...args:unknown[])=>{if(typeof statement==="object"&&statement&&"text" in statement&&String(statement.text).startsWith("INSERT OR IGNORE INTO guided_sessions")) {
+     throw new DataTableDatabaseError("Simulated guided initialization failure");
+   }return Reflect.apply(value,target,[statement,...args]);};
+ }return typeof value==="function"?value.bind(target):value;}});
  let result=await submit(failed,valid);assert.equal(result.status,500);let html=await result.text();assert.ok(html.includes(valid.title));assert.ok(html.includes(valid.organiserDisplayName));assert.equal((await db.findMany(boards)).length,0);assert.equal(result.headers.getSetCookie().some(c=>c.startsWith("taqyeem_session=")),false);
 });

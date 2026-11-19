@@ -45,9 +45,11 @@ try {
           revision: String(v.revision),
           kind,
         });
-      for (const [key, value] of Object.entries(fields))
-        for (const item of Array.isArray(value) ? value : [value])
+      for (const [key, value] of Object.entries(fields)) {
+        for (const item of Array.isArray(value) ? value : [value]) {
           body.append(key, String(item));
+        }
+      }
       const r = await owner.request.post(base + path + "/commands", {
         headers: {
           Accept: "application/json",
@@ -59,18 +61,22 @@ try {
       return r.json();
     }
     async function click(page, locator) {
-      if (!enhanced)
+      if (!enhanced) {
         await Promise.all([
           page.waitForNavigation({ waitUntil: "domcontentloaded" }),
           locator.click(),
         ]);
-      else await locator.click();
+      } else {
+        await locator.click();
+      }
     }
     async function command(page, kind, within = page) {
       const button = within
         .locator(`form.command-form:has([name=kind][value="${kind}"]) button`)
         .first();
-      if (!enhanced) return click(page, button);
+      if (!enhanced) {
+        return click(page, button);
+      }
       const response = page.waitForResponse(
         (r) => r.url().endsWith("/commands") && r.request().method() === "POST",
       );
@@ -91,12 +97,13 @@ try {
     }
     async function browse(page, id) {
       const link = page.locator(`.agenda a[href*="?topic=${id}"]`);
-      if (await link.isVisible())
+      if (await link.isVisible()) {
         await click(page, link);
-      else {
+      } else {
         await page.locator(".agenda select").selectOption(id);
-        if (!enhanced)
+        if (!enhanced) {
           await click(page, page.locator(".agenda [data-view-form] button"));
+        }
       }
       await subject(page, id);
     }
@@ -109,7 +116,7 @@ try {
         "Pairing caught mistakes earlier",
         "Try a smaller weekly release",
       ];
-    for (let i = 0; i < bodies.length; i++)
+    for (let i = 0; i < bodies.length; i++) {
       assert.equal(
         (
           await owner.request.post(base + path + "/new", {
@@ -124,6 +131,7 @@ try {
         ).status(),
         303,
       );
+    }
     await api("advance");
     const source = (await read()).cards;
     const themed = await api("theme", {
@@ -180,12 +188,13 @@ try {
         .count(),
       3,
     );
-    for (const body of bodies.slice(0, 3))
+    for (const body of bodies.slice(0, 3)) {
       assert.ok(
         (await owner.locator(".discussion-feedback").innerText()).includes(
           body,
         ),
       );
+    }
     await owner.screenshot({
       path:
         output +
@@ -378,11 +387,12 @@ try {
   );
   console.log(JSON.stringify({ checks, output }, null, 2));
 } catch (error) {
-  if (activePage && !activePage.isClosed())
+  if (activePage && !activePage.isClosed()) {
     await activePage.screenshot({
       path: output + "/failure.png",
       fullPage: true,
     });
+  }
   throw error;
 } finally {
   await browser.close();

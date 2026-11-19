@@ -16,7 +16,9 @@
   );
   document.addEventListener("click", (event) => {
     let button = event.target.closest?.("[data-appearance]");
-    if (!button) return;
+    if (!button) {
+      return;
+    }
     event.preventDefault();
     let value = button.dataset.appearance;
     apply(value);
@@ -24,16 +26,18 @@
     try {
       localStorage.setItem("taqyeem-appearance", value);
     } catch {}
-    for (let el of document.querySelectorAll("[data-appearance]"))
+    for (let el of document.querySelectorAll("[data-appearance]")) {
       el.setAttribute("aria-pressed", String(el.dataset.appearance === value));
+    }
   });
   document.addEventListener("DOMContentLoaded", () => {
-    for (let el of document.querySelectorAll("[data-appearance]"))
+    for (let el of document.querySelectorAll("[data-appearance]")) {
       el.setAttribute(
         "aria-pressed",
         String(
           el.dataset.appearance === document.documentElement.dataset.theme,
         ),
       );
+    }
   });
 })();

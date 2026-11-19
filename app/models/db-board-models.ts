@@ -13,6 +13,7 @@ import {
 import { createBoard } from "./boards/create.ts";
 import { joinBoard } from "./boards/join.ts";
 import { listViewerVotes, setCardVote } from "./cards/vote.ts";
+import { readGuidedStatus } from "./guided/session.ts";
 
 /**
  * The BoardModels the controllers use, backed by a Database. Each method delegates to the
@@ -30,7 +31,9 @@ export function createDbBoardModels(
       let created = await createBoard(db, input);
       let board = await loadBoard(db, created.board.id);
       // createBoard has just written the organiser, so the board is live.
-      if (!board) throw new Error("A newly created board could not be loaded");
+      if (!board) {
+        throw new Error("A newly created board could not be loaded");
+      }
       let organiser: Member = {
         id: created.organiser.id,
         boardId: created.organiser.board_id,
@@ -40,6 +43,7 @@ export function createDbBoardModels(
     },
 
     getBoard: (id) => loadBoard(db, id),
+    getGuidedStatus: (boardId) => readGuidedStatus(db, boardId),
     setVotingOpen: (boardId, votingOpen) => setVotingOpen(db, boardId, votingOpen),
     setBoardStatus: (boardId, status) => setBoardStatus(db, boardId, status),
 

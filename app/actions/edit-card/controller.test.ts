@@ -180,10 +180,13 @@ describe("edit card", () => {
     it(`rejects ${scenario.name} without updating`, async () => {
       let app = await setup();
       let data = validForm();
-      if (scenario.value === null) data.delete(scenario.field);
-      else if (typeof scenario.value === "string")
+      if (scenario.value === null) {
+        data.delete(scenario.field);
+      } else if (typeof scenario.value === "string") {
         data.set(scenario.field, scenario.value);
-      else data.set(scenario.field, scenario.value);
+      } else {
+        data.set(scenario.field, scenario.value);
+      }
       let response = await app.request("POST", data);
       assert.equal(response.status, 400);
       assert.equal(app.updates, 0);

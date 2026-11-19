@@ -27,8 +27,9 @@ const memberContext = await browser.newContext({
 });
 const owner = await ownerContext.newPage(),
   member = await memberContext.newPage();
-for (const page of [owner, member])
+for (const page of [owner, member]) {
   page.on("pageerror", (e) => errors.push(e.message));
+}
 const pause = () => new Promise((r) => setTimeout(r, 400));
 async function commandForm(page, kind) {
   return page.locator(
@@ -78,18 +79,21 @@ async function api(page, path, kind, fields = {}) {
   return r.json();
 }
 async function add(page, text, anonymous = false, categoryIndex) {
-  await page.locator(".add-note").click();
+  await page.locator('.lane[data-active="true"] .add-note').click();
   await page.locator("dialog[open]").waitFor();
   assert.equal(
     await page.locator("dialog [name=categoryId]").inputValue(),
     await page.locator("[data-view=category]").inputValue(),
   );
-  if (categoryIndex !== undefined)
+  if (categoryIndex !== undefined) {
     await page
       .locator("dialog [name=categoryId]")
       .selectOption({ index: categoryIndex });
+  }
   await page.locator("dialog textarea").fill(text);
-  if (anonymous) await page.locator("dialog input[type=checkbox]").check();
+  if (anonymous) {
+    await page.locator("dialog input[type=checkbox]").check();
+  }
   await page.locator("dialog button.primary").click();
   await page.locator("dialog[open]").waitFor({ state: "hidden" });
   await pause();
@@ -103,7 +107,7 @@ try {
   await owner.waitForURL(/\/boards\/[a-f0-9-]+$/);
   let path = new URL(owner.url()).pathname;
   await owner.locator(".category-setup button.primary").click();
-  await owner.locator(".add-note").waitFor();
+  await owner.locator('.lane[data-active="true"] .add-note').waitFor();
   await pause();
   await member.goto(base + path + "/join");
   await member.locator("[name=displayName]").fill("Participant");
@@ -117,7 +121,7 @@ try {
     "Created board, invited distinct member, posted original anonymous and mixed-script evidence through real UI",
   );
   // Stable mounted editor across an unrelated shared command and real polling.
-  await member.locator(".add-note").click();
+  await member.locator('.lane[data-active="true"] .add-note').click();
   let field = member.locator("dialog textarea");
   await field.fill("Draft survives updates\nand mobile Enter");
   await field.evaluate((el) => {
@@ -142,7 +146,7 @@ try {
     .filter({ hasText: "Close; keep draft" })
     .click();
   await member.locator("[data-appearance=dark]").click();
-  await member.locator(".add-note").click();
+  await member.locator('.lane[data-active="true"] .add-note').click();
   assert.equal(
     await field.inputValue(),
     "Draft survives updates\nand mobile Enter",
@@ -157,7 +161,7 @@ try {
     .click();
   await member.locator("button[name=locale][value=ar]").click();
   await member.waitForFunction(() => document.documentElement.dir === "rtl");
-  await member.locator(".add-note").click();
+  await member.locator('.lane[data-active="true"] .add-note').click();
   assert.equal(
     await field.inputValue(),
     "Draft survives updates\nand mobile Enter",
@@ -178,9 +182,11 @@ try {
       await route.fetch();
       await route.abort("failed");
       await owner.unroute("**/boards/*/new");
-    } else await route.continue();
+    } else {
+      await route.continue();
+    }
   });
-  await owner.locator(".add-note").click();
+  await owner.locator('.lane[data-active="true"] .add-note').click();
   await owner
     .locator("dialog textarea")
     .fill("Saved once despite a lost response");

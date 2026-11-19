@@ -8,17 +8,18 @@ import { createBoard } from "../boards/create.ts";
 import { createCard } from "../cards/card.ts";
 import { setCardVote } from "../cards/vote.ts";
 import { setBoardStatus } from "../boards/state.ts";
-import { readSession, initialState } from "./session.ts";
+import { createSession, initialState } from "./session.ts";
 it("additive migrations preserve populated/closed legacy boards, IDs, timestamps, anonymity, votes and reordered category identity", async () => {
   const db = createSqliteDatabase({ filename: ":memory:", foreignKeys: true });
   try {
     const files = (await readdir(migrationsDirectory))
       .filter((f) => /^\d+.*\.sql$/.test(f))
       .sort();
-    for (let file of files.filter((f) => f < "0007"))
+    for (let file of files.filter((f) => f < "0007")) {
       await db.executeScript(
         await readFile(new URL(file, migrationsDirectory), "utf8"),
       );
+    }
     // Seed the actual pre-feature physical schema; new model declarations include a tone column.
     const board = crypto.randomUUID(),
       member = crypto.randomUUID(),
@@ -53,10 +54,11 @@ it("additive migrations preserve populated/closed legacy boards, IDs, timestamps
       [board, card, member],
     );
     const before = (await db.exec("SELECT * FROM cards")).rows![0];
-    for (let file of files.filter((f) => f >= "0007"))
+    for (let file of files.filter((f) => f >= "0007")) {
       await db.executeScript(
         await readFile(new URL(file, migrationsDirectory), "utf8"),
       );
+    }
     assert.deepEqual((await db.exec("SELECT * FROM cards")).rows![0], before);
     assert.equal(
       (await db.exec("SELECT count(*) AS n FROM votes")).rows![0].n,
@@ -72,7 +74,7 @@ it("additive migrations preserve populated/closed legacy boards, IDs, timestamps
         .rows![0].tone,
       3,
     );
-    let converted = (await readSession(db, board, true))!;
+    let converted = (await createSession(db, board, { legacy: true }))!.view;
     assert.equal(converted.state.stage, "summary");
     assert.equal(converted.state.closure, null);
     assert.deepEqual(converted.state.decisions, {});
@@ -90,10 +92,11 @@ it("category setup migration gates only empty collecting guided boards and prese
     const files = (await readdir(migrationsDirectory))
       .filter((f) => /^\d+.*\.sql$/.test(f))
       .sort();
-    for (const file of files.filter((f) => f < "0010"))
+    for (const file of files.filter((f) => f < "0010")) {
       await db.executeScript(
         await readFile(new URL(file, migrationsDirectory), "utf8"),
       );
+    }
     const empty = await createBoard(db, {
       title: "Empty",
       organiserDisplayName: "Owner",
@@ -114,11 +117,12 @@ it("category setup migration gates only empty collecting guided boards and prese
       organiserDisplayName: "Owner",
       categoryLabels: ["Existing"],
     });
-    for (const board of [empty, populated, later])
+    for (const board of [empty, populated, later]) {
       await db.exec("INSERT INTO guided_sessions(board_id,data) VALUES (?,?)", [
         board.board.id,
         JSON.stringify(initialState((await loadBoard(db, board.board.id))!)),
       ]);
+    }
     await createCard(
       db,
       {
@@ -207,10 +211,11 @@ it("versioned-record migration preserves real closures and evidence, invents no 
     const files = (await readdir(migrationsDirectory))
       .filter((f) => /^\d+.*\.sql$/.test(f))
       .sort();
-    for (const file of files.filter((f) => f < "0011"))
+    for (const file of files.filter((f) => f < "0011")) {
       await db.executeScript(
         await readFile(new URL(file, migrationsDirectory), "utf8"),
       );
+    }
     const closed = await createBoard(db, {
         title: "Existing closed meeting",
         organiserDisplayName: "Owner",

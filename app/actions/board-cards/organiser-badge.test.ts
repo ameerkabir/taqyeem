@@ -19,7 +19,9 @@ async function boardWithTwoNotes() {
   let call = (path: string, init: RequestInit & { cookie?: string; fields?: Record<string, string> } = {}) => {
     let { cookie, fields, ...rest } = init;
     let headers = new Headers(rest.headers);
-    if (cookie) headers.set("Cookie", cookie);
+    if (cookie) {
+      headers.set("Cookie", cookie);
+    }
     return createAppRouter({ ...options, db }).fetch(
       new Request("http://localhost" + path, { ...rest, headers, body: fields ? new URLSearchParams(fields) : undefined }),
     );

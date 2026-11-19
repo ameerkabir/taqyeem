@@ -9,8 +9,9 @@ export function boardMemberSessionKey(boardId: string) {
 
 export function loadSession(secret: string | string[], db: Database) {
   const secrets = Array.isArray(secret) ? secret : [secret];
-  if (!secrets.length || secrets.some((value) => !value))
+  if (!secrets.length || secrets.some((value) => !value)) {
     throw new Error("SESSION_SECRET is required");
+  }
 
   let cookie = createCookie("taqyeem_session", {
     secrets,

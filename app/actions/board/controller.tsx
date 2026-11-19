@@ -1,5 +1,4 @@
 import {
-  hasGuidedSession,
   readSession,
   readMeetingRecord,
 } from "../../models/guided/session.ts";
@@ -25,8 +24,10 @@ export default createAction(routes.board, {
   async handler(context) {
     let { board, member } = context;
 
-    if (await hasGuidedSession(context.db, board.id)) {
-      let view = await readSession(context.db, board.id);
+    let view = board.guidedStage
+      ? await readSession(context.db, board.id)
+      : null;
+    if (view) {
       const recordParam = context.url.searchParams.get("record");
       const record =
         recordParam === null
@@ -36,19 +37,21 @@ export default createAction(routes.board, {
               board.id,
               /^[1-9]\d*$/.test(recordParam) ? Number(recordParam) : NaN,
             );
-      if (recordParam !== null && !record)
+      if (recordParam !== null && !record) {
         return new Response(context.i18n.t("history.notFound"), {
           status: 404,
         });
+      }
       const step = context.url.searchParams.get("step") ?? "";
-      if (!record && step && reviewStage(view!.state.stage, step) !== step)
+      if (!record && step && reviewStage(view.state.stage, step) !== step) {
         return redirect(routes.board.href({ boardId: board.id }), 303);
+      }
       return context.render(
         <Document i18n={context.i18n} title={board.title}>
           <Workspace
             key={`${board.id}:${member.id}`}
             origin={context.url.origin}
-            initial={viewerPayload(view!, member.id)}
+            initial={viewerPayload(view, member.id)}
             locale={context.i18n.locale}
             record={
               record

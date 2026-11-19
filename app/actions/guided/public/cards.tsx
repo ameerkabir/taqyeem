@@ -1,25 +1,35 @@
 import { on, type Handle } from "remix/component";
 import type { Card } from "../../../data/board.ts";
 import type { Topic, Proposal } from "../../../models/guided/session.ts";
+import { formatDate } from "../../../i18n/format-date.ts";
 import type { ViewerPayload } from "../payload.ts";
 import { numberLocaleFor, type Locale } from "../../../i18n/locales.ts";
 import { createTranslator } from "../../../i18n/translator.ts";
 import { routes } from "../../../routes.ts";
 import { CommandForm, type CommandProps } from "./command-form.tsx";
-export function NoteCard(
-  handle: Handle<{
-    data: ViewerPayload;
-    locale: Locale;
-    card: Card;
-    select?: boolean;
-    rootId?: string;
-    onCapture?: (card: Card) => void;
-    readOnly?: boolean;
-    canMove?: boolean;
-    pending?: boolean;
-    dragging?: boolean;
-  }>,
-) {
+
+export interface NoteCardProps {
+  data: ViewerPayload;
+  locale: Locale;
+  card: Card;
+  /** Show a checkbox that adds the note to the workspace's theme form. */
+  select?: boolean;
+  /** The workspace root id, used to target its `<id>-theme` form. */
+  rootId?: string;
+  /** Offers "capture an action" from this note when given. */
+  onCapture?: (card: Card) => void;
+  /** Hide every control (past records and reviewed steps). */
+  readOnly?: boolean;
+  /** The organiser may drag this note to another category. */
+  canMove?: boolean;
+  /** A command is saving, so dragging and buttons are disabled. */
+  pending?: boolean;
+  /** This note is the one being dragged. */
+  dragging?: boolean;
+}
+
+/** One feedback note: body, category, author (unless anonymous) and its own controls. */
+export function NoteCard(handle: Handle<NoteCardProps>) {
   return () => {
     let { data, locale, card, select = false, rootId = "" } = handle.props,
       state = data.state;
@@ -144,6 +154,7 @@ export function NoteCard(
     );
   };
 }
+/** A collapsible list of the notes behind a topic. */
 export function Evidence(
   handle: Handle<{ data: ViewerPayload; locale: Locale; topic: Topic }>,
 ) {
@@ -169,16 +180,20 @@ export function Evidence(
     );
   };
 }
-export function ActionCard(
-  handle: Handle<{
-    data: ViewerPayload;
-    locale: Locale;
-    proposal: Proposal;
-    historical?: boolean;
-    pending: boolean;
-    readOnly?: boolean;
-  }>,
-) {
+export interface ActionCardProps {
+  data: ViewerPayload;
+  locale: Locale;
+  proposal: Proposal;
+  /** Rendered from a past meeting record: no progress or edit controls. */
+  historical?: boolean;
+  /** A command is saving, so buttons are disabled. */
+  pending: boolean;
+  /** Hide every control (reviewed steps). */
+  readOnly?: boolean;
+}
+
+/** An action item with its owner, due date and progress, plus the controls the viewer may use. */
+export function ActionCard(handle: Handle<ActionCardProps>) {
   return () => {
     let {
         data,
@@ -226,10 +241,7 @@ export function ActionCard(
             <>
               {" "}
               ·{" "}
-              {new Intl.DateTimeFormat(numberLocaleFor(locale), {
-                dateStyle: "medium",
-                timeZone: "UTC",
-              }).format(new Date(p.due))}
+              {formatDate(numberLocaleFor(locale), p.due, "due")}
             </>
           )}
         </p>

@@ -16,12 +16,16 @@ export async function loadBoard(
   id: string,
 ): Promise<Board | null> {
   let row = await db.find(boards, id);
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
 
   let organiser = await db.findOne(members, {
     where: { board_id: id, role: "organiser" },
   });
-  if (!organiser) return null;
+  if (!organiser) {
+    return null;
+  }
 
   return {
     id: row.id,
