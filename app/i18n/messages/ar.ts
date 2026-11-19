@@ -202,7 +202,6 @@ export const ar = {
   "guided.discardConfirm": "هل تريد حذف هذه المسودة؟",
   "guided.category": "الفئة",
   "guided.all": "الكل",
-  "guided.emptyNotes": "لا توجد ملاحظات في هذه الفئة بعد.",
   "guided.yours": "لك",
   "guided.post": "نشر",
   "guided.saving": "جارٍ الحفظ…",
@@ -345,7 +344,6 @@ export const ar = {
   "collect.moveTo": "نقل إلى فئة",
   "collect.moveHint": "اسحب الملاحظات إلى فئة أخرى، أو استخدم نقل الملاحظة.",
   "collect.moveRestricted": "الميسّر وحده يستطيع نقل الملاحظة المنشورة إلى فئة أخرى.",
-  "collect.emptyHint": "استخدم «إضافة ملاحظة» لمشاركة فكرتك الأولى.",
   "collect.total": {
     zero: "عدد الملاحظات: {count}",
     one: "عدد الملاحظات: {count}",

@@ -50,24 +50,6 @@ function collectToolbar(v: WorkspaceView) {
   );
 }
 
-function emptyLane(v: WorkspaceView) {
-  return (
-    <div class="lane-empty">
-      <span class="empty-note-mark" aria-hidden="true">
-        <svg viewBox="0 0 40 48" fill="none">
-          <path
-            d="M7 1h18l13 13v31a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a5 5 0 0 1 5-5Z"
-            stroke="currentColor"
-          />
-          <path d="M25 1v13h13M11 26h18M11 33h12" stroke="currentColor" />
-        </svg>
-      </span>
-      <strong>{v.t("guided.emptyNotes")}</strong>
-      {!v.readOnly && <p>{v.t("collect.emptyHint")}</p>}
-    </div>
-  );
-}
-
 /**
  * One category lane with its own Add note control. The whole lane, stretched to
  * the height of its row, is the drop target when moving notes.
@@ -103,7 +85,6 @@ function lane(v: WorkspaceView, category: Category) {
       )}
       <div class="note-stack">
         {notes.map((c) => v.note(c))}
-        {!notes.length && emptyLane(v)}
       </div>
     </section>
   );

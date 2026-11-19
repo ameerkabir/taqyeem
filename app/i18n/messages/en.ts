@@ -198,7 +198,6 @@ export const en = {
   "guided.discardConfirm": "Discard this draft?",
   "guided.category": "Category",
   "guided.all": "All",
-  "guided.emptyNotes": "No notes yet in this category.",
   "guided.yours": "Yours",
   "guided.post": "Post",
   "guided.saving": "Saving…",
@@ -340,7 +339,6 @@ export const en = {
   "collect.moveTo": "Move to category",
   "collect.moveHint": "Drag notes to another category, or use Move note.",
   "collect.moveRestricted": "Only the facilitator can move a posted note to another category.",
-  "collect.emptyHint": "Use Add note to share your first thought.",
   "collect.total": {
     one: "{count} note shared",
     other: "{count} notes shared",
