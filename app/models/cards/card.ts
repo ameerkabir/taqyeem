@@ -73,7 +73,9 @@ export async function createCard(
   limits: CardLimits = defaultLimits,
 ): Promise<CreateCardResult> {
   let existing = await findBySubmission(db, card.boardId, card.memberId, submissionId);
-  if (existing) return { ok: true, card: toCard(existing, await countVotes(db, existing.id)) };
+  if (existing) {
+    return { ok: true, card: toCard(existing, await countVotes(db, existing.id)) };
+  }
 
   let windowSeconds = limits.windowMs / 1000;
   let usage = await db.exec(sql`
@@ -108,7 +110,9 @@ export async function createCard(
   } catch (error) {
     // A concurrent request may have inserted the same submission first.
     let winner = await findBySubmission(db, card.boardId, card.memberId, submissionId);
-    if (winner) return { ok: true, card: toCard(winner, await countVotes(db, winner.id)) };
+    if (winner) {
+      return { ok: true, card: toCard(winner, await countVotes(db, winner.id)) };
+    }
     throw error; // not a duplicate: a real failure
   }
 }
@@ -149,7 +153,9 @@ export async function updateCard(
     },
     { where: { board_id: boardId, id: cardId } },
   );
-  if (result.affectedRows === 0) return null;
+  if (result.affectedRows === 0) {
+    return null;
+  }
   return getCard(db, boardId, cardId);
 }
 

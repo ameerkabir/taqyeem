@@ -72,6 +72,8 @@ export async function loginAs(router: AppRouter, boardId: string, memberId: stri
   });
   let response = await router.fetch("http://localhost/__test-login");
   let cookie = response.headers.get("Set-Cookie");
-  if (!cookie) throw new Error("loginAs: the app did not set a session cookie");
+  if (!cookie) {
+    throw new Error("loginAs: the app did not set a session cookie");
+  }
   return cookie.split(";")[0];
 }

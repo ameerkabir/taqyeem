@@ -10,7 +10,9 @@ export function createRequestOptions(
   ctx: Pick<ExecutionContext, "waitUntil">,
   db: Database,
 ): AppRouterOptions {
-  if (!env.SESSION_SECRET) throw new Error("SESSION_SECRET is required");
+  if (!env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET is required");
+  }
   return {
     db,
     sessionSecret: env.SESSION_SECRET,

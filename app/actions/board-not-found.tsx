@@ -64,6 +64,8 @@ export const boardNotFound: BoardAccessErrorHandler = (
     return Response.json({ error: message }, { status });
   }
   let render = context.get(Renderer) as RenderFunction | undefined;
-  if (!render) return new Response(message, { status });
+  if (!render) {
+    return new Response(message, { status });
+  }
   return render(<BoardNotFoundPage i18n={getI18n(context)} />, { status });
 };

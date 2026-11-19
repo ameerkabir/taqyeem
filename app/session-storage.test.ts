@@ -113,17 +113,19 @@ describe("durable browser identity", () => {
     let faulty = new Proxy(db, {
       get(target, property) {
         let value = Reflect.get(target, property, target);
-        if (property === "exec")
+        if (property === "exec") {
           return async (statement: unknown, ...args: unknown[]) => {
             if (
               typeof statement === "object" &&
               statement &&
               "text" in statement &&
               String(statement.text).startsWith("INSERT INTO browser_sessions")
-            )
+            ) {
               throw new Error("Simulated write failure");
+            }
             return Reflect.apply(value, target, [statement, ...args]);
           };
+        }
         return typeof value === "function" ? value.bind(target) : value;
       },
     });

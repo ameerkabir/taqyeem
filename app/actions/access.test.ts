@@ -35,8 +35,12 @@ async function world() {
 
   async function request(caller: Caller, path: string, init: { method?: string; json?: boolean; fields?: Record<string, string> } = {}) {
     let headers = new Headers();
-    if (cookies[caller]) headers.set("Cookie", cookies[caller]!);
-    if (init.json) headers.set("Accept", "application/json");
+    if (cookies[caller]) {
+      headers.set("Cookie", cookies[caller]!);
+    }
+    if (init.json) {
+      headers.set("Accept", "application/json");
+    }
     let response=await createAppRouter({ ...options, db }).fetch(
       new Request("http://localhost" + path, {
         method: init.method ?? "GET",

@@ -22,8 +22,12 @@ export async function setVotingOpen(
   votingOpen: boolean,
 ): Promise<Board | null> {
   let row = await db.find(boards, boardId);
-  if (!row) return null;
-  if (votingOpen && row.status === "closed") throw new BoardClosedError();
+  if (!row) {
+    return null;
+  }
+  if (votingOpen && row.status === "closed") {
+    throw new BoardClosedError();
+  }
 
   await db.update(boards, boardId, { voting_open: votingOpen ? 1 : 0 });
   return loadBoard(db, boardId);
@@ -45,10 +49,16 @@ export async function setBoardStatus(
     voting_open?: number;
     current_section_id?: string | null;
   } = { status };
-  if (status === "closed") changes.voting_open = 0;
-  if (status !== "meeting") changes.current_section_id = null;
+  if (status === "closed") {
+    changes.voting_open = 0;
+  }
+  if (status !== "meeting") {
+    changes.current_section_id = null;
+  }
 
   let result = await db.updateMany(boards, changes, { where: { id: boardId } });
-  if (result.affectedRows === 0) return null;
+  if (result.affectedRows === 0) {
+    return null;
+  }
   return loadBoard(db, boardId);
 }

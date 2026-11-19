@@ -1,6 +1,6 @@
 import {createBoard} from "../app/models/boards/create.ts";
 import {createCard} from "../app/models/cards/card.ts";
-import {readSession,commandSession,topics,CommandError,readMeetingRecord} from "../app/models/guided/session.ts";
+import {readSession,createSession as createGuidedSession,commandSession,topics,CommandError,readMeetingRecord} from "../app/models/guided/session.ts";
 import {createDatabaseSessionStorage} from "../app/session-storage.ts";
 import {createSession} from "remix/session";
 // Test-only Worker. Never mapped into the application or deployed.
@@ -20,7 +20,9 @@ const probe = table({
   },
 });
 function check(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
+  if (!condition) {
+    throw new Error(message);
+  }
 }
 
 export default {
@@ -126,7 +128,7 @@ export default {
       });
       let id = created.board.id,
         actor = created.organiser.id;
-      await readSession(db, id, false, true);
+      await createGuidedSession(db, id, { requireCategorySetup: true });
       let beforeSetup = (await readSession(db, id))!;
       let blocked = false;
       try {
@@ -141,7 +143,7 @@ export default {
       check(configured.categories.map(c => c.label).join(",") === "Keep,Change,Try,Appreciate", "D1 category trigger must replace categories in the setup command");
       check(configured.categories.every((c, i) => c.tone === i), "D1 persists category tones");
       check((await commandSession(db, id, actor, setup)).revision === configured.revision, "D1 category setup retry must be idempotent");
-      for (let i = 0; i < 2; i++)
+      for (let i = 0; i < 2; i++) {
         await createCard(
           db,
           {
@@ -154,6 +156,7 @@ export default {
           },
           crypto.randomUUID(),
         );
+      }
       async function command(
         kind: string,
         fields: Record<string, unknown> = {},

@@ -8,7 +8,9 @@ export interface Board {
   title: string;
   organiserMemberId: string;
   status: BoardStatus;
+  /** Set only for guided boards; see models/guided/policy.ts. */
   guidedStage?: string;
+  guidedRevision?: number;
   categorySetupRequired?: boolean;
   votingOpen: boolean;
   currentSectionId: string | null;

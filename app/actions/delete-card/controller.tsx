@@ -24,14 +24,16 @@ export default createController(routes.deleteCard, {
         "delete",
         context.i18n.t,
       );
-      if (failure)
+      if (failure) {
         return cardAccessError(context, failure.message, failure.status);
-      if (!card)
+      }
+      if (!card) {
         return cardAccessError(
           context,
           context.i18n.t("access.cardNotFound"),
           404,
         );
+      }
       return context.render(
         <DeleteCardPage i18n={context.i18n} board={board} card={card} />,
       );
@@ -46,38 +48,43 @@ export default createController(routes.deleteCard, {
         "delete",
         context.i18n.t,
       );
-      if (failure)
+      if (failure) {
         return cardAccessError(context, failure.message, failure.status);
-      if (!card)
+      }
+      if (!card) {
         return cardAccessError(
           context,
           context.i18n.t("access.cardNotFound"),
           404,
         );
+      }
       let deleted;
       try {
         deleted = await context.models.deleteCard(board.id, card.id);
       } catch (error) {
-        if (isCollectLock(error))
+        if (isCollectLock(error)) {
           return cardAccessError(
             context,
             context.i18n.t("guided.collectOnly"),
             409,
           );
-        if (error instanceof DataTableDatabaseError)
+        }
+        if (error instanceof DataTableDatabaseError) {
           return cardAccessError(
             context,
             context.i18n.t("deleteCard.failed"),
             503,
           );
+        }
         throw error;
       }
-      if (!deleted)
+      if (!deleted) {
         return cardAccessError(
           context,
           context.i18n.t("access.cardNotFound"),
           404,
         );
+      }
       return redirect(
         `${routes.board.href({ boardId: board.id })}?section=${encodeURIComponent(card.categoryId)}`,
         303,

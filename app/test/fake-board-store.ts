@@ -8,6 +8,7 @@ import {
   type Member,
   type Card,
 } from "./fake-board.ts";
+import type { GuidedStatus } from "../models/guided/session.ts";
 
 export interface FakeBoardStore {
   boards: Map<string, Board>;
@@ -16,6 +17,8 @@ export interface FakeBoardStore {
   cards: Card[];
   submissions: Map<string, Card>;
   votes: Map<string, Set<string>>;
+  /** Guided sessions by board id; boards without one are legacy boards. */
+  guided: Map<string, GuidedStatus>;
 }
 
 export function createFakeBoardStore(
@@ -28,6 +31,7 @@ export function createFakeBoardStore(
     cards: cards.map((card) => ({ ...card })),
     submissions: new Map(),
     votes: new Map(),
+    guided: new Map(),
     ...overrides,
   };
 }
