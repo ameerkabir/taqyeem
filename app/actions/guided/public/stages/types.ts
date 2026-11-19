@@ -103,6 +103,9 @@ export interface WorkspaceView {
   persist(): void;
   refresh(announce?: boolean): void;
   copy(value: string): void;
+  /** Copies the invitation link; the button shows the outcome. */
+  copyInvite(): void;
+  inviteCopy: "idle" | "copied" | "failed";
   summaryText(): string;
   inviteUrl: string;
 }

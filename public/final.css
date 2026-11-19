@@ -599,6 +599,10 @@
     .invitation {
       max-width: none;
     }
+    .invitation-copy {
+      align-items: flex-start;
+      margin-top: 12px;
+    }
     .stage-rail {
       gap: 14px;
       font-size: 0.85rem;
@@ -704,6 +708,7 @@
     .stage-rail,
     .stage-heading,
     .invitation,
+    .invitation-copy,
     button,
     .command-form,
     .capture-editors,
@@ -905,6 +910,10 @@
   .workspace[data-enhanced="true"] .js-only {
     display: inline-flex;
   }
+  html[data-js="true"] .no-js-only,
+  .workspace[data-enhanced="true"] .no-js-only {
+    display: none;
+  }
 }
 @layer app {
   .group-switcher,
@@ -1073,8 +1082,40 @@
   .invitation > p {
     font-size: 12px;
   }
-  .invitation > button {
-    margin-top: 10px;
+  .invitation-copy {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 360px;
+  }
+  .invitation-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 16px;
+    min-height: 44px;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-border) 45%, transparent);
+    border-radius: 9px;
+    font-size: 13px;
+  }
+  .invitation-button::after {
+    content: "⧉";
+    font-size: 15px;
+  }
+  .invitation-button[data-copied]::after {
+    content: "✓";
+  }
+  .invitation-fallback {
+    display: grid;
+    gap: 6px;
+    width: min(360px, calc(100vw - 40px));
+    font-size: 12px;
+  }
+  .invitation-fallback input {
+    width: 100%;
+    font-size: 12px;
   }
   .stage-rail {
     margin: 0 0 28px;

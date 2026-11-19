@@ -93,6 +93,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
   let status = "",
     error = "",
     pending = false;
+  let inviteCopy: "idle" | "copied" | "failed" = "idle",
+    inviteTimer: ReturnType<typeof setTimeout> | undefined;
   let needsJoin = false;
   const rootId = handle.id,
     prefix = `taqyeem:${data.board.id}:${data.memberId}:`;
@@ -704,6 +706,8 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       persist,
       refresh: (announce) => void refresh(announce),
       copy: (value) => void copy(value),
+      copyInvite: () => void copyInvite(),
+      inviteCopy,
       summaryText: () =>
         buildSummaryText({
           boardTitle: data.board.title,
@@ -721,6 +725,22 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
         handle.props.origin,
       ).href,
     };
+    async function copyInvite() {
+      clearTimeout(inviteTimer);
+      try {
+        await navigator.clipboard.writeText(view.inviteUrl);
+        inviteCopy = "copied";
+        inviteTimer = setTimeout(() => {
+          if (!handle.signal.aborted) {
+            inviteCopy = "idle";
+            handle.update();
+          }
+        }, 2000);
+      } catch {
+        inviteCopy = "failed";
+      }
+      handle.update();
+    }
     async function copy(value: string) {
       try {
         await navigator.clipboard.writeText(value);

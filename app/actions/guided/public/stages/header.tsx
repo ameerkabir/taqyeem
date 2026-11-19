@@ -17,19 +17,33 @@ export function boardHeading(v: WorkspaceView) {
           {t("guided.joined", { count: data.members.length })}
         </p>
       </div>
-      <details class="invitation">
+      <div class="invitation-copy js-only">
+        <button
+          type="button"
+          class="invitation-button"
+          data-copied={v.inviteCopy === "copied" ? "true" : undefined}
+          mix={on("click", () => v.copyInvite())}
+        >
+          <span aria-live="polite">
+            {v.inviteCopy === "copied"
+              ? t("guided.inviteCopied")
+              : t("guided.copyInvite")}
+          </span>
+        </button>
+        {v.inviteCopy === "failed" && (
+          <label class="invitation-fallback">
+            {t("guided.copyFailed")}
+            <input readOnly value={v.inviteUrl} />
+          </label>
+        )}
+      </div>
+      {/* Without JavaScript there is no clipboard access, so show the link. */}
+      <details class="invitation no-js-only">
         <summary>{t("guided.invite")}</summary>
         <label>
           {t("guided.invite")}
           <input readOnly value={v.inviteUrl} />
         </label>
-        <button
-          class="js-only"
-          type="button"
-          mix={on("click", () => v.copy(v.inviteUrl))}
-        >
-          {t("guided.copy")}
-        </button>
         <p>{t("guided.identityNotice")}</p>
       </details>
     </header>
