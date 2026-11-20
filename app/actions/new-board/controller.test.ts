@@ -59,7 +59,7 @@ describe("new board action", () => {
     assert.equal(board.title, "لوحة اختبار");
     assert.equal(response.headers.get("Location"), routes.board.href({ boardId: board.id }));
     assert.equal((await db.findMany(members, { where: { board_id: board.id } })).length, 1);
-    assert.equal((await db.findMany(categories, { where: { board_id: board.id } })).length, 3);
+    assert.equal((await db.findMany(categories, { where: { board_id: board.id } })).length, 4);
     assert.match(response.headers.get("Set-Cookie") ?? "", /^taqyeem_session=/);
   });
 

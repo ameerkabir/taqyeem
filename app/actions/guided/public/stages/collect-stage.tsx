@@ -22,7 +22,7 @@ export function readyToggle(v: WorkspaceView, label: string) {
 function collectToolbar(v: WorkspaceView) {
   let { data, t, formatNumber } = v;
   return (
-    <div class="collect-toolbar" data-categories={data.categories.length}>
+    <div class="collect-toolbar">
       <form method="get" data-view-form>
         {reviewStepField(v)}
         <label>
@@ -90,7 +90,7 @@ function lane(v: WorkspaceView, category: Category) {
   );
 }
 
-/** Collect: notes by category in lanes (shelves of three on larger boards). */
+/** Collect: a lane per category, up to four per row; phones show one at a time. */
 export function collectStage(v: WorkspaceView) {
   return (
     <section>
@@ -98,7 +98,7 @@ export function collectStage(v: WorkspaceView) {
       {v.canMoveNotes && v.data.cards.length > 0 && (
         <p class="note-move-hint">{v.t("collect.moveHint")}</p>
       )}
-      <div class="lanes" data-lanes={v.lanes.length}>
+      <div class="lanes" data-columns={v.laneColumns}>
         {v.lanes.map((category) => lane(v, category))}
       </div>
     </section>

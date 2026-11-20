@@ -167,11 +167,11 @@ try {
     path: output + "/empty-collect-desktop.png",
     fullPage: true,
   });
-  assert.equal(await page.locator(".lane").count(), 3);
+  assert.equal(await page.locator(".lane").count(), 4);
   assert.equal(await page.locator(".lane .feedback-card").count(), 0);
-  assert.equal(await page.locator(".lane .add-note").count(), 3);
+  assert.equal(await page.locator(".lane .add-note").count(), 4);
   checks.push(
-    "Classic categories are explicit; empty Collect has three readable lanes, an Add note control in each lane and no page overflow at five viewports",
+    "Classic categories are explicit; empty Collect has four readable lanes, an Add note control in each lane and no page overflow at five viewports",
   );
   // Native fallback creates and confirms a custom board without JavaScript.
   const nativeContext = await browser.newContext({

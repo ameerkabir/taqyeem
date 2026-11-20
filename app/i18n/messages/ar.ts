@@ -21,7 +21,7 @@ export const ar = {
   "newBoard.nameLabel": "اسمك",
   "newBoard.nameHint": "ستصبح منظم اللوحة، وسيظهر هذا الاسم لفريقك",
   "newBoard.categoriesHeading": "أقسام اللوحة",
-  "newBoard.categoriesHint": "ستبدأ لوحتك بهذه الأقسام الثلاثة",
+  "newBoard.categoriesHint": "ستبدأ لوحتك بهذه الأقسام الأربعة",
   "newBoard.submit": "إنشاء اللوحة",
   "newBoard.error.titleMax": "الحد الأقصى لاسم اللوحة {max} حرفًا",
   "newBoard.error.titleInvalid": "يرجى إدخال اسم صالح للوحة",
@@ -50,6 +50,7 @@ export const ar = {
   "board.defaultCategory.good": "ما سار بشكل جيد",
   "board.defaultCategory.bad": "ما لم يسر جيدًا",
   "board.defaultCategory.ideas": "أفكار",
+  "board.defaultCategory.thanks": "شكر وتقدير",
 
   "board.status.collecting": "جمع الملاحظات",
   "board.status.meeting": "اجتماع",

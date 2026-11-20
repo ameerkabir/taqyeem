@@ -553,7 +553,7 @@ describe("guided route boundary", () => {
     assert.deepEqual(view.counts, {});
     assert.deepEqual(
       view.categories.map((c) => c.tone),
-      [0, 1, 2],
+      [0, 1, 2, 3],
     );
   });
   it("edits proposals through an authorised native route, preserves invalid fields and denies agreed-action edits to participants", async () => {
@@ -803,7 +803,7 @@ describe("guided route boundary", () => {
     assert.deepEqual(results.map((r) => r.status).sort(), [200, 409]);
     let final = await f.read();
     assert.equal(final.state.categorySetup?.confirmed, true);
-    assert.ok(final.categories.length === 2 || final.categories.length === 3);
+    assert.ok(final.categories.length === 2 || final.categories.length === 4);
   });
   it("answers a JSON command with the committed session, matching what a later poll returns", async () => {
     let f = await setup(),

@@ -569,7 +569,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     let active =
         ranked.find((x) => x.id === privateTopic) ?? sharedTopic ?? ranked[0],
       mine = state.votes[data.memberId] ?? [];
-    let { current: currentCategory, lanes } = laneLayout(
+    let { current: currentCategory, lanes, columns: laneColumns } = laneLayout(
       data.categories,
       category,
     );
@@ -648,6 +648,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       category,
       currentCategory,
       lanes,
+      laneColumns,
       dropCategory: drag.dropCategory(),
       canMoveNotes: canMoveNotes(),
       notesAllowed: notesAllowed(),

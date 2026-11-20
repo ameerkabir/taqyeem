@@ -1,32 +1,31 @@
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
-import { laneLayout } from "./lanes.ts";
+import { laneColumns, laneLayout } from "./lanes.ts";
 
 const categories = (n: number) =>
   Array.from({ length: n }, (_, i) => ({ id: `c${i}`, boardId: "b", label: `C${i}`, position: i }));
 
 describe("laneLayout", () => {
-  it("shows every lane for four or fewer categories", () => {
-    let all = categories(4);
-    assert.deepEqual(laneLayout(all, "c3").lanes, all);
-    assert.equal(laneLayout(all, "c3").current?.id, "c3");
+  it("shows every category's lane, however many the board has", () => {
+    for (let n of [1, 3, 4, 5, 8]) {
+      let all = categories(n);
+      assert.deepEqual(laneLayout(all, "c0").lanes, all, String(n));
+    }
+    assert.equal(laneLayout(categories(8), "c6").current?.id, "c6");
   });
 
-  it("pages larger boards in shelves of three around the chosen category", () => {
-    let all = categories(8);
-    assert.deepEqual(laneLayout(all, "c4").lanes.map((c) => c.id), ["c3", "c4", "c5"]);
-    assert.equal(laneLayout(all, "c4").shelf, 1);
-    assert.deepEqual(laneLayout(all, "c7").lanes.map((c) => c.id), ["c6", "c7"]);
+  it("keeps up to four lanes in one row and balances larger boards over two rows", () => {
+    assert.deepEqual(
+      [1, 2, 3, 4, 5, 6, 7, 8].map(laneColumns),
+      [1, 2, 3, 4, 3, 3, 4, 4],
+    );
   });
 
   it("falls back to the first category for an unknown or stale id", () => {
-    let all = categories(6);
-    let layout = laneLayout(all, "gone");
-    assert.equal(layout.current?.id, "c0");
-    assert.deepEqual(layout.lanes.map((c) => c.id), ["c0", "c1", "c2"]);
+    assert.equal(laneLayout(categories(6), "gone").current?.id, "c0");
   });
 
   it("copes with a board that has no categories", () => {
-    assert.deepEqual(laneLayout([], ""), { current: undefined, shelf: 0, lanes: [] });
+    assert.deepEqual(laneLayout([], ""), { current: undefined, lanes: [], columns: 1 });
   });
 });

@@ -21,7 +21,7 @@ export const en = {
   "newBoard.nameHint":
     "You will be the board organiser, and your team will see this name",
   "newBoard.categoriesHeading": "Board sections",
-  "newBoard.categoriesHint": "Your board starts with these three sections",
+  "newBoard.categoriesHint": "Your board starts with these four sections",
   "newBoard.submit": "Create board",
   "newBoard.error.titleMax": "The board name can be at most {max} characters",
   "newBoard.error.titleInvalid": "Please enter a valid board name",
@@ -51,6 +51,7 @@ export const en = {
   "board.defaultCategory.good": "What went well",
   "board.defaultCategory.bad": "What didn't go well",
   "board.defaultCategory.ideas": "Ideas",
+  "board.defaultCategory.thanks": "Thank yous",
 
   "board.status.collecting": "Collecting notes",
   "board.status.meeting": "Meeting",
