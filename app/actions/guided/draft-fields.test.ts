@@ -8,7 +8,7 @@ describe("guided draft fields", () => {
   });
 
   it("drops per-attempt fields that the server sets", () => {
-    for (let name of ["revision", "kind", "ballot"]) {
+    for (let name of ["revision", "kind", "ballot", "attachTopic"]) {
       assert.equal(isDraftField(name), false, name);
     }
   });

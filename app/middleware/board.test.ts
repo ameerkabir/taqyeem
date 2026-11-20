@@ -72,7 +72,7 @@ describe("board access middleware", () => {
       getBoard: async () => ({ ...board, status: "collecting", votingOpen: true }),
       getGuidedStatus: async (id) => {
         assert.equal(id, "demo");
-        return { stage: "vote", revision: 12, categorySetupRequired: false };
+        return { stage: "vote", revision: 12, categorySetupRequired: false, notesOpen: false };
       },
     });
     let response = await router.fetch("http://localhost/protected");

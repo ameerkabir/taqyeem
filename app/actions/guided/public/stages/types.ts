@@ -72,8 +72,12 @@ export interface WorkspaceView {
   category: string;
   currentCategory: Category | undefined;
   lanes: Category[];
+  /** Lanes per row on wide screens (see laneColumns). */
+  laneColumns: number;
   dropCategory: string;
   canMoveNotes: boolean;
+  /** New notes are accepted now: Collect, or reopened in Group or Discuss. */
+  notesAllowed: boolean;
   submission: string;
 
   // Actions

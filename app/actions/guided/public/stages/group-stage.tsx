@@ -1,5 +1,6 @@
 import type { Theme } from "../../../../models/guided/session.ts";
 import { CommandForm } from "../command-form.tsx";
+import { lateNotes } from "./late-notes.tsx";
 import type { WorkspaceView } from "./types.ts";
 
 /**
@@ -72,6 +73,7 @@ export function groupStage(v: WorkspaceView) {
   return (
     <section>
       <p>{t(v.readOnly ? "review.groupHint" : "guided.groupHint")}</p>
+      {lateNotes(v)}
       {v.canManage && (
         <a class="group-selection primary" href={`#${rootId}-group-themes`}>
           {t("guided.groupSelected")}

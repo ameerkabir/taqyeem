@@ -22,7 +22,7 @@ export function readyToggle(v: WorkspaceView, label: string) {
 function collectToolbar(v: WorkspaceView) {
   let { data, t, formatNumber } = v;
   return (
-    <div class="collect-toolbar" data-categories={data.categories.length}>
+    <div class="collect-toolbar">
       <form method="get" data-view-form>
         {reviewStepField(v)}
         <label>
@@ -46,24 +46,6 @@ function collectToolbar(v: WorkspaceView) {
       <span class="note-total">
         {t("collect.total", { count: data.cards.length })}
       </span>
-    </div>
-  );
-}
-
-function emptyLane(v: WorkspaceView) {
-  return (
-    <div class="lane-empty">
-      <span class="empty-note-mark" aria-hidden="true">
-        <svg viewBox="0 0 40 48" fill="none">
-          <path
-            d="M7 1h18l13 13v31a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a5 5 0 0 1 5-5Z"
-            stroke="currentColor"
-          />
-          <path d="M25 1v13h13M11 26h18M11 33h12" stroke="currentColor" />
-        </svg>
-      </span>
-      <strong>{v.t("guided.emptyNotes")}</strong>
-      {!v.readOnly && <p>{v.t("collect.emptyHint")}</p>}
     </div>
   );
 }
@@ -103,13 +85,12 @@ function lane(v: WorkspaceView, category: Category) {
       )}
       <div class="note-stack">
         {notes.map((c) => v.note(c))}
-        {!notes.length && emptyLane(v)}
       </div>
     </section>
   );
 }
 
-/** Collect: notes by category in lanes (shelves of three on larger boards). */
+/** Collect: a lane per category, up to four per row; phones show one at a time. */
 export function collectStage(v: WorkspaceView) {
   return (
     <section>
@@ -117,7 +98,7 @@ export function collectStage(v: WorkspaceView) {
       {v.canMoveNotes && v.data.cards.length > 0 && (
         <p class="note-move-hint">{v.t("collect.moveHint")}</p>
       )}
-      <div class="lanes" data-lanes={v.lanes.length}>
+      <div class="lanes" data-columns={v.laneColumns}>
         {v.lanes.map((category) => lane(v, category))}
       </div>
     </section>

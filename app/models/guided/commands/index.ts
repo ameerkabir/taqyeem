@@ -9,6 +9,7 @@ import { ballot, vote } from "./vote.ts";
 import { decision, live, outcome } from "./discuss.ts";
 import { complete, disposition, editProposal, propose } from "./proposals.ts";
 import { advance, reopen } from "./progression.ts";
+import { attachNote, notes } from "./late-notes.ts";
 import type { CommandHandler } from "./types.ts";
 
 export type { CommandContext, CommandHandler } from "./types.ts";
@@ -33,6 +34,8 @@ export const handlers: Readonly<Record<string, CommandHandler>> = {
   complete,
   advance,
   reopen,
+  notes,
+  "attach-note": attachNote,
 };
 
 /** The handler for a command kind, or undefined for an unknown kind. */

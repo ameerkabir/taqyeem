@@ -76,6 +76,45 @@ async function setup(autoConfigure = true) {
   return { db, path, owner, participant, request, read, command };
 }
 describe("guided route boundary", () => {
+  it("accepts notes after Collect only when the facilitator reopens them, and attaches Discuss notes to the topic being read", async () => {
+    const f = await setup();
+    const categoryId = (await f.read()).categories[0].id;
+    const post = (text: string, extra: Record<string, string> = {}) =>
+      f.request(
+        f.path + "/new",
+        f.participant,
+        { submissionId: crypto.randomUUID(), text, categoryId, ...extra },
+        false,
+      );
+    assert.equal((await post("Collected")).status, 303);
+    assert.equal((await f.command("advance")).status, 200);
+    assert.equal((await post("Too late")).status, 403);
+    assert.equal(
+      (await f.command("notes", { value: "true" }, f.participant)).status,
+      403,
+    );
+    assert.equal((await f.command("notes", { value: "true" })).status, 200);
+    assert.equal((await post("Late but welcome")).status, 303);
+    assert.equal((await f.read()).cards.length, 2);
+
+    assert.equal((await f.command("advance")).status, 200);
+    assert.equal((await post("During the ballot")).status, 403);
+    const ballot = String((await f.read()).state.ballot);
+    assert.equal((await f.command("ballot", { ballot, value: "false" })).status, 200);
+    assert.equal((await f.command("advance")).status, 200);
+    assert.equal((await f.command("notes", { value: "true" })).status, 200);
+    const topic = (await f.read()).cards.find((c) => c.body === "Collected")!.id;
+    const added = await post("Evidence for the topic", { attachTopic: topic });
+    assert.equal(added.status, 303);
+    assert.match(added.headers.get("Location")!, new RegExp(`\\?topic=${topic}$`));
+    const view = await f.read();
+    const late = view.cards.find((c) => c.body === "Evidence for the topic")!;
+    assert.deepEqual(
+      view.state.themes.find((t) => t.id === topic)?.notes,
+      [topic, late.id],
+    );
+  });
+
   it("prevents participants bypassing move permissions through Edit while preserving their text/anonymity edits", async () => {
     const f = await setup(),
       initial = await f.read();
@@ -514,7 +553,7 @@ describe("guided route boundary", () => {
     assert.deepEqual(view.counts, {});
     assert.deepEqual(
       view.categories.map((c) => c.tone),
-      [0, 1, 2],
+      [0, 1, 2, 3],
     );
   });
   it("edits proposals through an authorised native route, preserves invalid fields and denies agreed-action edits to participants", async () => {
@@ -764,7 +803,7 @@ describe("guided route boundary", () => {
     assert.deepEqual(results.map((r) => r.status).sort(), [200, 409]);
     let final = await f.read();
     assert.equal(final.state.categorySetup?.confirmed, true);
-    assert.ok(final.categories.length === 2 || final.categories.length === 3);
+    assert.ok(final.categories.length === 2 || final.categories.length === 4);
   });
   it("answers a JSON command with the committed session, matching what a later poll returns", async () => {
     let f = await setup(),

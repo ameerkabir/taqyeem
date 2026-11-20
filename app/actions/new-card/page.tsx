@@ -13,7 +13,7 @@ import { Document } from "../document.tsx";
 import type { I18n } from "../../middleware/locale.ts";
 import { isolate } from "../../i18n/translator.ts";
 import { NewCardForm, type NewCardFormProps } from "./public/form.tsx";
-import { guidedContributionsClosed } from "../../models/guided/policy.ts";
+import { guidedNotesClosed } from "../../models/guided/policy.ts";
 
 interface NewCardPageProps
   extends Omit<NewCardFormProps, "boardId" | "locale"> {
@@ -55,7 +55,7 @@ export function NewCardPage(handle: Handle<NewCardPageProps>) {
             <NewCardForm
               blocked={
                 board.categorySetupRequired ||
-                guidedContributionsClosed(board)
+                guidedNotesClosed(board)
               }
               boardId={board.id}
               locale={i18n.locale}

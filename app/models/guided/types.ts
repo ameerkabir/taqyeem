@@ -51,6 +51,11 @@ export interface SharedSession {
     categories: { id: string; label: string; tone: number }[];
   };
   themes: Theme[];
+  /**
+   * The facilitator reopened note-taking in Group or Discuss. Any stage change
+   * clears it. Notes added in Discuss are attached to a topic (`attach-note`).
+   */
+  notesOpen?: boolean;
   /** Votes each member may cast per ballot. */
   budget: number;
   /** Ballot number; increments each time voting (re)opens. */
@@ -111,4 +116,6 @@ export interface GuidedStatus {
   stage: Stage;
   revision: number;
   categorySetupRequired: boolean;
+  /** Note-taking reopened by the facilitator after Collect. */
+  notesOpen: boolean;
 }

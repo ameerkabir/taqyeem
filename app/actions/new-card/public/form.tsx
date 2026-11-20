@@ -26,6 +26,8 @@ export interface NewCardFormProps {
   categories: Category[];
   activeCategoryId?: string;
   submissionId: string;
+  /** Discuss topic the note is added to (guided boards with notes reopened). */
+  attachTopic?: string;
   values?: { text: string; isAnonymous: boolean };
   error?: string;
 }
@@ -124,6 +126,13 @@ export const NewCardForm = clientEntry(
             name="submissionId"
             defaultValue={initialSubmissionId}
           />
+          {handle.props.attachTopic && (
+            <input
+              type="hidden"
+              name="attachTopic"
+              defaultValue={handle.props.attachTopic}
+            />
+          )}
           <fieldset mix={fieldsetStyle}>
             <legend mix={labelStyle}>{t("form.category")}</legend>
             <div mix={choicesStyle}>

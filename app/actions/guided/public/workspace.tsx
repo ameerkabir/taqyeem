@@ -123,6 +123,17 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       !viewing().readOnly
     );
   }
+  /** Whether the team may add notes right now, on the live stage. */
+  function notesAllowed() {
+    let stage = data.state.stage;
+    return (
+      !viewing().readOnly &&
+      data.state.categorySetup?.confirmed !== false &&
+      (stage === "collect" ||
+        (data.state.notesOpen === true &&
+          (stage === "group" || stage === "discuss")))
+    );
+  }
   const drag = createNoteDrag({
     boardId: () => data.board.id,
     cards: () => data.cards,
@@ -558,7 +569,7 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
     let active =
         ranked.find((x) => x.id === privateTopic) ?? sharedTopic ?? ranked[0],
       mine = state.votes[data.memberId] ?? [];
-    let { current: currentCategory, lanes } = laneLayout(
+    let { current: currentCategory, lanes, columns: laneColumns } = laneLayout(
       data.categories,
       category,
     );
@@ -637,8 +648,10 @@ function SessionWorkspace(handle: Handle<WorkspaceProps>) {
       category,
       currentCategory,
       lanes,
+      laneColumns,
       dropCategory: drag.dropCategory(),
       canMoveNotes: canMoveNotes(),
+      notesAllowed: notesAllowed(),
       submission,
       filter,
       filtered: state.proposals.filter((p) => matches(p, filter)),

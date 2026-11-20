@@ -5,6 +5,7 @@ const DEFAULT_CATEGORY_KEYS = [
   "board.defaultCategory.good",
   "board.defaultCategory.bad",
   "board.defaultCategory.ideas",
+  "board.defaultCategory.thanks",
 ] as const;
 
 export function defaultCategoryLabels(t: Translator["t"]): string[] {

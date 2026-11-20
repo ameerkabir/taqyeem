@@ -21,7 +21,7 @@ export const en = {
   "newBoard.nameHint":
     "You will be the board organiser, and your team will see this name",
   "newBoard.categoriesHeading": "Board sections",
-  "newBoard.categoriesHint": "Your board starts with these three sections",
+  "newBoard.categoriesHint": "Your board starts with these four sections",
   "newBoard.submit": "Create board",
   "newBoard.error.titleMax": "The board name can be at most {max} characters",
   "newBoard.error.titleInvalid": "Please enter a valid board name",
@@ -51,6 +51,7 @@ export const en = {
   "board.defaultCategory.good": "What went well",
   "board.defaultCategory.bad": "What didn't go well",
   "board.defaultCategory.ideas": "Ideas",
+  "board.defaultCategory.thanks": "Thank yous",
 
   "board.status.collecting": "Collecting notes",
   "board.status.meeting": "Meeting",
@@ -198,7 +199,6 @@ export const en = {
   "guided.discardConfirm": "Discard this draft?",
   "guided.category": "Category",
   "guided.all": "All",
-  "guided.emptyNotes": "No notes yet in this category.",
   "guided.yours": "Yours",
   "guided.post": "Post",
   "guided.saving": "Saving…",
@@ -338,9 +338,12 @@ export const en = {
     "Make space for every perspective. Add one thought per note.",
   "collect.moveNote": "Move note",
   "collect.moveTo": "Move to category",
+  "notes.reopen": "Allow new notes",
+  "notes.close": "Stop new notes",
+  "notes.addToTopic": "Add note to this topic",
+  "notes.openHint": "The facilitator has reopened note-taking.",
   "collect.moveHint": "Drag notes to another category, or use Move note.",
   "collect.moveRestricted": "Only the facilitator can move a posted note to another category.",
-  "collect.emptyHint": "Use Add note to share your first thought.",
   "collect.total": {
     one: "{count} note shared",
     other: "{count} notes shared",
