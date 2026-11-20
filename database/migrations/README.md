@@ -8,3 +8,7 @@ List pending locally: `npm run db:migrations:list`
 Wrangler tracks applied files in `d1_migrations`. Tests replay these same files
 in filename order into a fresh SQLite database; they do not use Remix's separate
 migration directory/journal format. Do not edit an already-applied migration.
+
+Remote D1 is migrated by `.github/workflows/migrate.yml`: merging new files to `main`
+queues a run that applies them after approval on the `production-db` environment.
+It can also be started by hand from the Actions tab.

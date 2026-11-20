@@ -1,0 +1,77 @@
+name: Migrate D1 (remote)
+
+# Applies database/migrations to the remote D1 database, but only after a
+# required reviewer approves the `production-db` environment.
+#
+# Runs on its own, so it never blocks ci.yml or deploy.yml:
+# - automatically queued when a merge to main changes database/migrations/**
+#   (it waits for your approval, then applies);
+# - or run by hand from the Actions tab ("Run workflow").
+on:
+  push:
+    branches: [main]
+    paths:
+      - "database/migrations/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One migration run at a time; never cancel one that is running.
+concurrency:
+  group: d1-migrate-production
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  WRANGLER_SEND_METRICS: "false"
+
+jobs:
+  plan:
+    name: List pending migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Pending migrations
+        shell: bash
+        run: |
+          {
+            echo '## Pending D1 migrations'
+            echo '```'
+            npm run --silent db:migrations:list:remote 2>&1
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    name: Apply migrations
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The approval gate: configure required reviewers on this environment in
+    # Settings -> Environments -> production-db.
+    environment: production-db
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      # Wrangler auto-confirms in non-interactive CI.
+      - run: npm run db:migrate:remote
+      - name: Applied state
+        shell: bash
+        run: |
+          {
+            echo '## D1 migrations after apply'
+            echo '```'
+            npm run --silent db:migrations:list:remote 2>&1
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"

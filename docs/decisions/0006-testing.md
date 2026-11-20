@@ -63,7 +63,8 @@ commit the lockfile when dependencies change.
   - `guided-stress.mjs` writes fixtures into the default local D1 state (`.wrangler/`)
     with `wrangler d1 execute --local`. Run it alone.
 - **Remote D1.** `db:migrate:remote` and `db:migrations:list:remote` are never run by
-  tests or CI.
+  tests or `ci.yml`. They run only in `migrate.yml`, behind a manual approval on the
+  `production-db` environment (see "Deploy and migrations" below).
 - **`remix doctor`.** It is run by hand when project structure changes. A known naming
   warning is recorded in `VERIFICATION.md`.
 
@@ -84,3 +85,21 @@ npm run db:migrate:local
 npm run dev -- --host 127.0.0.1
 node test/guided-browser.mjs
 ```
+
+## Deploy and migrations
+
+Separate from `ci.yml`, which keeps no secrets:
+
+- `.github/workflows/deploy.yml`: every push to `main` runs typecheck and tests, then
+  `npm run deploy`. No approval.
+- `.github/workflows/migrate.yml`: queued on pushes to `main` that touch
+  `database/migrations/**`, or run by hand. A `plan` job lists pending migrations in
+  the run summary; the `apply` job waits for approval on the `production-db`
+  environment, then runs `npm run db:migrate:remote`.
+
+The two are independent, so a deploy can go out before its migration is approved.
+Keep migrations backward compatible with the code already running (add before use,
+drop only after code stops using it), or approve the migration before relying on it.
+
+Both need repository secrets `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit, D1: Edit)
+and `CLOUDFLARE_ACCOUNT_ID`.
