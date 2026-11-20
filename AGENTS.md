@@ -39,3 +39,8 @@ Refer to ./.agents/skills/remix/SKILL.md for the Remix mental model and how to f
 - Root `public/` contains static files served unchanged from the app root
 
 This starter intentionally begins small; add directories like `app/data/`, `app/middleware/`, `app/ui/`, and `test/` only when you need them.
+
+## Pull Requests
+
+Keep PR bodies concise and to the point: a short summary of what changed and any
+required setup. No long explanations or restated diffs.
